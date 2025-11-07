@@ -12,8 +12,35 @@
 -- ============================================================================
 -- These tables will store historical data while resetting the main tables
 
-CREATE TABLE IF NOT EXISTS archive_evaluations AS SELECT * FROM evaluations WHERE FALSE;
-CREATE TABLE IF NOT EXISTS archive_classrooms AS SELECT * FROM classrooms WHERE FALSE;
+-- Drop existing archive tables if they exist
+DROP TABLE IF EXISTS archive_evaluations;
+DROP TABLE IF EXISTS archive_classrooms;
+
+-- Create archive_evaluations with proper schema
+CREATE TABLE archive_evaluations (
+  id uuid PRIMARY KEY,
+  classroom_id uuid,
+  supervisor_id uuid,
+  evaluation_date timestamp with time zone,
+  items jsonb,
+  total_score integer,
+  max_score integer,
+  notes text,
+  created_at timestamp with time zone,
+  archived_at timestamp with time zone DEFAULT now()
+);
+
+-- Create archive_classrooms with proper schema
+CREATE TABLE archive_classrooms (
+  id uuid PRIMARY KEY,
+  name text,
+  grade text,
+  description text,
+  supervisor_id uuid,
+  is_active boolean,
+  created_at timestamp with time zone,
+  archived_at timestamp with time zone DEFAULT now()
+);
 
 -- ============================================================================
 -- STEP 2: ARCHIVE ALL DATA & RESET (uncomment to use)

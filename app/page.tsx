@@ -4,6 +4,8 @@ import { calculateLeaderboard } from "@/lib/utils-leaderboard"
 import { getEvaluationsServer } from "@/lib/supabase-data-server"
 import { LeafIcon } from "@/components/icons"
 
+export const revalidate = 0
+
 export default async function HomePage() {
   const evaluations = await getEvaluationsServer()
   const leaderboard = calculateLeaderboard(evaluations)
