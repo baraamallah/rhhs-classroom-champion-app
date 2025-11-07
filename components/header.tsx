@@ -8,6 +8,7 @@ import { LeafIcon } from "@/components/icons"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { LayoutDashboard, LogOut, Sun, Moon, User } from "lucide-react"
 import { useTheme } from "next-themes"
+import { motion } from "framer-motion"
 
 export function Header() {
   const router = useRouter()
@@ -61,15 +62,24 @@ export function Header() {
   }
 
   return (
-    <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
+    <motion.header 
+      className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50"
+      initial={{ y: -100 }}
+      animate={{ y: 0 }}
+      transition={{ duration: 0.5, ease: "easeOut" }}
+    >
       <div className="container mx-auto px-4 py-4">
         <div className="flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-full bg-primary flex items-center justify-center">
+          <Link href="/" className="flex items-center gap-3 group">
+            <motion.div 
+              className="h-10 w-10 rounded-full bg-gradient-to-br from-primary to-green-600 flex items-center justify-center shadow-lg"
+              whileHover={{ scale: 1.1, rotate: 10 }}
+              transition={{ type: "spring", stiffness: 300 }}
+            >
               <LeafIcon className="h-6 w-6 text-primary-foreground" />
-            </div>
+            </motion.div>
             <div>
-              <h1 className="text-xl font-bold text-foreground">ECO Club</h1>
+              <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-green-600 bg-clip-text text-transparent">ECO Club</h1>
               <p className="text-xs text-muted-foreground">Classroom Champion</p>
             </div>
           </Link>
@@ -154,6 +164,6 @@ export function Header() {
           </nav>
         </div>
       </div>
-    </header>
+    </motion.header>
   )
 }
