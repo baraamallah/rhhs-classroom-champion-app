@@ -1,7 +1,7 @@
 import type React from "react"
 import type { Metadata } from "next"
 import { Poppins } from "next/font/google"
-import { Analytics } from "@vercel/analytics/next"
+
 import { ThemeProvider } from "@/components/theme-provider"
 import { Footer } from "@/components/footer"
 import "./globals.css"
@@ -37,7 +37,6 @@ export default function RootLayout({
             <Footer />
           </div>
         </ThemeProvider>
-        <Analytics />
       </body>
     </html>
   )
