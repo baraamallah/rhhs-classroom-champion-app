@@ -1,7 +1,7 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { createClient } from "@/lib/supabase/server"
+import { createClient, createAdminClient } from "@/lib/supabase/server"
 import { getSessionFromCookies, clearSessionCookie } from "@/lib/auth/session"
 
 type UserRole = "super_admin" | "admin" | "supervisor" | "viewer"
@@ -137,7 +137,6 @@ export async function deleteClassroom(classroomId: string) {
   const supabase = await createClient()
 
   try {
-    // Delete all evaluations for this classroom first
     const { error: deleteEvalsError } = await supabase.from("evaluations").delete().eq("classroom_id", classroomId)
 
     if (deleteEvalsError) {
@@ -145,7 +144,6 @@ export async function deleteClassroom(classroomId: string) {
       return { success: false, error: "Failed to delete classroom evaluations" }
     }
 
-    // Then delete the classroom
     const { error: deleteClassError } = await supabase.from("classrooms").delete().eq("id", classroomId)
 
     if (deleteClassError) {
@@ -158,5 +156,122 @@ export async function deleteClassroom(classroomId: string) {
   } catch (dbError: any) {
     console.error("[data-management-actions] deleteClassroom error", dbError)
     return { success: false, error: "Failed to delete classroom" }
+  }
+}
+
+export async function archiveEvaluation(evaluationId: string) {
+  const { currentUser, error } = await requireSuperAdmin()
+  if (error || !currentUser) {
+    return { success: false, error }
+  }
+
+  if (!evaluationId || evaluationId.trim() === "") {
+    return { success: false, error: "Invalid evaluation ID" }
+  }
+
+  const supabase = await createAdminClient()
+
+  try {
+    console.log("[archiveEvaluation] Starting archive process for ID:", evaluationId)
+
+    const { data: evaluation, error: fetchError } = await supabase
+      .from("evaluations")
+      .select("*")
+      .eq("id", evaluationId)
+      .single()
+
+    if (fetchError) {
+      console.error("[archiveEvaluation] Fetch error:", fetchError)
+      return { success: false, error: `Failed to fetch evaluation: ${fetchError.message}` }
+    }
+
+    if (!evaluation) {
+      console.error("[archiveEvaluation] No evaluation found with ID:", evaluationId)
+      return { success: false, error: "Evaluation not found" }
+    }
+
+    console.log("[archiveEvaluation] Evaluation fetched:", evaluation.id)
+
+    const { data: archiveData, error: archiveError } = await supabase
+      .from("archive_evaluations")
+      .insert(evaluation)
+      .select()
+
+    if (archiveError) {
+      console.error("[archiveEvaluation] Archive insert error:", archiveError)
+      return { success: false, error: `Failed to archive evaluation: ${archiveError.message}` }
+    }
+
+    console.log("[archiveEvaluation] Archived successfully:", archiveData)
+
+    const { data: deleteData, error: deleteError, count } = await supabase
+      .from("evaluations")
+      .delete()
+      .eq("id", evaluationId)
+      .select()
+
+    if (deleteError) {
+      console.error("[archiveEvaluation] Delete error:", deleteError)
+      return {
+        success: false,
+        error: `Evaluation was archived but failed to delete from main table: ${deleteError.message}`,
+      }
+    }
+
+    console.log("[archiveEvaluation] Deleted from main table:", deleteData, "Count:", count)
+
+    if (!deleteData || deleteData.length === 0) {
+      console.error("[archiveEvaluation] No rows deleted for ID:", evaluationId)
+      return {
+        success: false,
+        error: "Evaluation was archived but no rows were deleted from main table. Check RLS policies.",
+      }
+    }
+
+    revalidatePath("/admin")
+    console.log("[archiveEvaluation] Process completed successfully for ID:", evaluationId)
+    return { success: true, message: `Evaluation archived and removed successfully (ID: ${evaluationId})` }
+  } catch (dbError: any) {
+    console.error("[archiveEvaluation] Unexpected error:", dbError)
+    return { success: false, error: `Failed to archive evaluation: ${dbError.message || "Unknown error"}` }
+  }
+}
+
+export async function getAllEvaluationsForManagement() {
+  const { currentUser, error } = await requireSuperAdmin()
+  if (error || !currentUser) {
+    return { success: false, error, data: [] }
+  }
+
+  const supabase = await createClient()
+
+  try {
+    const { data, error: fetchError } = await supabase
+      .from("evaluations")
+      .select(`
+        id,
+        evaluation_date,
+        total_score,
+        max_score,
+        created_at,
+        classrooms:classroom_id (
+          name,
+          grade
+        ),
+        users:supervisor_id (
+          name
+        )
+      `)
+      .order("evaluation_date", { ascending: false })
+
+    if (fetchError) {
+      console.error("[data-management-actions] getAllEvaluationsForManagement error", fetchError)
+      return { success: false, error: "Failed to fetch evaluations", data: [] }
+    }
+
+    return { success: true, data: data || [] }
+  } catch (dbError: any) {
+    console.error("[data-management-actions] getAllEvaluationsForManagement error", dbError)
+    return { success: false, error: "Failed to fetch evaluations", data: [] }
   }
 }

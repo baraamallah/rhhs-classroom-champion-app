@@ -15,8 +15,10 @@ DROP POLICY IF EXISTS "Allow anon read classrooms" ON classrooms;
 DROP POLICY IF EXISTS "Allow anon read checklist_items" ON checklist_items;
 DROP POLICY IF EXISTS "Allow anon read evaluations" ON evaluations;
 DROP POLICY IF EXISTS "Allow anon insert evaluations" ON evaluations;
+DROP POLICY IF EXISTS "Allow anon delete evaluations" ON evaluations;
 DROP POLICY IF EXISTS "Allow anon insert classrooms" ON classrooms;
 DROP POLICY IF EXISTS "Allow anon update classrooms" ON classrooms;
+DROP POLICY IF EXISTS "Allow anon delete classrooms" ON classrooms;
 DROP POLICY IF EXISTS "Allow anon insert checklist_items" ON checklist_items;
 DROP POLICY IF EXISTS "Allow anon update checklist_items" ON checklist_items;
 DROP POLICY IF EXISTS "Allow anon insert users" ON users;
@@ -91,6 +93,19 @@ CREATE POLICY "Allow anon insert evaluations"
 ON evaluations FOR INSERT
 TO anon
 WITH CHECK (true);
+
+CREATE POLICY "Allow anon delete evaluations"
+ON evaluations FOR DELETE
+TO anon
+USING (true);
+
+-- ============================================================================
+-- CLASSROOMS DELETE POLICY
+-- ============================================================================
+CREATE POLICY "Allow anon delete classrooms"
+ON classrooms FOR DELETE
+TO anon
+USING (true);
 
 -- ============================================================================
 -- VERIFY POLICIES
