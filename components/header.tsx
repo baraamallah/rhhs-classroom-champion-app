@@ -79,7 +79,7 @@ export function Header() {
               <LeafIcon className="h-6 w-6 text-primary-foreground" />
             </motion.div>
             <div>
-              <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-green-600 bg-clip-text text-transparent">ECO Club</h1>
+              <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-green-600 bg-clip-text text-transparent">RHHS ECO Club</h1>
               <p className="text-xs text-muted-foreground">Classroom Champion</p>
             </div>
           </Link>

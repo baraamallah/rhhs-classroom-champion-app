@@ -28,11 +28,11 @@ Your app shows **401 (Unauthorized)** and **404 (Not Found)** errors on Vercel b
 
 In your deployment platform (Vercel, Supabase, etc.), set:
 
-```bash
+\`\`\`bash
 NEXT_PUBLIC_SUPABASE_URL=https://dqfpinqjomlgpoyfewzk.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRxZnBpbnFqb21sZ3BveWZld3prIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEyMzQxODYsImV4cCI6MjA3NjgxMDE4Nn0.2FH88MXYMBClo8hQ1pIMMcV3c7I7xxMaeFOECp1qaXc
 AUTH_SECRET=your-secret-key-here-min-32-chars
-```
+\`\`\`
 
 ### Step 2: Run Database Scripts in Supabase
 
@@ -43,18 +43,18 @@ Go to Supabase Dashboard → SQL Editor and run **in this order**:
 
 ### Step 3: Remove Vercel Analytics Package (Optional)
 
-```bash
+\`\`\`bash
 npm uninstall @vercel/analytics
-```
+\`\`\`
 
 Or keep it installed but unused.
 
 ### Step 4: Deploy
 
-```bash
+\`\`\`bash
 npm run build
 npm start
-```
+\`\`\`
 
 Or deploy to your platform.
 
@@ -67,12 +67,12 @@ Or deploy to your platform.
 3. Restrict policies to authenticated users only
 
 Example production policy:
-```sql
+\`\`\`sql
 CREATE POLICY "Users can only see active data"
 ON users FOR SELECT
 TO authenticated
 USING (is_active = true);
-```
+\`\`\`
 
 ## 🧪 Testing
 

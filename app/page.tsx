@@ -141,8 +141,7 @@ export default function HomePage() {
           <div className="bg-card/80 backdrop-blur-sm border border-border rounded-lg p-8 text-center shadow-lg">
             <h3 className="text-2xl font-semibold text-foreground mb-4">How It Works</h3>
             <p className="text-muted-foreground mb-4">
-              Supervisors evaluate each classroom based on eco-friendly practices like waste sorting, 
-              energy conservation, and environmental care.
+              The Supervisors Evaluate Each Classroom Using Smart, Eco-Focused Criteria — From Efficient Energy Use and Intelligent Waste Management to Innovative Environmental Care Practices.
             </p>
             <motion.p 
               className="text-primary font-medium"
