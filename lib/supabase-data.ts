@@ -7,15 +7,27 @@ export async function getClassrooms(): Promise<Classroom[]> {
     const supabase = createClient()
     const { data, error } = await supabase
       .from("classrooms")
-      .select("*")
+      .select(`
+        *,
+        classroom_supervisors!classroom_id(
+          supervisor_id,
+          users!classroom_supervisors_supervisor_id_fkey(id, name, email)
+        )
+      `)
       .eq("is_active", true)
       .order("name")
 
     if (error) {
       console.error("[v0] Error fetching classrooms:", error)
+      console.error("[v0] Error details:", JSON.stringify(error, null, 2))
       return []
     }
-    return data || []
+
+    // Transform data to flatten the nested structure
+    return (data || []).map((classroom: any) => ({
+      ...classroom,
+      supervisors: classroom.classroom_supervisors?.map((s: any) => s.users) || []
+    }))
   } catch (error) {
     console.error("[v0] Exception fetching classrooms:", error)
     return []
@@ -48,16 +60,28 @@ export async function getChecklistItems(): Promise<ChecklistItem[]> {
     const supabase = createClient()
     const { data, error } = await supabase
       .from("checklist_items")
-      .select("*")
+      .select(`
+        *,
+        checklist_item_assignments!checklist_item_id(
+          supervisor_id,
+          users!checklist_item_assignments_supervisor_id_fkey(id, name, email)
+        )
+      `)
       .eq("is_active", true)
       .order("display_order", { ascending: true })
       .order("created_at", { ascending: true })
 
     if (error) {
       console.error("[v0] Error fetching checklist items:", error)
+      console.error("[v0] Error details:", JSON.stringify(error, null, 2))
       return []
     }
-    return data || []
+
+    // Transform data to flatten the nested structure
+    return (data || []).map((item: any) => ({
+      ...item,
+      assigned_supervisors: item.checklist_item_assignments?.map((s: any) => s.users) || []
+    }))
   } catch (error) {
     console.error("[v0] Exception fetching checklist items:", error)
     return []
@@ -107,15 +131,15 @@ export async function getEvaluations(): Promise<Evaluation[]> {
       created_at: row.created_at,
       classroom: row.classrooms
         ? {
-            name: row.classrooms.name,
-            grade: row.classrooms.grade ?? "",
-          }
+          name: row.classrooms.name,
+          grade: row.classrooms.grade ?? "",
+        }
         : undefined,
       supervisor: row.users
         ? {
-            name: row.users.name,
-            email: row.users.email ?? "",
-          }
+          name: row.users.name,
+          email: row.users.email ?? "",
+        }
         : undefined,
     }))
   } catch (error) {
@@ -161,22 +185,41 @@ export async function addChecklistItem(
   category?: string,
   displayOrder?: number,
   createdBy?: string,
+  assignedSupervisorIds?: string[],
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const supabase = createClient()
 
-    const { error } = await supabase.from("checklist_items").insert({
+    const { data: newItem, error } = await supabase.from("checklist_items").insert({
       title,
       description,
       points,
       category: category || null,
       display_order: displayOrder || 0,
-    })
+    }).select().single()
 
     if (error) {
       console.error("[v0] Error adding checklist item:", error)
       return { success: false, error: error.message }
     }
+
+    // Insert assignments if any
+    if (assignedSupervisorIds && assignedSupervisorIds.length > 0) {
+      const assignments = assignedSupervisorIds.map(id => ({
+        checklist_item_id: newItem.id,
+        supervisor_id: id
+      }))
+
+      const { error: assignmentError } = await supabase
+        .from("checklist_item_assignments")
+        .insert(assignments)
+
+      if (assignmentError) {
+        console.error("[v0] Error adding checklist assignments:", assignmentError)
+        // We don't fail the whole operation if assignments fail, but we log it
+      }
+    }
+
     return { success: true }
   } catch (error) {
     console.error("[v0] Exception adding checklist item:", error)
@@ -192,11 +235,12 @@ export async function updateChecklistItem(
   category?: string,
   displayOrder?: number,
   isActive?: boolean,
+  assignedSupervisorIds?: string[],
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const supabase = createClient()
     const updateData: any = { title, description, points }
-    
+
     if (category !== undefined) updateData.category = category
     if (displayOrder !== undefined) updateData.display_order = displayOrder
     if (isActive !== undefined) updateData.is_active = isActive
@@ -207,6 +251,32 @@ export async function updateChecklistItem(
       console.error("[v0] Error updating checklist item:", error)
       return { success: false, error: error.message }
     }
+
+    // Update assignments if provided
+    if (assignedSupervisorIds !== undefined) {
+      // First delete existing assignments
+      await supabase
+        .from("checklist_item_assignments")
+        .delete()
+        .eq("checklist_item_id", id)
+
+      // Then insert new ones
+      if (assignedSupervisorIds.length > 0) {
+        const assignments = assignedSupervisorIds.map(supId => ({
+          checklist_item_id: id,
+          supervisor_id: supId
+        }))
+
+        const { error: assignmentError } = await supabase
+          .from("checklist_item_assignments")
+          .insert(assignments)
+
+        if (assignmentError) {
+          console.error("[v0] Error updating checklist assignments:", assignmentError)
+        }
+      }
+    }
+
     return { success: true }
   } catch (error) {
     console.error("[v0] Exception updating checklist item:", error)
@@ -279,23 +349,39 @@ export async function createClassroom(
   name: string,
   grade: string,
   description?: string,
-  supervisorId?: string,
+  supervisorIds?: string[],
   createdBy?: string,
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const supabase = createClient()
 
-    const { error } = await supabase.from("classrooms").insert({
+    const { data: newClassroom, error } = await supabase.from("classrooms").insert({
       name,
       grade,
       description: description || null,
-      supervisor_id: supervisorId || null,
-    })
+    }).select().single()
 
     if (error) {
       console.error("[v0] Error creating classroom:", error)
       return { success: false, error: error.message }
     }
+
+    // Insert assignments if any
+    if (supervisorIds && supervisorIds.length > 0) {
+      const assignments = supervisorIds.map(id => ({
+        classroom_id: newClassroom.id,
+        supervisor_id: id
+      }))
+
+      const { error: assignmentError } = await supabase
+        .from("classroom_supervisors")
+        .insert(assignments)
+
+      if (assignmentError) {
+        console.error("[v0] Error adding classroom supervisors:", assignmentError)
+      }
+    }
+
     return { success: true }
   } catch (error) {
     console.error("[v0] Exception creating classroom:", error)
@@ -308,15 +394,14 @@ export async function updateClassroom(
   name: string,
   grade: string,
   description?: string,
-  supervisorId?: string,
+  supervisorIds?: string[],
   isActive?: boolean,
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const supabase = createClient()
     const updateData: any = { name, grade }
-    
+
     if (description !== undefined) updateData.description = description
-    if (supervisorId !== undefined) updateData.supervisor_id = supervisorId
     if (isActive !== undefined) updateData.is_active = isActive
 
     const { error } = await supabase.from("classrooms").update(updateData).eq("id", id)
@@ -325,6 +410,33 @@ export async function updateClassroom(
       console.error("[v0] Error updating classroom:", error)
       return { success: false, error: error.message }
     }
+
+    // Update assignments if provided
+    if (supervisorIds !== undefined) {
+      // First delete existing assignments
+      await supabase
+        .from("classroom_supervisors")
+        .delete()
+        .eq("classroom_id", id)
+
+      // Then insert new ones
+      if (supervisorIds.length > 0) {
+        const assignments = supervisorIds.map(supId => ({
+          classroom_id: id,
+          supervisor_id: supId
+        }))
+
+        const { error: assignmentError } = await supabase
+          .from("classroom_supervisors")
+          .insert(assignments)
+
+        if (assignmentError) {
+          console.error("[v0] Error updating classroom supervisors:", assignmentError)
+          console.error("[v0] Assignment error details:", JSON.stringify(assignmentError, null, 2))
+        }
+      }
+    }
+
     return { success: true }
   } catch (error) {
     console.error("[v0] Exception updating classroom:", error)
@@ -434,15 +546,15 @@ export async function getEvaluationsBySupervisor(supervisorId: string): Promise<
       created_at: row.created_at,
       classroom: row.classrooms
         ? {
-            name: row.classrooms.name,
-            grade: row.classrooms.grade ?? "",
-          }
+          name: row.classrooms.name,
+          grade: row.classrooms.grade ?? "",
+        }
         : undefined,
       supervisor: row.users
         ? {
-            name: row.users.name,
-            email: row.users.email ?? "",
-          }
+          name: row.users.name,
+          email: row.users.email ?? "",
+        }
         : undefined,
     }))
   } catch (error) {
@@ -496,15 +608,15 @@ export async function getEvaluationsByDateRange(startDate: string, endDate: stri
       created_at: row.created_at,
       classroom: row.classrooms
         ? {
-            name: row.classrooms.name,
-            grade: row.classrooms.grade ?? "",
-          }
+          name: row.classrooms.name,
+          grade: row.classrooms.grade ?? "",
+        }
         : undefined,
       supervisor: row.users
         ? {
-            name: row.users.name,
-            email: row.users.email ?? "",
-          }
+          name: row.users.name,
+          email: row.users.email ?? "",
+        }
         : undefined,
     }))
   } catch (error) {

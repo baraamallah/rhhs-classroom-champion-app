@@ -7,36 +7,62 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import type { ChecklistItem, User } from "@/lib/types"
-import { getChecklistItems, addChecklistItem, updateChecklistItem, deleteChecklistItem } from "@/lib/supabase-data"
+import { getChecklistItems, addChecklistItem, updateChecklistItem, deleteChecklistItem, getAllUsers } from "@/lib/supabase-data"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Pencil, Trash2, Plus, MoreVertical } from "lucide-react"
+import { useToast } from "@/components/ui/use-toast"
 
 interface ChecklistManagerProps {
   currentUser: User
 }
 
+interface ChecklistItemFormData {
+  title: string
+  description: string
+  points: number
+  category: string
+  displayOrder: number
+  assignedSupervisorIds: string[]
+}
+
 export function ChecklistManager({ currentUser }: ChecklistManagerProps) {
   const [items, setItems] = useState<ChecklistItem[]>([])
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [isAdding, setIsAdding] = useState(false)
-  const [formData, setFormData] = useState({ 
-    title: "", 
-    description: "", 
-    points: 10, 
-    category: "", 
-    displayOrder: 0 
-  })
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [isAddOpen, setIsAddOpen] = useState(false)
+  const [isEditOpen, setIsEditOpen] = useState(false)
+  const [currentItem, setCurrentItem] = useState<ChecklistItem | null>(null)
+  const { toast } = useToast()
+
+  const [formData, setFormData] = useState<ChecklistItemFormData>({
+    title: "",
+    description: "",
+    points: 10,
+    category: "General",
+    displayOrder: 0,
+    assignedSupervisorIds: []
+  })
+  const [supervisors, setSupervisors] = useState<User[]>([])
 
   const fetchItems = async () => {
     try {
-      const data = await getChecklistItems()
-      setItems(data)
-      setError(null)
+      const [itemsData, usersResult] = await Promise.all([
+        getChecklistItems(),
+        getAllUsers()
+      ])
+
+      setItems(itemsData)
+
+      if (usersResult.success) {
+        const supervisorList = usersResult.data.filter(u => u.role === 'supervisor')
+        setSupervisors(supervisorList)
+      }
     } catch (error) {
-      console.error("[v0] Error fetching checklist items:", error)
-      setError("Failed to load checklist items")
+      console.error("Error fetching data:", error)
+      toast({
+        title: "Error",
+        description: "Failed to load data",
+        variant: "destructive",
+      })
     } finally {
       setLoading(false)
     }
@@ -50,59 +76,99 @@ export function ChecklistManager({ currentUser }: ChecklistManagerProps) {
     if (!formData.title.trim()) return
 
     try {
-      let result
-      if (editingId) {
-        result = await updateChecklistItem(
-          editingId, 
-          formData.title, 
-          formData.description, 
-          formData.points,
-          formData.category || undefined,
-          formData.displayOrder,
-          true
-        )
-        if (result.success) {
-          setEditingId(null)
-        }
+      const result = await addChecklistItem(
+        formData.title,
+        formData.description,
+        formData.points,
+        formData.category,
+        formData.displayOrder,
+        undefined, // createdBy will be handled by RLS or backend
+        formData.assignedSupervisorIds
+      )
+
+      if (result.success) {
+        toast({
+          title: "Success",
+          description: "Checklist item added successfully",
+        })
+        setIsAddOpen(false)
+        fetchItems()
+        setFormData({
+          title: "",
+          description: "",
+          points: 10,
+          category: "General",
+          displayOrder: 0,
+          assignedSupervisorIds: []
+        })
       } else {
-        result = await addChecklistItem(
-          formData.title, 
-          formData.description, 
-          formData.points,
-          formData.category || undefined,
-          formData.displayOrder,
-          currentUser.id
-        )
-        if (result.success) {
-          setIsAdding(false)
-        }
+        toast({
+          title: "Error",
+          description: result.error || "Failed to add item",
+          variant: "destructive",
+        })
       }
-
-      if (!result.success) {
-        setError(result.error || "Failed to save item")
-        return
-      }
-
-      setFormData({ title: "", description: "", points: 10, category: "", displayOrder: 0 })
-      setError(null)
-      await fetchItems()
     } catch (error) {
-      console.error("[v0] Error saving checklist item:", error)
-      setError("An unexpected error occurred")
+      console.error("Error saving checklist item:", error)
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleUpdate = async () => {
+    if (!currentItem || !formData.title.trim()) return
+
+    try {
+      const result = await updateChecklistItem(
+        currentItem.id,
+        formData.title,
+        formData.description,
+        formData.points,
+        formData.category,
+        formData.displayOrder,
+        currentItem.is_active,
+        formData.assignedSupervisorIds
+      )
+
+      if (result.success) {
+        toast({
+          title: "Success",
+          description: "Checklist item updated successfully",
+        })
+        setIsEditOpen(false)
+        setCurrentItem(null)
+        fetchItems()
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || "Failed to update item",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error("Error updating checklist item:", error)
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred",
+        variant: "destructive",
+      })
     }
   }
 
   const handleEdit = (item: ChecklistItem) => {
-    setEditingId(item.id)
-    setFormData({ 
-      title: item.title, 
-      description: item.description || "", 
+    setCurrentItem(item)
+    setFormData({
+      title: item.title,
+      description: item.description || "",
       points: item.points,
-      category: item.category || "",
-      displayOrder: item.display_order || 0
+      category: item.category || "General",
+      displayOrder: item.display_order,
+      assignedSupervisorIds: item.assigned_supervisors?.map(s => s.id) || []
     })
-    setIsAdding(false)
-    setError(null)
+    setIsEditOpen(true)
   }
 
   const handleDelete = async (id: string) => {
@@ -110,30 +176,53 @@ export function ChecklistManager({ currentUser }: ChecklistManagerProps) {
 
     try {
       const result = await deleteChecklistItem(id)
-      if (!result.success) {
-        setError(result.error || "Failed to delete item")
-        return
+      if (result.success) {
+        toast({
+          title: "Success",
+          description: "Item deleted successfully",
+        })
+        fetchItems()
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || "Failed to delete item",
+          variant: "destructive",
+        })
       }
-      setError(null)
-      await fetchItems()
     } catch (error) {
-      console.error("[v0] Error deleting checklist item:", error)
-      setError("An unexpected error occurred")
+      console.error("Error deleting checklist item:", error)
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred",
+        variant: "destructive",
+      })
     }
   }
 
   const handleCancel = () => {
-    setEditingId(null)
-    setIsAdding(false)
-    setFormData({ title: "", description: "", points: 10, category: "", displayOrder: 0 })
-    setError(null)
+    setIsAddOpen(false)
+    setIsEditOpen(false)
+    setCurrentItem(null)
+    setFormData({
+      title: "",
+      description: "",
+      points: 10,
+      category: "General",
+      displayOrder: 0,
+      assignedSupervisorIds: []
+    })
   }
 
   const handleAddNew = () => {
-    setIsAdding(true)
-    setEditingId(null)
-    setFormData({ title: "", description: "", points: 10, category: "", displayOrder: 0 })
-    setError(null)
+    setFormData({
+      title: "",
+      description: "",
+      points: 10,
+      category: "General",
+      displayOrder: 0,
+      assignedSupervisorIds: []
+    })
+    setIsAddOpen(true)
   }
 
   if (loading) {
@@ -154,7 +243,7 @@ export function ChecklistManager({ currentUser }: ChecklistManagerProps) {
             <CardTitle>Checklist Items</CardTitle>
             <CardDescription>Manage evaluation criteria and point values</CardDescription>
           </div>
-          {!isAdding && !editingId && (
+          {!isAddOpen && !isEditOpen && (
             <Button onClick={handleAddNew} size="sm">
               <Plus className="h-4 w-4 mr-2" />
               Add Item
@@ -163,16 +252,10 @@ export function ChecklistManager({ currentUser }: ChecklistManagerProps) {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {error && (
-          <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
-            <p className="text-sm text-destructive">{error}</p>
-          </div>
-        )}
-
         {/* Items List */}
         <div className="space-y-2">
           {/* Add Form */}
-          {isAdding && (
+          {isAddOpen && (
             <div className="p-4 bg-muted/50 rounded-lg border space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="title">Item Name</Label>
@@ -226,6 +309,44 @@ export function ChecklistManager({ currentUser }: ChecklistManagerProps) {
                   placeholder="0"
                 />
               </div>
+              <div className="space-y-2">
+                <Label>Assigned Supervisors</Label>
+                <div className="border rounded-md p-4 space-y-2 max-h-48 overflow-y-auto bg-background">
+                  {supervisors.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No supervisors found.</p>
+                  ) : (
+                    supervisors.map((supervisor) => (
+                      <div key={supervisor.id} className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id={`supervisor-${supervisor.id}`}
+                          checked={formData.assignedSupervisorIds.includes(supervisor.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setFormData({
+                                ...formData,
+                                assignedSupervisorIds: [...formData.assignedSupervisorIds, supervisor.id]
+                              })
+                            } else {
+                              setFormData({
+                                ...formData,
+                                assignedSupervisorIds: formData.assignedSupervisorIds.filter(id => id !== supervisor.id)
+                              })
+                            }
+                          }}
+                          className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                        />
+                        <label
+                          htmlFor={`supervisor-${supervisor.id}`}
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                        >
+                          {supervisor.name}
+                        </label>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
               <div className="flex gap-2">
                 <Button onClick={handleSave} size="sm">
                   Create Item
@@ -242,7 +363,7 @@ export function ChecklistManager({ currentUser }: ChecklistManagerProps) {
           ) : (
             items.map((item) => (
               <div key={item.id} className="rounded-lg border bg-card">
-                {editingId === item.id ? (
+                {isEditOpen && currentItem?.id === item.id ? (
                   // Inline edit form
                   <div className="p-4 space-y-4">
                     <div className="space-y-2">
@@ -297,8 +418,46 @@ export function ChecklistManager({ currentUser }: ChecklistManagerProps) {
                         placeholder="0"
                       />
                     </div>
+                    <div className="space-y-2">
+                      <Label>Assigned Supervisors</Label>
+                      <div className="border rounded-md p-4 space-y-2 max-h-48 overflow-y-auto bg-background">
+                        {supervisors.length === 0 ? (
+                          <p className="text-sm text-muted-foreground">No supervisors found.</p>
+                        ) : (
+                          supervisors.map((supervisor) => (
+                            <div key={`edit-supervisor-${supervisor.id}`} className="flex items-center space-x-2">
+                              <input
+                                type="checkbox"
+                                id={`edit-supervisor-${supervisor.id}`}
+                                checked={formData.assignedSupervisorIds.includes(supervisor.id)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setFormData({
+                                      ...formData,
+                                      assignedSupervisorIds: [...formData.assignedSupervisorIds, supervisor.id]
+                                    })
+                                  } else {
+                                    setFormData({
+                                      ...formData,
+                                      assignedSupervisorIds: formData.assignedSupervisorIds.filter(id => id !== supervisor.id)
+                                    })
+                                  }
+                                }}
+                                className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                              />
+                              <label
+                                htmlFor={`edit-supervisor-${supervisor.id}`}
+                                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                              >
+                                {supervisor.name}
+                              </label>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
                     <div className="flex gap-2">
-                      <Button onClick={handleSave} size="sm">
+                      <Button onClick={handleUpdate} size="sm">
                         Update Item
                       </Button>
                       <Button onClick={handleCancel} variant="outline" size="sm">
@@ -319,9 +478,21 @@ export function ChecklistManager({ currentUser }: ChecklistManagerProps) {
                         )}
                       </div>
                       {item.description && <p className="text-sm text-muted-foreground mt-1">{item.description}</p>}
-                      <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                        <span>Order: {item.display_order || 0}</span>
-                        <span>Points: {item.points}</span>
+                      <div className="flex flex-col gap-1 mt-2">
+                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                          <span>Order: {item.display_order || 0}</span>
+                          <span>Points: {item.points}</span>
+                        </div>
+                        {item.assigned_supervisors && item.assigned_supervisors.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            <span className="text-xs text-muted-foreground mr-1">Assigned to:</span>
+                            {item.assigned_supervisors.map((supervisor) => (
+                              <span key={supervisor.id} className="text-xs bg-secondary px-1.5 py-0.5 rounded-md text-secondary-foreground">
+                                {supervisor.name}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
                     <div className="flex items-center gap-3">

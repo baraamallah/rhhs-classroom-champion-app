@@ -3,6 +3,7 @@ export interface Classroom {
   name: string
   grade: string
   description?: string
+  // supervisor_id is deprecated in favor of supervisors array
   supervisor_id?: string
   created_by?: string
   is_active: boolean
@@ -13,6 +14,11 @@ export interface Classroom {
     name: string
     email: string
   }
+  supervisors?: {
+    id: string
+    name: string
+    email: string
+  }[]
   created_by_user?: {
     name: string
     email: string
@@ -28,6 +34,8 @@ export interface ChecklistItem {
   is_active: boolean
   display_order: number
   created_by?: string
+  // assigned_supervisor_id is deprecated in favor of assigned_supervisors array
+  assigned_supervisor_id?: string
   created_at?: string
   updated_at?: string
   // Joined data from relations
@@ -35,6 +43,15 @@ export interface ChecklistItem {
     name: string
     email: string
   }
+  assigned_supervisor?: {
+    name: string
+    email: string
+  }
+  assigned_supervisors?: {
+    id: string
+    name: string
+    email: string
+  }[]
 }
 
 export interface Evaluation {

@@ -13,9 +13,17 @@ import { createClassroom, updateClassroom, deleteClassroom, getAllUsers } from "
 import { createClient } from "@/lib/supabase/client"
 import type { Classroom, User } from "@/lib/types"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { useToast } from "@/components/ui/use-toast"
 
 interface ClassroomManagementProps {
   currentUser: User
+}
+
+interface ClassroomFormData {
+  name: string
+  grade: string
+  description: string
+  supervisorIds: string[]
 }
 
 export function ClassroomManagement({ currentUser }: ClassroomManagementProps) {
@@ -25,13 +33,13 @@ export function ClassroomManagement({ currentUser }: ClassroomManagementProps) {
   const [creating, setCreating] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [isAdding, setIsAdding] = useState(false)
-  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
+  const { toast } = useToast()
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<ClassroomFormData>({
     name: "",
     grade: "",
     description: "",
-    supervisor_id: "",
+    supervisorIds: [],
   })
 
   useEffect(() => {
@@ -47,20 +55,36 @@ export function ClassroomManagement({ currentUser }: ClassroomManagementProps) {
         .from("classrooms")
         .select(`
           *,
-          supervisor:users!supervisor_id(id, name, email)
+          classroom_supervisors!classroom_id(
+            supervisor_id,
+            users!classroom_supervisors_supervisor_id_fkey(id, name, email)
+          )
         `)
         .eq("is_active", true)
         .order("name")
 
       if (error) {
         console.error("Error fetching classrooms:", error)
-        setMessage({ type: "error", text: "Failed to load classrooms" })
+        toast({
+          title: "Error",
+          description: "Failed to load classrooms",
+          variant: "destructive",
+        })
       } else {
-        setClassrooms(data || [])
+        // Transform data to flatten the nested structure
+        const transformedData = (data || []).map((classroom: any) => ({
+          ...classroom,
+          supervisors: classroom.classroom_supervisors?.map((s: any) => s.users) || []
+        }))
+        setClassrooms(transformedData)
       }
     } catch (error) {
       console.error("Exception fetching classrooms:", error)
-      setMessage({ type: "error", text: "Failed to load classrooms" })
+      toast({
+        title: "Error",
+        description: "Failed to load classrooms",
+        variant: "destructive",
+      })
     } finally {
       setLoading(false)
     }
@@ -75,33 +99,37 @@ export function ClassroomManagement({ currentUser }: ClassroomManagementProps) {
         setSupervisors(supervisorUsers)
       } else {
         console.error("Failed to load supervisors:", result.error)
-        setMessage({ type: "error", text: `Failed to load supervisors: ${result.error || "Unknown error"}` })
       }
     } catch (error) {
       console.error("Error loading supervisors:", error)
-      setMessage({ type: "error", text: "Failed to load supervisors" })
     }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleSubmit = async () => {
     setCreating(true)
-    setMessage(null)
 
     const result = await createClassroom(
       formData.name,
       formData.grade,
       formData.description || undefined,
-      formData.supervisor_id || undefined,
+      formData.supervisorIds,
       currentUser.id
     )
 
     if (result.success) {
-      setMessage({ type: "success", text: "Classroom created successfully" })
-      setFormData({ name: "", grade: "", description: "", supervisor_id: "" })
+      toast({
+        title: "Success",
+        description: "Classroom created successfully",
+      })
+      setFormData({ name: "", grade: "", description: "", supervisorIds: [] })
+      setIsAdding(false)
       loadClassrooms()
     } else {
-      setMessage({ type: "error", text: result.error || "Failed to create classroom" })
+      toast({
+        title: "Error",
+        description: result.error || "Failed to create classroom",
+        variant: "destructive",
+      })
     }
 
     setCreating(false)
@@ -113,32 +141,38 @@ export function ClassroomManagement({ currentUser }: ClassroomManagementProps) {
       name: classroom.name,
       grade: classroom.grade,
       description: classroom.description || "",
-      supervisor_id: classroom.supervisor_id || "",
+      supervisorIds: classroom.supervisors?.map(s => s.id) || [],
     })
-    setMessage(null)
+    setIsAdding(false)
   }
 
   const handleUpdate = async () => {
     if (!editingId) return
 
     setCreating(true)
-    setMessage(null)
 
     const result = await updateClassroom(
       editingId,
       formData.name,
       formData.grade,
       formData.description || undefined,
-      formData.supervisor_id || undefined
+      formData.supervisorIds
     )
 
     if (result.success) {
-      setMessage({ type: "success", text: "Classroom updated successfully" })
+      toast({
+        title: "Success",
+        description: "Classroom updated successfully",
+      })
       setEditingId(null)
-      setFormData({ name: "", grade: "", description: "", supervisor_id: "" })
+      setFormData({ name: "", grade: "", description: "", supervisorIds: [] })
       loadClassrooms()
     } else {
-      setMessage({ type: "error", text: result.error || "Failed to update classroom" })
+      toast({
+        title: "Error",
+        description: result.error || "Failed to update classroom",
+        variant: "destructive",
+      })
     }
 
     setCreating(false)
@@ -150,25 +184,30 @@ export function ClassroomManagement({ currentUser }: ClassroomManagementProps) {
     const result = await deleteClassroom(classroomId)
 
     if (result.success) {
-      setMessage({ type: "success", text: "Classroom deactivated successfully" })
+      toast({
+        title: "Success",
+        description: "Classroom deactivated successfully",
+      })
       loadClassrooms()
     } else {
-      setMessage({ type: "error", text: result.error || "Failed to deactivate classroom" })
+      toast({
+        title: "Error",
+        description: result.error || "Failed to deactivate classroom",
+        variant: "destructive",
+      })
     }
   }
 
   const handleCancel = () => {
     setEditingId(null)
     setIsAdding(false)
-    setFormData({ name: "", grade: "", description: "", supervisor_id: "" })
-    setMessage(null)
+    setFormData({ name: "", grade: "", description: "", supervisorIds: [] })
   }
 
   const handleAddNew = () => {
     setIsAdding(true)
     setEditingId(null)
-    setFormData({ name: "", grade: "", description: "", supervisor_id: "" })
-    setMessage(null)
+    setFormData({ name: "", grade: "", description: "", supervisorIds: [] })
   }
 
   return (
@@ -191,12 +230,6 @@ export function ClassroomManagement({ currentUser }: ClassroomManagementProps) {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {message && (
-          <Alert variant={message.type === "error" ? "destructive" : "default"}>
-            <AlertDescription>{message.text}</AlertDescription>
-          </Alert>
-        )}
-
         {/* Classrooms List */}
         <div className="space-y-2">
           {/* Add Form */}
@@ -234,23 +267,42 @@ export function ClassroomManagement({ currentUser }: ClassroomManagementProps) {
                   />
                 </div>
                 <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="supervisor">Assigned Supervisor</Label>
-                  <Select
-                    value={formData.supervisor_id || "none"}
-                    onValueChange={(value) => setFormData({ ...formData, supervisor_id: value === "none" ? "" : value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a supervisor (optional)" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">No supervisor assigned</SelectItem>
-                      {supervisors.map((supervisor) => (
-                        <SelectItem key={supervisor.id} value={supervisor.id}>
-                          {supervisor.name} ({supervisor.email})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label>Assigned Supervisors</Label>
+                  <div className="border rounded-md p-4 space-y-2 max-h-48 overflow-y-auto bg-background">
+                    {supervisors.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">No supervisors found.</p>
+                    ) : (
+                      supervisors.map((supervisor) => (
+                        <div key={supervisor.id} className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            id={`supervisor-${supervisor.id}`}
+                            checked={formData.supervisorIds.includes(supervisor.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setFormData({
+                                  ...formData,
+                                  supervisorIds: [...formData.supervisorIds, supervisor.id]
+                                })
+                              } else {
+                                setFormData({
+                                  ...formData,
+                                  supervisorIds: formData.supervisorIds.filter(id => id !== supervisor.id)
+                                })
+                              }
+                            }}
+                            className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                          />
+                          <label
+                            htmlFor={`supervisor-${supervisor.id}`}
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                          >
+                            {supervisor.name} ({supervisor.email})
+                          </label>
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </div>
               </div>
               <div className="flex gap-2">
@@ -307,23 +359,42 @@ export function ClassroomManagement({ currentUser }: ClassroomManagementProps) {
                           />
                         </div>
                         <div className="space-y-2 md:col-span-2">
-                          <Label htmlFor={`edit-supervisor-${classroom.id}`}>Assigned Supervisor</Label>
-                          <Select
-                            value={formData.supervisor_id || "none"}
-                            onValueChange={(value) => setFormData({ ...formData, supervisor_id: value === "none" ? "" : value })}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select a supervisor (optional)" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="none">No supervisor assigned</SelectItem>
-                              {supervisors.map((supervisor) => (
-                                <SelectItem key={supervisor.id} value={supervisor.id}>
-                                  {supervisor.name} ({supervisor.email})
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <Label>Assigned Supervisors</Label>
+                          <div className="border rounded-md p-4 space-y-2 max-h-48 overflow-y-auto bg-background">
+                            {supervisors.length === 0 ? (
+                              <p className="text-sm text-muted-foreground">No supervisors found.</p>
+                            ) : (
+                              supervisors.map((supervisor) => (
+                                <div key={`edit-supervisor-${supervisor.id}`} className="flex items-center space-x-2">
+                                  <input
+                                    type="checkbox"
+                                    id={`edit-supervisor-${supervisor.id}`}
+                                    checked={formData.supervisorIds.includes(supervisor.id)}
+                                    onChange={(e) => {
+                                      if (e.target.checked) {
+                                        setFormData({
+                                          ...formData,
+                                          supervisorIds: [...formData.supervisorIds, supervisor.id]
+                                        })
+                                      } else {
+                                        setFormData({
+                                          ...formData,
+                                          supervisorIds: formData.supervisorIds.filter(id => id !== supervisor.id)
+                                        })
+                                      }
+                                    }}
+                                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                                  />
+                                  <label
+                                    htmlFor={`edit-supervisor-${supervisor.id}`}
+                                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                                  >
+                                    {supervisor.name} ({supervisor.email})
+                                  </label>
+                                </div>
+                              ))
+                            )}
+                          </div>
                         </div>
                       </div>
                       <div className="flex gap-2">
@@ -351,13 +422,20 @@ export function ClassroomManagement({ currentUser }: ClassroomManagementProps) {
                             <p className="text-sm text-muted-foreground">{classroom.description}</p>
                           )}
                           <div className="flex items-center gap-4 mt-1">
-                            {classroom.supervisor ? (
-                              <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                                <Users className="h-3 w-3" />
-                                <span>Supervisor: {classroom.supervisor.name}</span>
+                            {classroom.supervisors && classroom.supervisors.length > 0 ? (
+                              <div className="flex flex-wrap gap-1">
+                                <div className="flex items-center gap-1 text-sm text-muted-foreground mr-1">
+                                  <Users className="h-3 w-3" />
+                                  <span>Supervisors:</span>
+                                </div>
+                                {classroom.supervisors.map((supervisor) => (
+                                  <span key={supervisor.id} className="text-xs bg-secondary px-1.5 py-0.5 rounded-md text-secondary-foreground">
+                                    {supervisor.name}
+                                  </span>
+                                ))}
                               </div>
                             ) : (
-                              <span className="text-sm text-muted-foreground">No supervisor assigned</span>
+                              <span className="text-sm text-muted-foreground">No supervisors assigned</span>
                             )}
                           </div>
                         </div>
