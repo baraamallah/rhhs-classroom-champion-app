@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import type { ChecklistItem, User } from "@/lib/types"
-import { getChecklistItems, addChecklistItem, updateChecklistItem, deleteChecklistItem, getAllUsers } from "@/lib/supabase-data"
+import { getAllUsers, getChecklistItems, addChecklistItem, updateChecklistItem, deleteChecklistItem } from "@/lib/supabase-data"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Pencil, Trash2, Plus, MoreVertical } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
@@ -53,7 +53,7 @@ export function ChecklistManager({ currentUser }: ChecklistManagerProps) {
       setItems(itemsData)
 
       if (usersResult.success) {
-        const supervisorList = usersResult.data.filter(u => u.role === 'supervisor')
+        const supervisorList = usersResult.data.filter((u: User) => u.role === 'supervisor')
         setSupervisors(supervisorList)
       }
     } catch (error) {
@@ -73,7 +73,7 @@ export function ChecklistManager({ currentUser }: ChecklistManagerProps) {
   }, [])
 
   const handleSave = async () => {
-    if (!formData.title.trim()) return
+    if (!formData || !formData.title || !formData.title.trim()) return
 
     try {
       const result = await addChecklistItem(
@@ -119,7 +119,7 @@ export function ChecklistManager({ currentUser }: ChecklistManagerProps) {
   }
 
   const handleUpdate = async () => {
-    if (!currentItem || !formData.title.trim()) return
+    if (!currentItem || !formData || !formData.title || !formData.title.trim()) return
 
     try {
       const result = await updateChecklistItem(

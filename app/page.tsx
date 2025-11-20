@@ -8,17 +8,18 @@ import { calculateLeaderboard } from "@/lib/utils-leaderboard"
 import { getEvaluationsServer } from "@/lib/supabase-data-server"
 import { LeafIcon } from "@/components/icons"
 import type { ClassroomScore } from "@/lib/types"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 const FloatingLeaf = ({ delay = 0, x = 0 }: { delay?: number, x?: number }) => (
   <motion.div
     className="absolute text-primary/20"
     initial={{ y: -20, x, opacity: 0 }}
-    animate={{ 
+    animate={{
       y: [null, 100, 0],
       x: [null, x + 20, x - 10, x],
       opacity: [0, 0.6, 0.3, 0]
     }}
-    transition={{ 
+    transition={{
       duration: 8,
       delay,
       repeat: Infinity,
@@ -58,13 +59,13 @@ export default function HomePage() {
         </div>
 
         {/* Animated Hero Section */}
-        <motion.div 
+        <motion.div
           className="text-center mb-16 relative z-10"
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, ease: "easeOut" }}
         >
-          <motion.div 
+          <motion.div
             className="inline-flex items-center justify-center gap-3 mb-6"
             initial={{ scale: 0.8 }}
             animate={{ scale: 1 }}
@@ -80,7 +81,7 @@ export default function HomePage() {
               Green Classrooms
             </h1>
           </motion.div>
-          <motion.p 
+          <motion.p
             className="text-xl text-muted-foreground max-w-2xl mx-auto"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -101,7 +102,7 @@ export default function HomePage() {
             </motion.div>
           </div>
         ) : leaderboard.length === 0 ? (
-          <motion.div 
+          <motion.div
             className="text-center py-12"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -109,30 +110,58 @@ export default function HomePage() {
             <p className="text-muted-foreground">No evaluations yet. Check back soon!</p>
           </motion.div>
         ) : (
-          <motion.div 
-            className="max-w-4xl mx-auto space-y-3 mb-16 relative z-10"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.6 }}
-          >
-            {leaderboard.map((classroom, index) => (
-              <motion.div
-                key={`${classroom.classroom.id}-${index}`}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.7 + index * 0.1, duration: 0.5 }}
-              >
-                <SimpleClassroomCard 
-                  classroom={classroom} 
-                  rank={index + 1} 
-                />
-              </motion.div>
-            ))}
-          </motion.div>
+          <Tabs defaultValue="all" className="w-full max-w-4xl mx-auto mb-16 relative z-10">
+            <div className="flex justify-center mb-8">
+              <TabsList className="grid grid-cols-2 md:grid-cols-5 h-auto">
+                <TabsTrigger value="all">All</TabsTrigger>
+                <TabsTrigger value="High School">High School</TabsTrigger>
+                <TabsTrigger value="Intermediate">Intermediate</TabsTrigger>
+                <TabsTrigger value="Kindergarten">Kindergarten</TabsTrigger>
+                <TabsTrigger value="Preschool">Preschool</TabsTrigger>
+              </TabsList>
+            </div>
+
+            {["all", "High School", "Intermediate", "Kindergarten", "Preschool"].map((division) => {
+              const filteredLeaderboard = division === "all"
+                ? leaderboard
+                : leaderboard.filter(c => c.classroom.division === division);
+
+              return (
+                <TabsContent key={division} value={division}>
+                  <motion.div
+                    className="space-y-3"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.6 }}
+                  >
+                    {filteredLeaderboard.length === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        No classrooms found in this division.
+                      </div>
+                    ) : (
+                      filteredLeaderboard.map((classroom, index) => (
+                        <motion.div
+                          key={`${classroom.classroom.id}-${division}-${index}`}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: 0.1 * index, duration: 0.5 }}
+                        >
+                          <SimpleClassroomCard
+                            classroom={classroom}
+                            rank={index + 1}
+                          />
+                        </motion.div>
+                      ))
+                    )}
+                  </motion.div>
+                </TabsContent>
+              );
+            })}
+          </Tabs>
         )}
 
         {/* Simple How It Works */}
-        <motion.div 
+        <motion.div
           className="max-w-3xl mx-auto mb-16 relative z-10"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -143,7 +172,7 @@ export default function HomePage() {
             <p className="text-muted-foreground mb-4">
               The Supervisors Evaluate Each Classroom Using Smart, Eco-Focused Criteria — From Efficient Energy Use and Intelligent Waste Management to Innovative Environmental Care Practices.
             </p>
-            <motion.p 
+            <motion.p
               className="text-primary font-medium"
               animate={{ scale: [1, 1.05, 1] }}
               transition={{ duration: 2, repeat: Infinity }}

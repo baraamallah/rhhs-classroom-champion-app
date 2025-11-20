@@ -2,6 +2,7 @@ export interface Classroom {
   id: string
   name: string
   grade: string
+  division?: string // 'High School' | 'Intermediate' | 'Kindergarten' | 'Preschool'
   description?: string
   // supervisor_id is deprecated in favor of supervisors array
   supervisor_id?: string
@@ -68,6 +69,7 @@ export interface Evaluation {
   classroom?: {
     name: string
     grade: string
+    division?: string
   }
   supervisor?: {
     name: string
@@ -104,6 +106,7 @@ export interface ClassroomScore {
     id: string
     name: string
     grade: string
+    division?: string
   }
   totalScore: number
   evaluationCount: number

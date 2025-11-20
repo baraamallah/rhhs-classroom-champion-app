@@ -4,7 +4,7 @@ export function calculateLeaderboard(evaluations: Evaluation[]): ClassroomScore[
   const scoreMap = new Map<
     string,
     {
-      classroom: { id: string; name: string; grade: string }
+      classroom: { id: string; name: string; grade: string; division?: string }
       total: number
       count: number
       lastDate: string
@@ -16,7 +16,12 @@ export function calculateLeaderboard(evaluations: Evaluation[]): ClassroomScore[
     if (!evaluation.classroom) return
 
     const existing = scoreMap.get(evaluation.classroom_id) || {
-      classroom: evaluation.classroom,
+      classroom: {
+        id: evaluation.classroom_id,
+        name: evaluation.classroom.name,
+        grade: evaluation.classroom.grade,
+        division: evaluation.classroom.division,
+      },
       total: 0,
       count: 0,
       lastDate: evaluation.evaluation_date,
@@ -61,21 +66,21 @@ export function getScoreColor(score: number): string {
 }
 
 export function getScoreRange(score: number): { label: string; color: string } {
-  if (score >= 90) return { 
-    label: "Excellent", 
-    color: "bg-yellow-100 text-yellow-700 border-yellow-200 dark:bg-yellow-400/10 dark:text-yellow-400 dark:border-yellow-400/20" 
+  if (score >= 90) return {
+    label: "Excellent",
+    color: "bg-yellow-100 text-yellow-700 border-yellow-200 dark:bg-yellow-400/10 dark:text-yellow-400 dark:border-yellow-400/20"
   }
-  if (score >= 75) return { 
-    label: "Good", 
-    color: "bg-green-100 text-green-700 border-green-200 dark:bg-green-400/10 dark:text-green-400 dark:border-green-400/20" 
+  if (score >= 75) return {
+    label: "Good",
+    color: "bg-green-100 text-green-700 border-green-200 dark:bg-green-400/10 dark:text-green-400 dark:border-green-400/20"
   }
-  if (score >= 60) return { 
-    label: "Fair", 
-    color: "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-400/10 dark:text-blue-400 dark:border-blue-400/20" 
+  if (score >= 60) return {
+    label: "Fair",
+    color: "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-400/10 dark:text-blue-400 dark:border-blue-400/20"
   }
-  return { 
-    label: "Needs Improvement", 
-    color: "bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-400/10 dark:text-gray-400 dark:border-gray-400/20" 
+  return {
+    label: "Needs Improvement",
+    color: "bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-400/10 dark:text-gray-400 dark:border-gray-400/20"
   }
 }
 
@@ -89,21 +94,21 @@ export function calculateProgramStats(evaluations: Evaluation[]): {
   recentActivityCount: number
 } {
   const leaderboard = calculateLeaderboard(evaluations)
-  
+
   // Calculate total classrooms
   const totalClassrooms = leaderboard.length
-  
+
   // Calculate total evaluations
   const totalEvaluations = evaluations.length
-  
+
   // Calculate average score across all evaluations
-  const averageScore = totalEvaluations > 0 
+  const averageScore = totalEvaluations > 0
     ? Math.round(evaluations.reduce((sum, evaluation) => sum + evaluation.total_score, 0) / totalEvaluations)
     : 0
-  
+
   // Find most improved classroom (simplified - could be enhanced with historical data)
   const mostImprovedClassroom = leaderboard.length > 0 ? leaderboard[0] : null
-  
+
   // Find top performing grade level
   const gradeStats = new Map<string, { total: number; count: number }>()
   leaderboard.forEach(score => {
@@ -114,7 +119,7 @@ export function calculateProgramStats(evaluations: Evaluation[]): {
       count: existing.count + 1
     })
   })
-  
+
   let topGradeLevel: string | null = null
   let highestGradeAverage = 0
   gradeStats.forEach((stats, grade) => {
@@ -124,14 +129,14 @@ export function calculateProgramStats(evaluations: Evaluation[]): {
       topGradeLevel = grade
     }
   })
-  
+
   // Count recent activity (last 7 days)
   const sevenDaysAgo = new Date()
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
-  const recentActivityCount = evaluations.filter(evaluation => 
+  const recentActivityCount = evaluations.filter(evaluation =>
     new Date(evaluation.evaluation_date) >= sevenDaysAgo
   ).length
-  
+
   return {
     totalClassrooms,
     totalEvaluations,
@@ -154,7 +159,7 @@ export function getGradeLevelStats(leaderboard: ClassroomScore[]): Array<{
   classroomCount: number
 }> {
   const gradeMap = new Map<string, { total: number; count: number }>()
-  
+
   leaderboard.forEach(score => {
     const grade = score.classroom.grade
     const existing = gradeMap.get(grade) || { total: 0, count: 0 }
@@ -163,7 +168,7 @@ export function getGradeLevelStats(leaderboard: ClassroomScore[]): Array<{
       count: existing.count + 1
     })
   })
-  
+
   return Array.from(gradeMap.entries())
     .map(([grade, stats]) => ({
       grade,

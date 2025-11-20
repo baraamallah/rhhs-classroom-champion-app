@@ -22,6 +22,7 @@ interface ClassroomManagementProps {
 interface ClassroomFormData {
   name: string
   grade: string
+  division: string
   description: string
   supervisorIds: string[]
 }
@@ -38,6 +39,7 @@ export function ClassroomManagement({ currentUser }: ClassroomManagementProps) {
   const [formData, setFormData] = useState<ClassroomFormData>({
     name: "",
     grade: "",
+    division: "",
     description: "",
     supervisorIds: [],
   })
@@ -111,6 +113,7 @@ export function ClassroomManagement({ currentUser }: ClassroomManagementProps) {
     const result = await createClassroom(
       formData.name,
       formData.grade,
+      formData.division,
       formData.description || undefined,
       formData.supervisorIds,
       currentUser.id
@@ -121,7 +124,7 @@ export function ClassroomManagement({ currentUser }: ClassroomManagementProps) {
         title: "Success",
         description: "Classroom created successfully",
       })
-      setFormData({ name: "", grade: "", description: "", supervisorIds: [] })
+      setFormData({ name: "", grade: "", division: "", description: "", supervisorIds: [] })
       setIsAdding(false)
       loadClassrooms()
     } else {
@@ -140,6 +143,7 @@ export function ClassroomManagement({ currentUser }: ClassroomManagementProps) {
     setFormData({
       name: classroom.name,
       grade: classroom.grade,
+      division: classroom.division || "",
       description: classroom.description || "",
       supervisorIds: classroom.supervisors?.map(s => s.id) || [],
     })
@@ -155,6 +159,7 @@ export function ClassroomManagement({ currentUser }: ClassroomManagementProps) {
       editingId,
       formData.name,
       formData.grade,
+      formData.division,
       formData.description || undefined,
       formData.supervisorIds
     )
@@ -165,7 +170,7 @@ export function ClassroomManagement({ currentUser }: ClassroomManagementProps) {
         description: "Classroom updated successfully",
       })
       setEditingId(null)
-      setFormData({ name: "", grade: "", description: "", supervisorIds: [] })
+      setFormData({ name: "", grade: "", division: "", description: "", supervisorIds: [] })
       loadClassrooms()
     } else {
       toast({
@@ -201,13 +206,13 @@ export function ClassroomManagement({ currentUser }: ClassroomManagementProps) {
   const handleCancel = () => {
     setEditingId(null)
     setIsAdding(false)
-    setFormData({ name: "", grade: "", description: "", supervisorIds: [] })
+    setFormData({ name: "", grade: "", division: "", description: "", supervisorIds: [] })
   }
 
   const handleAddNew = () => {
     setIsAdding(true)
     setEditingId(null)
-    setFormData({ name: "", grade: "", description: "", supervisorIds: [] })
+    setFormData({ name: "", grade: "", division: "", description: "", supervisorIds: [] })
   }
 
   return (
@@ -255,6 +260,23 @@ export function ClassroomManagement({ currentUser }: ClassroomManagementProps) {
                     placeholder="Grade 5"
                     required
                   />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="division">Division</Label>
+                  <Select
+                    value={formData.division}
+                    onValueChange={(value) => setFormData({ ...formData, division: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select division" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Preschool">Preschool</SelectItem>
+                      <SelectItem value="Kindergarten">Kindergarten</SelectItem>
+                      <SelectItem value="Intermediate">Intermediate</SelectItem>
+                      <SelectItem value="High School">High School</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2 md:col-span-2">
                   <Label htmlFor="description">Description</Label>
@@ -348,6 +370,23 @@ export function ClassroomManagement({ currentUser }: ClassroomManagementProps) {
                             required
                           />
                         </div>
+                        <div className="space-y-2">
+                          <Label htmlFor={`edit-division-${classroom.id}`}>Division</Label>
+                          <Select
+                            value={formData.division}
+                            onValueChange={(value) => setFormData({ ...formData, division: value })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select division" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Preschool">Preschool</SelectItem>
+                              <SelectItem value="Kindergarten">Kindergarten</SelectItem>
+                              <SelectItem value="Intermediate">Intermediate</SelectItem>
+                              <SelectItem value="High School">High School</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
                         <div className="space-y-2 md:col-span-2">
                           <Label htmlFor={`edit-description-${classroom.id}`}>Description</Label>
                           <Textarea
@@ -417,6 +456,11 @@ export function ClassroomManagement({ currentUser }: ClassroomManagementProps) {
                           <div className="flex items-center gap-2">
                             <p className="font-medium text-foreground">{classroom.name}</p>
                             <span className="text-sm text-muted-foreground">{classroom.grade}</span>
+                            {classroom.division && (
+                              <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+                                {classroom.division}
+                              </span>
+                            )}
                           </div>
                           {classroom.description && (
                             <p className="text-sm text-muted-foreground">{classroom.description}</p>

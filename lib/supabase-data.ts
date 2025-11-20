@@ -34,27 +34,7 @@ export async function getClassrooms(): Promise<Classroom[]> {
   }
 }
 
-export async function getClassroomsBySupervisor(supervisorId: string): Promise<Classroom[]> {
-  try {
-    const supabase = createClient()
-    const { data, error } = await supabase
-      .from("classrooms")
-      .select("*")
-      .eq("supervisor_id", supervisorId)
-      .eq("is_active", true)
-      .order("name")
-
-    if (error) {
-      console.error("[v0] Error fetching classrooms by supervisor:", error)
-      return []
-    }
-    return data || []
-  } catch (error) {
-    console.error("[v0] Exception fetching classrooms by supervisor:", error)
-    return []
-  }
-}
-
+// Checklist items functions
 export async function getChecklistItems(): Promise<ChecklistItem[]> {
   try {
     const supabase = createClient()
@@ -73,7 +53,6 @@ export async function getChecklistItems(): Promise<ChecklistItem[]> {
 
     if (error) {
       console.error("[v0] Error fetching checklist items:", error)
-      console.error("[v0] Error details:", JSON.stringify(error, null, 2))
       return []
     }
 
@@ -88,96 +67,6 @@ export async function getChecklistItems(): Promise<ChecklistItem[]> {
   }
 }
 
-export async function getEvaluations(): Promise<Evaluation[]> {
-  try {
-    const supabase = createClient()
-    const { data, error } = await supabase
-      .from("evaluations")
-      .select(`
-        id,
-        classroom_id,
-        supervisor_id,
-        evaluation_date,
-        items,
-        total_score,
-        max_score,
-        created_at,
-        classrooms:classroom_id (
-          name,
-          grade
-        ),
-        users:supervisor_id (
-          name,
-          email
-        )
-      `)
-      .order("evaluation_date", { ascending: false })
-
-    if (error) {
-      console.error("[v0] Error fetching evaluations:", error)
-      return []
-    }
-
-    if (!data) return []
-
-    return data.map((row: any) => ({
-      id: row.id,
-      classroom_id: row.classroom_id,
-      supervisor_id: row.supervisor_id,
-      evaluation_date: row.evaluation_date,
-      items: row.items,
-      total_score: row.total_score,
-      max_score: row.max_score,
-      created_at: row.created_at,
-      classroom: row.classrooms
-        ? {
-          name: row.classrooms.name,
-          grade: row.classrooms.grade ?? "",
-        }
-        : undefined,
-      supervisor: row.users
-        ? {
-          name: row.users.name,
-          email: row.users.email ?? "",
-        }
-        : undefined,
-    }))
-  } catch (error) {
-    console.error("[v0] Exception fetching evaluations:", error)
-    return []
-  }
-}
-
-export async function submitEvaluation(
-  classroomId: string,
-  supervisorId: string,
-  checkedItems: Record<string, boolean>,
-  totalScore: number,
-  maxScore: number,
-  notes?: string,
-): Promise<{ success: boolean; error?: string }> {
-  try {
-    const supabase = createClient()
-    const { error } = await supabase.from("evaluations").insert({
-      classroom_id: classroomId,
-      supervisor_id: supervisorId,
-      items: checkedItems,
-      total_score: totalScore,
-      max_score: maxScore,
-      notes: notes || null,
-    })
-
-    if (error) {
-      console.error("[v0] Error submitting evaluation:", error)
-      return { success: false, error: error.message }
-    }
-    return { success: true }
-  } catch (error) {
-    console.error("[v0] Exception submitting evaluation:", error)
-    return { success: false, error: "Failed to submit evaluation" }
-  }
-}
-
 export async function addChecklistItem(
   title: string,
   description: string,
@@ -185,7 +74,7 @@ export async function addChecklistItem(
   category?: string,
   displayOrder?: number,
   createdBy?: string,
-  assignedSupervisorIds?: string[],
+  assignedSupervisorIds?: string[]
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const supabase = createClient()
@@ -216,7 +105,6 @@ export async function addChecklistItem(
 
       if (assignmentError) {
         console.error("[v0] Error adding checklist assignments:", assignmentError)
-        // We don't fail the whole operation if assignments fail, but we log it
       }
     }
 
@@ -235,7 +123,7 @@ export async function updateChecklistItem(
   category?: string,
   displayOrder?: number,
   isActive?: boolean,
-  assignedSupervisorIds?: string[],
+  assignedSupervisorIds?: string[]
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const supabase = createClient()
@@ -301,29 +189,6 @@ export async function deleteChecklistItem(id: string): Promise<{ success: boolea
   }
 }
 
-// User management functions
-export async function getUsersByCreator(creatorId: string): Promise<User[]> {
-  try {
-    const supabase = createClient()
-    // Simplified query without the foreign key relationship
-    const { data, error } = await supabase
-      .from("users")
-      .select("*")
-      .eq("created_by", creatorId)
-      .eq("is_active", true)
-      .order("created_at", { ascending: false })
-
-    if (error) {
-      console.error("[v0] Error fetching users by creator:", error)
-      return []
-    }
-    return data || []
-  } catch (error) {
-    console.error("[v0] Exception fetching users by creator:", error)
-    return []
-  }
-}
-
 export async function getAllUsers(): Promise<{ success: boolean; data: User[]; error?: string }> {
   try {
     const supabase = createClient()
@@ -348,9 +213,9 @@ export async function getAllUsers(): Promise<{ success: boolean; data: User[]; e
 export async function createClassroom(
   name: string,
   grade: string,
-  description?: string,
-  supervisorIds?: string[],
-  createdBy?: string,
+  division: string,
+  description: string,
+  supervisorIds: string[]
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const supabase = createClient()
@@ -358,6 +223,7 @@ export async function createClassroom(
     const { data: newClassroom, error } = await supabase.from("classrooms").insert({
       name,
       grade,
+      division: division || null,
       description: description || null,
     }).select().single()
 
@@ -393,13 +259,17 @@ export async function updateClassroom(
   id: string,
   name: string,
   grade: string,
-  description?: string,
+  division: string,
+  description: string,
   supervisorIds?: string[],
-  isActive?: boolean,
+  isActive?: boolean
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const supabase = createClient()
     const updateData: any = { name, grade }
+
+    // Only include division if it's not empty to avoid violating the constraint
+    if (division) updateData.division = division
 
     if (description !== undefined) updateData.description = description
     if (isActive !== undefined) updateData.is_active = isActive
@@ -502,6 +372,66 @@ export async function getSystemSettings(): Promise<SystemSetting[]> {
 }
 
 // Statistics and analytics functions
+export async function getEvaluations(): Promise<Evaluation[]> {
+  try {
+    const supabase = createClient()
+    const { data, error } = await supabase
+      .from("evaluations")
+      .select(`
+        id,
+        classroom_id,
+        supervisor_id,
+        evaluation_date,
+        items,
+        total_score,
+        max_score,
+        created_at,
+        classrooms:classroom_id (
+          name,
+          grade
+        ),
+        users:supervisor_id (
+          name,
+          email
+        )
+      `)
+      .order("evaluation_date", { ascending: false })
+
+    if (error) {
+      console.error("[v0] Error fetching evaluations:", error)
+      return []
+    }
+
+    if (!data) return []
+
+    return data.map((row: any) => ({
+      id: row.id,
+      classroom_id: row.classroom_id,
+      supervisor_id: row.supervisor_id,
+      evaluation_date: row.evaluation_date,
+      items: row.items,
+      total_score: row.total_score,
+      max_score: row.max_score,
+      created_at: row.created_at,
+      classroom: row.classrooms
+        ? {
+          name: row.classrooms.name,
+          grade: row.classrooms.grade ?? "",
+        }
+        : undefined,
+      supervisor: row.users
+        ? {
+          name: row.users.name,
+          email: row.users.email ?? "",
+        }
+        : undefined,
+    }))
+  } catch (error) {
+    console.error("[v0] Exception fetching evaluations:", error)
+    return []
+  }
+}
+
 export async function getEvaluationsBySupervisor(supervisorId: string): Promise<Evaluation[]> {
   try {
     const supabase = createClient()
