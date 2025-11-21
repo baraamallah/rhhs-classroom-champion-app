@@ -2,7 +2,7 @@ export interface Classroom {
   id: string
   name: string
   grade: string
-  division?: string // 'High School' | 'Intermediate' | 'Kindergarten' | 'Preschool'
+  division?: 'Pre-School' | 'Elementary' | 'Middle School' | 'High School' | 'Technical Institute'
   description?: string
   // supervisor_id is deprecated in favor of supervisors array
   supervisor_id?: string

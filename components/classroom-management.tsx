@@ -114,9 +114,8 @@ export function ClassroomManagement({ currentUser }: ClassroomManagementProps) {
       formData.name,
       formData.grade,
       formData.division,
-      formData.description || undefined,
-      formData.supervisorIds,
-      currentUser.id
+      formData.description,
+      formData.supervisorIds
     )
 
     if (result.success) {
@@ -160,7 +159,7 @@ export function ClassroomManagement({ currentUser }: ClassroomManagementProps) {
       formData.name,
       formData.grade,
       formData.division,
-      formData.description || undefined,
+      formData.description,
       formData.supervisorIds
     )
 
@@ -271,10 +270,11 @@ export function ClassroomManagement({ currentUser }: ClassroomManagementProps) {
                       <SelectValue placeholder="Select division" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Preschool">Preschool</SelectItem>
-                      <SelectItem value="Kindergarten">Kindergarten</SelectItem>
-                      <SelectItem value="Intermediate">Intermediate</SelectItem>
+                      <SelectItem value="Pre-School">Pre-School</SelectItem>
+                      <SelectItem value="Elementary">Elementary</SelectItem>
+                      <SelectItem value="Middle School">Middle School</SelectItem>
                       <SelectItem value="High School">High School</SelectItem>
+                      <SelectItem value="Technical Institute">Technical Institute</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -348,6 +348,7 @@ export function ClassroomManagement({ currentUser }: ClassroomManagementProps) {
                 <div key={classroom.id} className="border border-border rounded-lg bg-card">
                   {editingId === classroom.id ? (
                     // Inline edit form
+
                     <div className="p-4 space-y-4">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
@@ -380,10 +381,11 @@ export function ClassroomManagement({ currentUser }: ClassroomManagementProps) {
                               <SelectValue placeholder="Select division" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="Preschool">Preschool</SelectItem>
-                              <SelectItem value="Kindergarten">Kindergarten</SelectItem>
-                              <SelectItem value="Intermediate">Intermediate</SelectItem>
+                              <SelectItem value="Pre-School">Pre-School</SelectItem>
+                              <SelectItem value="Elementary">Elementary</SelectItem>
+                              <SelectItem value="Middle School">Middle School</SelectItem>
                               <SelectItem value="High School">High School</SelectItem>
+                              <SelectItem value="Technical Institute">Technical Institute</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
@@ -517,7 +519,7 @@ export function ClassroomManagement({ currentUser }: ClassroomManagementProps) {
             </div>
           )}
         </div>
-      </CardContent>
-    </Card>
+      </CardContent >
+    </Card >
   )
 }

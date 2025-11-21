@@ -112,16 +112,17 @@ export default function HomePage() {
         ) : (
           <Tabs defaultValue="all" className="w-full max-w-4xl mx-auto mb-16 relative z-10">
             <div className="flex justify-center mb-8">
-              <TabsList className="grid grid-cols-2 md:grid-cols-5 h-auto">
+              <TabsList className="grid grid-cols-3 md:grid-cols-6 h-auto">
                 <TabsTrigger value="all">All</TabsTrigger>
+                <TabsTrigger value="Pre-School">Pre-School</TabsTrigger>
+                <TabsTrigger value="Elementary">Elementary</TabsTrigger>
+                <TabsTrigger value="Middle School">Middle School</TabsTrigger>
                 <TabsTrigger value="High School">High School</TabsTrigger>
-                <TabsTrigger value="Intermediate">Intermediate</TabsTrigger>
-                <TabsTrigger value="Kindergarten">Kindergarten</TabsTrigger>
-                <TabsTrigger value="Preschool">Preschool</TabsTrigger>
+                <TabsTrigger value="Technical Institute">Technical Institute</TabsTrigger>
               </TabsList>
             </div>
 
-            {["all", "High School", "Intermediate", "Kindergarten", "Preschool"].map((division) => {
+            {["all", "Pre-School", "Elementary", "Middle School", "High School", "Technical Institute"].map((division) => {
               const filteredLeaderboard = division === "all"
                 ? leaderboard
                 : leaderboard.filter(c => c.classroom.division === division);
