@@ -34,6 +34,37 @@ export async function getClassrooms(): Promise<Classroom[]> {
   }
 }
 
+export async function getClassroomsBySupervisor(supervisorId: string): Promise<Classroom[]> {
+  try {
+    const supabase = createClient()
+    const { data, error } = await supabase
+      .from("classrooms")
+      .select(`
+        *,
+        classroom_supervisors!inner(
+          supervisor_id,
+          users!classroom_supervisors_supervisor_id_fkey(id, name, email)
+        )
+      `)
+      .eq("classroom_supervisors.supervisor_id", supervisorId)
+      .eq("is_active", true)
+      .order("name")
+
+    if (error) {
+      console.error("[v0] Error fetching classrooms by supervisor:", error)
+      return []
+    }
+
+    return (data || []).map((classroom: any) => ({
+      ...classroom,
+      supervisors: classroom.classroom_supervisors?.map((s: any) => s.users) || []
+    }))
+  } catch (error) {
+    console.error("[v0] Exception fetching classrooms by supervisor:", error)
+    return []
+  }
+}
+
 // Checklist items functions
 export async function getChecklistItems(): Promise<ChecklistItem[]> {
   try {
@@ -372,6 +403,42 @@ export async function getSystemSettings(): Promise<SystemSetting[]> {
 }
 
 // Statistics and analytics functions
+export async function submitEvaluation(
+  classroomId: string,
+  supervisorId: string,
+  checkedItemIds: string[],
+  totalScore: number,
+  maxScore: number
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const supabase = createClient()
+
+    const itemsMap = checkedItemIds.reduce((acc, id) => {
+      acc[id] = true
+      return acc
+    }, {} as Record<string, boolean>)
+
+    const { error } = await supabase.from("evaluations").insert({
+      classroom_id: classroomId,
+      supervisor_id: supervisorId,
+      items: itemsMap,
+      total_score: totalScore,
+      max_score: maxScore,
+      evaluation_date: new Date().toISOString().split("T")[0],
+    })
+
+    if (error) {
+      console.error("[v0] Error submitting evaluation:", error)
+      return { success: false, error: error.message }
+    }
+
+    return { success: true }
+  } catch (error) {
+    console.error("[v0] Exception submitting evaluation:", error)
+    return { success: false, error: "Failed to submit evaluation" }
+  }
+}
+
 export async function getEvaluations(): Promise<Evaluation[]> {
   try {
     const supabase = createClient()
@@ -388,7 +455,8 @@ export async function getEvaluations(): Promise<Evaluation[]> {
         created_at,
         classrooms:classroom_id (
           name,
-          grade
+          grade,
+          division
         ),
         users:supervisor_id (
           name,
@@ -417,6 +485,7 @@ export async function getEvaluations(): Promise<Evaluation[]> {
         ? {
           name: row.classrooms.name,
           grade: row.classrooms.grade ?? "",
+          division: row.classrooms.division,
         }
         : undefined,
       supervisor: row.users
@@ -448,7 +517,8 @@ export async function getEvaluationsBySupervisor(supervisorId: string): Promise<
         created_at,
         classrooms:classroom_id (
           name,
-          grade
+          grade,
+          division
         ),
         users:supervisor_id (
           name,
@@ -478,6 +548,7 @@ export async function getEvaluationsBySupervisor(supervisorId: string): Promise<
         ? {
           name: row.classrooms.name,
           grade: row.classrooms.grade ?? "",
+          division: row.classrooms.division,
         }
         : undefined,
       supervisor: row.users
@@ -509,7 +580,8 @@ export async function getEvaluationsByDateRange(startDate: string, endDate: stri
         created_at,
         classrooms:classroom_id (
           name,
-          grade
+          grade,
+          division
         ),
         users:supervisor_id (
           name,
@@ -540,6 +612,7 @@ export async function getEvaluationsByDateRange(startDate: string, endDate: stri
         ? {
           name: row.classrooms.name,
           grade: row.classrooms.grade ?? "",
+          division: row.classrooms.division,
         }
         : undefined,
       supervisor: row.users

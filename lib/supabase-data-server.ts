@@ -35,7 +35,8 @@ export async function getEvaluationsServer(): Promise<Evaluation[]> {
         created_at,
         classrooms:classroom_id (
           name,
-          grade
+          grade,
+          division
         ),
         users:supervisor_id (
           name,
@@ -62,16 +63,17 @@ export async function getEvaluationsServer(): Promise<Evaluation[]> {
       created_at: row.created_at,
       classroom: row.classrooms
         ? {
-            id: row.classroom_id,
-            name: row.classrooms.name,
-            grade: row.classrooms.grade ?? "",
-          }
+          id: row.classroom_id,
+          name: row.classrooms.name,
+          grade: row.classrooms.grade ?? "",
+          division: row.classrooms.division,
+        }
         : undefined,
       supervisor: row.users
         ? {
-            name: row.users.name,
-            email: row.users.email ?? "",
-          }
+          name: row.users.name,
+          email: row.users.email ?? "",
+        }
         : undefined,
     }))
   } catch (err) {

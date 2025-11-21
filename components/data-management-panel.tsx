@@ -21,8 +21,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast"
-import { archiveAndReset, deleteEvaluation, deleteClassroom, archiveEvaluation, getAllEvaluationsForManagement } from "@/app/actions/data-management-actions"
-import { Loader2, Trash2, Archive, Search } from "lucide-react"
+import { archiveAndReset, deleteEvaluation, deleteClassroom, archiveEvaluation, getAllEvaluationsForManagement, getArchivedEvaluations } from "@/app/actions/data-management-actions"
+import { Loader2, Trash2, Archive, Search, History } from "lucide-react"
 
 interface EvaluationData {
   id: string
@@ -50,17 +50,26 @@ export function DataManagementPanel() {
   const [evaluationId, setEvaluationId] = useState("")
   const [classroomId, setClassroomId] = useState("")
   const [evaluations, setEvaluations] = useState<EvaluationData[]>([])
+  const [archivedEvaluations, setArchivedEvaluations] = useState<any[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedEvaluation, setSelectedEvaluation] = useState<string>("")
 
   useEffect(() => {
     loadEvaluations()
+    loadArchivedEvaluations()
   }, [])
 
   const loadEvaluations = async () => {
     const result = await getAllEvaluationsForManagement()
     if (result.success && result.data) {
       setEvaluations(result.data as EvaluationData[])
+    }
+  }
+
+  const loadArchivedEvaluations = async () => {
+    const result = await getArchivedEvaluations()
+    if (result.success && result.data) {
+      setArchivedEvaluations(result.data)
     }
   }
 
@@ -90,7 +99,11 @@ export function DataManagementPanel() {
       setEvaluationId("")
       setClassroomId("")
       setSelectedEvaluation("")
+      setEvaluationId("")
+      setClassroomId("")
+      setSelectedEvaluation("")
       loadEvaluations()
+      loadArchivedEvaluations()
     } else {
       toast({
         title: "Error",
@@ -154,7 +167,9 @@ export function DataManagementPanel() {
         description: result.message,
       })
       setSelectedEvaluation("")
+      setSelectedEvaluation("")
       loadEvaluations()
+      loadArchivedEvaluations()
     } else {
       toast({
         title: "Error",
@@ -395,6 +410,56 @@ export function DataManagementPanel() {
           </AlertDialogAction>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <History className="h-5 w-5" />
+            Archived Evaluations
+          </CardTitle>
+          <CardDescription>
+            View previously archived evaluations.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="rounded-md border">
+              <div className="p-4">
+                <p className="text-sm text-muted-foreground mb-4">
+                  Total Archived: {archivedEvaluations.length}
+                </p>
+                {archivedEvaluations.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">No archived evaluations found.</p>
+                ) : (
+                  <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                    {archivedEvaluations.map((evalItem) => (
+                      <div key={evalItem.id} className="flex justify-between items-center p-2 border rounded hover:bg-muted/50">
+                        <div>
+                          <p className="font-medium text-sm">
+                            Date: {new Date(evalItem.evaluation_date).toLocaleDateString()}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Score: {evalItem.total_score}/{evalItem.max_score}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs text-muted-foreground">
+                            Archived: {new Date(evalItem.archived_at).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+            <Button variant="outline" onClick={loadArchivedEvaluations} disabled={loading} size="sm">
+              <History className="mr-2 h-4 w-4" />
+              Refresh Archive
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div >
   )
 }

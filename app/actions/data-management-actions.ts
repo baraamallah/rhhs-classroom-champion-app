@@ -275,3 +275,33 @@ export async function getAllEvaluationsForManagement() {
     return { success: false, error: "Failed to fetch evaluations", data: [] }
   }
 }
+
+export async function getArchivedEvaluations() {
+  const { currentUser, error } = await requireSuperAdmin()
+  if (error || !currentUser) {
+    return { success: false, error, data: [] }
+  }
+
+  const supabase = await createClient()
+
+  try {
+    const { data, error: fetchError } = await supabase
+      .from("archive_evaluations")
+      .select("*")
+      .order("archived_at", { ascending: false })
+
+    if (fetchError) {
+      console.error("[data-management-actions] getArchivedEvaluations error", fetchError)
+      return { success: false, error: "Failed to fetch archived evaluations", data: [] }
+    }
+
+    // Since archive tables don't have relations set up in the same way, we might need to fetch classroom names manually
+    // or just return the raw data. For now, let's return raw data.
+    // Ideally, we would join with archive_classrooms if we had that data there too.
+
+    return { success: true, data: data || [] }
+  } catch (dbError: any) {
+    console.error("[data-management-actions] getArchivedEvaluations error", dbError)
+    return { success: false, error: "Failed to fetch archived evaluations", data: [] }
+  }
+}
