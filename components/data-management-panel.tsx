@@ -4,13 +4,7 @@ import { useState, useEffect, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,7 +15,13 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast"
-import { archiveAndReset, deleteEvaluation, deleteClassroom, archiveEvaluation, getAllEvaluationsForManagement, getArchivedEvaluations } from "@/app/actions/data-management-actions"
+import {
+  deleteEvaluation,
+  deleteClassroom,
+  archiveEvaluations,
+  getAllEvaluationsForManagement,
+  getArchivedEvaluations,
+} from "@/app/actions/data-management-actions"
 import { Loader2, Trash2, Archive, Search, History } from "lucide-react"
 
 interface EvaluationData {
@@ -42,17 +42,18 @@ export function DataManagementPanel() {
     type: "evaluation" | "classroom" | null
     id: string
   }>({ open: false, type: null, id: "" })
-  const [archiveDialog, setArchiveDialog] = useState(false)
-  const [archiveEvalDialog, setArchiveEvalDialog] = useState<{
+
+  const [archiveDialog, setArchiveDialog] = useState<{
     open: boolean
-    id: string
-  }>({ open: false, id: "" })
+    count: number
+  }>({ open: false, count: 0 })
+
   const [evaluationId, setEvaluationId] = useState("")
   const [classroomId, setClassroomId] = useState("")
   const [evaluations, setEvaluations] = useState<EvaluationData[]>([])
   const [archivedEvaluations, setArchivedEvaluations] = useState<any[]>([])
   const [searchTerm, setSearchTerm] = useState("")
-  const [selectedEvaluation, setSelectedEvaluation] = useState<string>("")
+  const [selectedEvaluations, setSelectedEvaluations] = useState<string[]>([])
 
   useEffect(() => {
     loadEvaluations()
@@ -70,6 +71,12 @@ export function DataManagementPanel() {
     const result = await getArchivedEvaluations()
     if (result.success && result.data) {
       setArchivedEvaluations(result.data)
+    } else if (result.error) {
+      toast({
+        title: "Error loading archive",
+        description: result.error,
+        variant: "destructive",
+      })
     }
   }
 
@@ -85,29 +92,42 @@ export function DataManagementPanel() {
     )
   }, [evaluations, searchTerm])
 
-  const handleArchiveAndReset = async () => {
+  const handleSelectAll = () => {
+    if (selectedEvaluations.length === filteredEvaluations.length) {
+      setSelectedEvaluations([])
+    } else {
+      setSelectedEvaluations(filteredEvaluations.map((e) => e.id))
+    }
+  }
+
+  const toggleSelection = (id: string) => {
+    if (selectedEvaluations.includes(id)) {
+      setSelectedEvaluations(selectedEvaluations.filter((e) => e !== id))
+    } else {
+      setSelectedEvaluations([...selectedEvaluations, id])
+    }
+  }
+
+  const handleArchiveSelected = async () => {
+    if (selectedEvaluations.length === 0) return
+
     setLoading(true)
-    const result = await archiveAndReset()
+    const result = await archiveEvaluations(selectedEvaluations)
     setLoading(false)
-    setArchiveDialog(false)
+    setArchiveDialog({ open: false, count: 0 })
 
     if (result.success) {
       toast({
         title: "Success",
         description: result.message,
       })
-      setEvaluationId("")
-      setClassroomId("")
-      setSelectedEvaluation("")
-      setEvaluationId("")
-      setClassroomId("")
-      setSelectedEvaluation("")
+      setSelectedEvaluations([])
       loadEvaluations()
       loadArchivedEvaluations()
     } else {
       toast({
         title: "Error",
-        description: result.error || "Failed to archive and reset data",
+        description: result.error || "Failed to archive evaluations",
         variant: "destructive",
       })
     }
@@ -134,46 +154,11 @@ export function DataManagementPanel() {
         description: result.message,
       })
       setEvaluationId("")
-      setSelectedEvaluation("")
       loadEvaluations()
     } else {
       toast({
         title: "Error",
         description: result.error || "Failed to delete evaluation",
-        variant: "destructive",
-      })
-    }
-  }
-
-  const handleArchiveEvaluation = async () => {
-    const evalId = archiveEvalDialog.id || selectedEvaluation
-    if (!evalId) {
-      toast({
-        title: "Error",
-        description: "Please select an evaluation",
-        variant: "destructive",
-      })
-      return
-    }
-
-    setLoading(true)
-    const result = await archiveEvaluation(evalId)
-    setLoading(false)
-    setArchiveEvalDialog({ open: false, id: "" })
-
-    if (result.success) {
-      toast({
-        title: "Success",
-        description: result.message,
-      })
-      setSelectedEvaluation("")
-      setSelectedEvaluation("")
-      loadEvaluations()
-      loadArchivedEvaluations()
-    } else {
-      toast({
-        title: "Error",
-        description: result.error || "Failed to archive evaluation",
         variant: "destructive",
       })
     }
@@ -212,177 +197,230 @@ export function DataManagementPanel() {
 
   return (
     <div className="space-y-6">
-      <Card className="border-destructive/50">
+      <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Archive className="h-5 w-5" />
-            Archive & Reset
+            Archive Evaluations
           </CardTitle>
           <CardDescription>
-            Move all evaluations and classrooms to archive tables and reset the main tables. This action cannot be
-            undone.
+            Select evaluations to move to the archive. Archived evaluations are removed from the active list but preserved for history.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by classroom, grade, supervisor, or date..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                disabled={loading}
+                className="pl-10"
+              />
+            </div>
+            <Button
+              variant={selectedEvaluations.length > 0 ? "default" : "outline"}
+              onClick={() => setArchiveDialog({ open: true, count: selectedEvaluations.length })}
+              disabled={loading || selectedEvaluations.length === 0}
+            >
+              <Archive className="mr-2 h-4 w-4" />
+              Archive ({selectedEvaluations.length})
+            </Button>
+          </div>
+
+          <div className="border rounded-md">
+            <div className="flex items-center p-3 border-b bg-muted/50">
+              <Checkbox
+                checked={selectedEvaluations.length === filteredEvaluations.length && filteredEvaluations.length > 0}
+                onCheckedChange={handleSelectAll}
+                disabled={loading || filteredEvaluations.length === 0}
+              />
+              <span className="ml-3 text-sm font-medium text-muted-foreground">
+                {selectedEvaluations.length} selected
+              </span>
+            </div>
+            <div className="max-h-[400px] overflow-y-auto">
+              {filteredEvaluations.length === 0 ? (
+                <div className="p-8 text-center text-muted-foreground">
+                  No evaluations found.
+                </div>
+              ) : (
+                filteredEvaluations.map((evaluation) => (
+                  <div
+                    key={evaluation.id}
+                    className="flex items-center p-3 border-b last:border-0 hover:bg-muted/30 transition-colors"
+                  >
+                    <Checkbox
+                      checked={selectedEvaluations.includes(evaluation.id)}
+                      onCheckedChange={() => toggleSelection(evaluation.id)}
+                      disabled={loading}
+                    />
+                    <div className="ml-3 flex-1 grid grid-cols-1 md:grid-cols-2 gap-2">
+                      <div>
+                        <p className="font-medium text-sm">
+                          {evaluation.classrooms?.name || "Unknown"}
+                          <span className="text-muted-foreground font-normal ml-1">
+                            ({evaluation.classrooms?.grade || "N/A"})
+                          </span>
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Supervisor: {evaluation.users?.name || "Unknown"}
+                        </p>
+                      </div>
+                      <div className="text-right md:text-left">
+                        <p className="text-sm">
+                          Score: {evaluation.total_score}/{evaluation.max_score}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(evaluation.evaluation_date).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <History className="h-5 w-5" />
+            Archived Evaluations
+          </CardTitle>
+          <CardDescription>
+            View previously archived evaluations.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Button variant="destructive" onClick={() => setArchiveDialog(true)} disabled={loading}>
-            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Archive All Data & Reset
-          </Button>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Archive className="h-5 w-5" />
-            Archive Evaluation
-          </CardTitle>
-          <CardDescription>Archive a specific evaluation. It will be moved to archive table and removed from active data.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input
-              id="evaluation-search"
-              name="evaluation-search"
-              placeholder="Search by classroom, grade, supervisor, or date..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              disabled={loading}
-              className="pl-10"
-            />
+          <div className="space-y-4">
+            <div className="rounded-md border">
+              <div className="p-4">
+                <p className="text-sm text-muted-foreground mb-4">
+                  Total Archived: {archivedEvaluations.length}
+                </p>
+                {archivedEvaluations.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">No archived evaluations found.</p>
+                ) : (
+                  <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                    {archivedEvaluations.map((evalItem) => (
+                      <div
+                        key={evalItem.id}
+                        className="flex justify-between items-center p-2 border rounded hover:bg-muted/50"
+                      >
+                        <div>
+                          <p className="font-medium text-sm">
+                            {evalItem.classrooms?.name || "Unknown Classroom"}{" "}
+                            <span className="text-muted-foreground font-normal">
+                              ({evalItem.classrooms?.grade || "N/A"})
+                            </span>
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Supervisor: {evalItem.users?.name || "Unknown"}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Date: {new Date(evalItem.evaluation_date).toLocaleDateString()}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Score: {evalItem.total_score}/{evalItem.max_score}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs text-muted-foreground">
+                            Archived:{" "}
+                            {evalItem.archived_at ? new Date(evalItem.archived_at).toLocaleDateString() : "N/A"}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+            <Button variant="outline" onClick={loadArchivedEvaluations} disabled={loading} size="sm">
+              <History className="mr-2 h-4 w-4" />
+              Refresh Archive
+            </Button>
           </div>
-          <Select
-            value={selectedEvaluation}
-            onValueChange={(value) => {
-              setSelectedEvaluation(value)
-              setEvaluationId(value)
-            }}
-            disabled={loading}
-            name="evaluation-select"
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select an evaluation to archive" />
-            </SelectTrigger>
-            <SelectContent>
-              {filteredEvaluations.length === 0 && (
-                <div className="p-2 text-sm text-muted-foreground">No evaluations found</div>
-              )}
-              {filteredEvaluations.map((evaluation) => (
-                <SelectItem key={evaluation.id} value={evaluation.id}>
-                  {evaluation.classrooms?.name || "Unknown"} ({evaluation.classrooms?.grade || "N/A"}) -{" "}
-                  {new Date(evaluation.evaluation_date).toLocaleDateString()} - Score: {evaluation.total_score}/{evaluation.max_score}
-                  {evaluation.users?.name && ` - ${evaluation.users.name}`}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button
-            variant="outline"
-            onClick={() => setArchiveEvalDialog({ open: true, id: selectedEvaluation })}
-            disabled={loading || !selectedEvaluation}
-          >
-            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Archive Selected Evaluation
-          </Button>
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Trash2 className="h-5 w-5" />
-            Delete Evaluation
-          </CardTitle>
-          <CardDescription>Permanently delete a specific evaluation by its ID. This action cannot be undone.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <Input
-            id="evaluation-id-delete"
-            name="evaluation-id-delete"
-            placeholder="Enter evaluation ID (UUID)"
-            value={evaluationId}
-            onChange={(e) => setEvaluationId(e.target.value)}
-            disabled={loading}
-          />
-          <Button
-            variant="outline"
-            onClick={() => setDeleteDialog({ open: true, type: "evaluation", id: evaluationId })}
-            disabled={loading || !evaluationId.trim()}
-          >
-            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Delete Evaluation
-          </Button>
-        </CardContent>
-      </Card>
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Trash2 className="h-5 w-5" />
+              Delete Evaluation
+            </CardTitle>
+            <CardDescription>Permanently delete a specific evaluation by its ID.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Input
+              placeholder="Enter evaluation ID (UUID)"
+              value={evaluationId}
+              onChange={(e) => setEvaluationId(e.target.value)}
+              disabled={loading}
+            />
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialog({ open: true, type: "evaluation", id: evaluationId })}
+              disabled={loading || !evaluationId.trim()}
+            >
+              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Delete Evaluation
+            </Button>
+          </CardContent>
+        </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Trash2 className="h-5 w-5" />
-            Delete Classroom
-          </CardTitle>
-          <CardDescription>
-            Delete a specific classroom and all its associated evaluations. This action cannot be undone.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <Input
-            id="classroom-id-delete"
-            name="classroom-id-delete"
-            placeholder="Enter classroom ID (UUID)"
-            value={classroomId}
-            onChange={(e) => setClassroomId(e.target.value)}
-            disabled={loading}
-          />
-          <Button
-            variant="outline"
-            onClick={() => setDeleteDialog({ open: true, type: "classroom", id: classroomId })}
-            disabled={loading || !classroomId.trim()}
-          >
-            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Delete Classroom
-          </Button>
-        </CardContent>
-      </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Trash2 className="h-5 w-5" />
+              Delete Classroom
+            </CardTitle>
+            <CardDescription>
+              Delete a specific classroom and all its associated evaluations.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Input
+              placeholder="Enter classroom ID (UUID)"
+              value={classroomId}
+              onChange={(e) => setClassroomId(e.target.value)}
+              disabled={loading}
+            />
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialog({ open: true, type: "classroom", id: classroomId })}
+              disabled={loading || !classroomId.trim()}
+            >
+              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Delete Classroom
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
 
-      <AlertDialog open={archiveDialog} onOpenChange={setArchiveDialog}>
+      <AlertDialog open={archiveDialog.open} onOpenChange={(open) => setArchiveDialog({ ...archiveDialog, open })}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Archive & Reset Everything?</AlertDialogTitle>
+            <AlertDialogTitle>Archive {archiveDialog.count} Evaluations?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will move all evaluations and classrooms to archive tables and reset the main tables. This action
-              cannot be undone. Are you sure?
+              This will move the selected evaluations to the archive table and remove them from the active list.
+              This action preserves the data for history.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
           <AlertDialogAction
-            onClick={handleArchiveAndReset}
-            disabled={loading}
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-          >
-            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Archive & Reset
-          </AlertDialogAction>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={archiveEvalDialog.open} onOpenChange={(open) => setArchiveEvalDialog({ ...archiveEvalDialog, open })}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Archive Evaluation?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will move the selected evaluation to the archive table and remove it from active data. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction
-            onClick={handleArchiveEvaluation}
+            onClick={handleArchiveSelected}
             disabled={loading}
             className="bg-blue-600 text-white hover:bg-blue-700"
           >
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Archive
+            Archive Selected
           </AlertDialogAction>
         </AlertDialogContent>
       </AlertDialog>
@@ -410,56 +448,6 @@ export function DataManagementPanel() {
           </AlertDialogAction>
         </AlertDialogContent>
       </AlertDialog>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <History className="h-5 w-5" />
-            Archived Evaluations
-          </CardTitle>
-          <CardDescription>
-            View previously archived evaluations.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="rounded-md border">
-              <div className="p-4">
-                <p className="text-sm text-muted-foreground mb-4">
-                  Total Archived: {archivedEvaluations.length}
-                </p>
-                {archivedEvaluations.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-4">No archived evaluations found.</p>
-                ) : (
-                  <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                    {archivedEvaluations.map((evalItem) => (
-                      <div key={evalItem.id} className="flex justify-between items-center p-2 border rounded hover:bg-muted/50">
-                        <div>
-                          <p className="font-medium text-sm">
-                            Date: {new Date(evalItem.evaluation_date).toLocaleDateString()}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            Score: {evalItem.total_score}/{evalItem.max_score}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-xs text-muted-foreground">
-                            Archived: {new Date(evalItem.archived_at).toLocaleDateString()}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-            <Button variant="outline" onClick={loadArchivedEvaluations} disabled={loading} size="sm">
-              <History className="mr-2 h-4 w-4" />
-              Refresh Archive
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    </div >
+    </div>
   )
 }
