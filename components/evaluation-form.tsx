@@ -29,10 +29,20 @@ export function EvaluationForm({ classroom, user, onComplete, onCancel }: Evalua
     const fetchItems = async () => {
       try {
         const items = await getChecklistItems()
-        if (items.length === 0) {
-          setError("No checklist items found. Please contact an administrator to set up the checklist.")
+
+        // Filter items:
+        // 1. If no supervisors are assigned, it's global (visible to all)
+        // 2. If supervisors are assigned, only they can see it
+        const filteredItems = items.filter((item) => {
+          const assignments = item.assigned_supervisors || []
+          if (assignments.length === 0) return true
+          return assignments.some((s) => s.id === user.id)
+        })
+
+        if (filteredItems.length === 0) {
+          setError("No checklist items found for your account. Please contact an administrator.")
         }
-        setChecklistItems(items)
+        setChecklistItems(filteredItems)
       } catch (error) {
         console.error("[v0] Error fetching checklist items:", error)
         setError("Failed to load checklist items. Please try again.")
@@ -42,7 +52,7 @@ export function EvaluationForm({ classroom, user, onComplete, onCancel }: Evalua
     }
 
     fetchItems()
-  }, [])
+  }, [user.id])
 
   const handleCheckChange = (itemId: string, checked: boolean) => {
     setCheckedItems((prev) => (checked ? [...prev, itemId] : prev.filter((id) => id !== itemId)))
