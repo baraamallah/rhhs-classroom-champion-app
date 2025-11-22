@@ -1,5 +1,7 @@
 -- Update the check constraint for division
+-- Drop both potential constraint names to be safe
 ALTER TABLE classrooms DROP CONSTRAINT IF EXISTS classrooms_division_check;
+ALTER TABLE classrooms DROP CONSTRAINT IF EXISTS valid_division;
 
 ALTER TABLE classrooms
   ADD CONSTRAINT classrooms_division_check 
