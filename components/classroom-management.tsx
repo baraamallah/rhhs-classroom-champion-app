@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Building2, Plus, Pencil, Trash2, Users, MoreVertical } from "lucide-react"
+import { Building2, Plus, Pencil, Trash2, Users, MoreVertical, Filter } from "lucide-react"
 import { createClassroom, updateClassroom, deleteClassroom, getAllUsers } from "@/lib/supabase-data"
 import { createClient } from "@/lib/supabase/client"
 import type { Classroom, User } from "@/lib/types"
@@ -34,6 +34,7 @@ export function ClassroomManagement({ currentUser }: ClassroomManagementProps) {
   const [creating, setCreating] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [isAdding, setIsAdding] = useState(false)
+  const [selectedDivision, setSelectedDivision] = useState<string>("all")
   const { toast } = useToast()
 
   const [formData, setFormData] = useState<ClassroomFormData>({
@@ -214,6 +215,11 @@ export function ClassroomManagement({ currentUser }: ClassroomManagementProps) {
     setFormData({ name: "", grade: "", division: "", description: "", supervisorIds: [] })
   }
 
+  // Filter classrooms by division
+  const filteredClassrooms = selectedDivision === "all"
+    ? classrooms
+    : classrooms.filter(classroom => classroom.division === selectedDivision)
+
   return (
     <Card>
       <CardHeader>
@@ -234,6 +240,25 @@ export function ClassroomManagement({ currentUser }: ClassroomManagementProps) {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Division Filter */}
+        <div className="flex items-center gap-2 p-3 bg-muted/30 rounded-lg border">
+          <Filter className="h-4 w-4 text-muted-foreground" />
+          <Label className="text-sm font-medium">Filter by Division:</Label>
+          <Select value={selectedDivision} onValueChange={setSelectedDivision}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Select division" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Divisions</SelectItem>
+              <SelectItem value="Pre-School">Pre-School</SelectItem>
+              <SelectItem value="Elementary">Elementary</SelectItem>
+              <SelectItem value="Middle School">Middle School</SelectItem>
+              <SelectItem value="High School">High School</SelectItem>
+              <SelectItem value="Technical Institute">Technical Institute</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
         {/* Classrooms List */}
         <div className="space-y-2">
           {/* Add Form */}
@@ -340,11 +365,13 @@ export function ClassroomManagement({ currentUser }: ClassroomManagementProps) {
 
           {loading ? (
             <p className="text-muted-foreground text-center py-8">Loading classrooms...</p>
-          ) : classrooms.length === 0 ? (
-            <p className="text-muted-foreground text-center py-8">No classrooms found</p>
+          ) : filteredClassrooms.length === 0 ? (
+            <p className="text-muted-foreground text-center py-8">
+              {selectedDivision === "all" ? "No classrooms found" : `No classrooms in ${selectedDivision}`}
+            </p>
           ) : (
             <div className="space-y-3">
-              {classrooms.map((classroom) => (
+              {filteredClassrooms.map((classroom) => (
                 <div key={classroom.id} className="border border-border rounded-lg bg-card">
                   {editingId === classroom.id ? (
                     // Inline edit form

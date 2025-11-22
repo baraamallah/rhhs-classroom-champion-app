@@ -1,6 +1,9 @@
-import type { ClassroomScore, Evaluation } from "./types"
+import type { ClassroomScore, Evaluation, Classroom } from "./types"
 
-export function calculateLeaderboard(evaluations: Evaluation[]): ClassroomScore[] {
+export function calculateLeaderboard(
+  evaluations: Evaluation[],
+  allClassrooms?: Classroom[]
+): ClassroomScore[] {
   const scoreMap = new Map<
     string,
     {
@@ -10,6 +13,23 @@ export function calculateLeaderboard(evaluations: Evaluation[]): ClassroomScore[
       lastDate: string
     }
   >()
+
+  // If allClassrooms is provided, initialize all classrooms with 0 evaluations
+  if (allClassrooms) {
+    allClassrooms.forEach((classroom) => {
+      scoreMap.set(classroom.id, {
+        classroom: {
+          id: classroom.id,
+          name: classroom.name,
+          grade: classroom.grade,
+          division: classroom.division,
+        },
+        total: 0,
+        count: 0,
+        lastDate: "Never",
+      })
+    })
+  }
 
   // Calculate totals for each classroom
   evaluations.forEach((evaluation) => {
@@ -28,11 +48,16 @@ export function calculateLeaderboard(evaluations: Evaluation[]): ClassroomScore[
     }
 
     scoreMap.set(evaluation.classroom_id, {
-      classroom: evaluation.classroom,
+      classroom: {
+        id: evaluation.classroom_id,
+        name: evaluation.classroom.name,
+        grade: evaluation.classroom.grade,
+        division: evaluation.classroom.division,
+      },
       total: existing.total + evaluation.total_score,
       count: existing.count + 1,
       lastDate:
-        new Date(evaluation.evaluation_date) > new Date(existing.lastDate)
+        existing.lastDate === "Never" || new Date(evaluation.evaluation_date) > new Date(existing.lastDate)
           ? evaluation.evaluation_date
           : existing.lastDate,
     })
@@ -47,8 +72,13 @@ export function calculateLeaderboard(evaluations: Evaluation[]): ClassroomScore[
     lastEvaluated: stats.lastDate,
   }))
 
-  // Sort by average score (descending)
-  return scores.sort((a, b) => b.averageScore - a.averageScore)
+  // Sort by average score (descending), then by evaluation count
+  return scores.sort((a, b) => {
+    if (b.averageScore !== a.averageScore) {
+      return b.averageScore - a.averageScore
+    }
+    return b.evaluationCount - a.evaluationCount
+  })
 }
 
 export function getRankBadge(rank: number): { label: string; color: string } {
