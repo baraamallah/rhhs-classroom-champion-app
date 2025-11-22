@@ -741,7 +741,7 @@ export function UserManagement({ currentUser }: UserManagementProps) {
                 }}
                 className="flex-1"
               >
-                Select All {classroomDivisionFilter !== "all" && [(${ classroomDivisionFilter })](cci:1://file:///d:/gemini-cli/rhhs-classroom-champion-app/app/page.tsx:38:4-46:5)}
+                Select All {classroomDivisionFilter !== "all" && `(${classroomDivisionFilter})`}
               </Button>
               <Button
                 type="button"
@@ -755,7 +755,7 @@ export function UserManagement({ currentUser }: UserManagementProps) {
                 }}
                 className="flex-1"
               >
-                Deselect All {classroomDivisionFilter !== "all" && [(${ classroomDivisionFilter })](cci:1://file:///d:/gemini-cli/rhhs-classroom-champion-app/app/page.tsx:38:4-46:5)}
+                Deselect All {classroomDivisionFilter !== "all" && `(${classroomDivisionFilter})`}
               </Button>
             </div>
             <div className="space-y-3 max-h-60 overflow-y-auto border rounded-md p-3">
