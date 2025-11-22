@@ -727,6 +727,37 @@ export function UserManagement({ currentUser }: UserManagementProps) {
               </Select>
             </div>
 
+            {/* Select All / Deselect All */}
+            <div className="mb-3 flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const filteredIds = availableClassrooms
+                    .filter(classroom => classroomDivisionFilter === "all" || classroom.division === classroomDivisionFilter)
+                    .map(c => c.id)
+                  setSelectedClassrooms([...new Set([...selectedClassrooms, ...filteredIds])])
+                }}
+                className="flex-1"
+              >
+                Select All {classroomDivisionFilter !== "all" && [(${ classroomDivisionFilter })](cci:1://file:///d:/gemini-cli/rhhs-classroom-champion-app/app/page.tsx:38:4-46:5)}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const filteredIds = availableClassrooms
+                    .filter(classroom => classroomDivisionFilter === "all" || classroom.division === classroomDivisionFilter)
+                    .map(c => c.id)
+                  setSelectedClassrooms(selectedClassrooms.filter(id => !filteredIds.includes(id)))
+                }}
+                className="flex-1"
+              >
+                Deselect All {classroomDivisionFilter !== "all" && [(${ classroomDivisionFilter })](cci:1://file:///d:/gemini-cli/rhhs-classroom-champion-app/app/page.tsx:38:4-46:5)}
+              </Button>
+            </div>
             <div className="space-y-3 max-h-60 overflow-y-auto border rounded-md p-3">
               {availableClassrooms
                 .filter(classroom => classroomDivisionFilter === "all" || classroom.division === classroomDivisionFilter)
