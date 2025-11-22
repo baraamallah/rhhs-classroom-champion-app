@@ -123,16 +123,16 @@ export async function getAllUsers() {
       data?.map(async (row) => {
         let classrooms: { id: string; name: string; grade: string }[] = []
 
-        // If user is a supervisor, fetch their classroom assignments
+        // If user is a supervisor, fetch their classroom assignments using the junction table
         if (row.role === 'supervisor') {
           const { data: classroomData, error: classroomError } = await supabase
-            .from('classrooms')
-            .select('id, name, grade')
+            .from('classroom_supervisors')
+            .select('classroom_id, classrooms!inner(id, name, grade)')
             .eq('supervisor_id', row.id)
-            .eq('is_active', true)
+            .eq('classrooms.is_active', true)
 
           if (!classroomError && classroomData) {
-            classrooms = classroomData
+            classrooms = classroomData.map((item: any) => item.classrooms)
           }
         }
 
@@ -368,20 +368,23 @@ export async function getSupervisorClassrooms(supervisorId: string) {
   }
 
   const supabase = await createClient()
-
+  
   try {
+    // Query using the classroom_supervisors junction table
     const { data, error: queryError } = await supabase
-      .from('classrooms')
-      .select('id, name, grade')
+      .from('classroom_supervisors')
+      .select('classroom_id, classrooms!inner(id, name, grade)')
       .eq('supervisor_id', supervisorId)
-      .eq('is_active', true)
+      .eq('classrooms.is_active', true)
 
     if (queryError) {
       console.error("[user-actions] getSupervisorClassrooms error", queryError)
       return { success: false, error: "Failed to fetch classrooms", data: [] }
     }
 
-    return { success: true, data: data || [] }
+    // Transform the data to return classroom objects
+    const classrooms = data?.map((item: any) => item.classrooms) || []
+    return { success: true, data: classrooms }
   } catch (dbError) {
     console.error("[user-actions] getSupervisorClassrooms error", dbError)
     return { success: false, error: "Failed to fetch classrooms", data: [] }
@@ -422,12 +425,12 @@ export async function assignSupervisorToClassrooms(supervisorId: string, classro
   }
 
   const supabase = await createClient()
-
+  
   try {
-    // First, remove all existing assignments for this supervisor
+    // First, remove all existing assignments for this supervisor from the junction table
     const { error: removeError } = await supabase
-      .from('classrooms')
-      .update({ supervisor_id: null })
+      .from('classroom_supervisors')
+      .delete()
       .eq('supervisor_id', supervisorId)
 
     if (removeError) {
@@ -435,12 +438,16 @@ export async function assignSupervisorToClassrooms(supervisorId: string, classro
       return { success: false, error: "Failed to remove existing assignments" }
     }
 
-    // Then assign to new classrooms
+    // Then assign to new classrooms using the junction table
     if (classroomIds.length > 0) {
+      const assignments = classroomIds.map(classroomId => ({
+        classroom_id: classroomId,
+        supervisor_id: supervisorId
+      }))
+
       const { error: assignError } = await supabase
-        .from('classrooms')
-        .update({ supervisor_id: supervisorId })
-        .in('id', classroomIds)
+        .from('classroom_supervisors')
+        .insert(assignments)
 
       if (assignError) {
         console.error("[user-actions] assignSupervisorToClassrooms assign error", assignError)
