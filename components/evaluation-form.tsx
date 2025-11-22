@@ -10,6 +10,7 @@ import type { Classroom, ChecklistItem, User } from "@/lib/types"
 import { getChecklistItems, submitEvaluation } from "@/lib/supabase-data"
 import { CheckCircleIcon, XCircleIcon } from "@/components/icons"
 import { cn } from "@/lib/utils"
+import { motion } from "framer-motion"
 
 interface EvaluationFormProps {
   classroom: Classroom
@@ -134,37 +135,65 @@ export function EvaluationForm({ classroom, user, onComplete, onCancel }: Evalua
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Checklist Items */}
             <div className="space-y-4">
-              {checklistItems.map((item) => {
+              {checklistItems.map((item, index) => {
                 const isChecked = checkedItems.includes(item.id)
                 return (
-                  <div
+                  <motion.div
                     key={item.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
                     className={cn(
-                      "flex items-start gap-4 p-4 rounded-lg border transition-colors",
-                      isChecked ? "bg-primary/5 border-primary/50" : "bg-card border-border",
+                      "relative flex items-start gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border transition-all duration-200 cursor-pointer active:scale-[0.99]",
+                      isChecked
+                        ? "bg-primary/10 border-primary/50 shadow-sm"
+                        : "bg-card border-border hover:bg-muted/50",
                     )}
+                    onClick={() => handleCheckChange(item.id, !isChecked)}
                   >
-                    <Checkbox
-                      id={item.id}
-                      checked={isChecked}
-                      onCheckedChange={(checked) => handleCheckChange(item.id, checked as boolean)}
-                      className="mt-1"
-                    />
-                    <div className="flex-1">
-                      <Label htmlFor={item.id} className="text-base font-medium cursor-pointer text-foreground">
+                    <div className="mt-1">
+                      <Checkbox
+                        id={item.id}
+                        checked={isChecked}
+                        onCheckedChange={(checked) => handleCheckChange(item.id, checked as boolean)}
+                        className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <Label
+                        htmlFor={item.id}
+                        className="text-sm sm:text-base font-medium cursor-pointer text-foreground block leading-tight"
+                        onClick={(e) => e.preventDefault()} // Prevent double toggle since parent has onClick
+                      >
                         {item.title}
                       </Label>
-                      {item.description && <p className="text-sm text-muted-foreground mt-1">{item.description}</p>}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {isChecked ? (
-                        <CheckCircleIcon className="h-5 w-5 text-primary" />
-                      ) : (
-                        <XCircleIcon className="h-5 w-5 text-muted-foreground" />
+                      {item.description && (
+                        <p className="text-xs sm:text-sm text-muted-foreground mt-1 leading-snug">
+                          {item.description}
+                        </p>
                       )}
-                      <span className="text-sm font-medium text-foreground">{item.points} pts</span>
                     </div>
-                  </div>
+                    <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                      <div className="flex items-center gap-1.5">
+                        <motion.div
+                          initial={false}
+                          animate={{ scale: isChecked ? 1 : 0.8, opacity: isChecked ? 1 : 0.5 }}
+                        >
+                          {isChecked ? (
+                            <CheckCircleIcon className="h-5 w-5 text-primary" />
+                          ) : (
+                            <XCircleIcon className="h-5 w-5 text-muted-foreground/50" />
+                          )}
+                        </motion.div>
+                      </div>
+                      <span className={cn(
+                        "text-xs font-semibold px-2 py-0.5 rounded-full",
+                        isChecked ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"
+                      )}>
+                        {item.points} pts
+                      </span>
+                    </div>
+                  </motion.div>
                 )
               })}
             </div>

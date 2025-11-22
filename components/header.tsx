@@ -62,7 +62,7 @@ export function Header() {
   }
 
   return (
-    <motion.header 
+    <motion.header
       className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50"
       initial={{ y: -100 }}
       animate={{ y: 0 }}
@@ -70,21 +70,24 @@ export function Header() {
     >
       <div className="container mx-auto px-4 py-4">
         <div className="flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3 group">
-            <motion.div 
-              className="h-10 w-10 rounded-full bg-gradient-to-br from-primary to-green-600 flex items-center justify-center shadow-lg"
+          <Link href="/" className="flex items-center gap-2 sm:gap-3 group">
+            <motion.div
+              className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-gradient-to-br from-primary to-green-600 flex items-center justify-center shadow-lg"
               whileHover={{ scale: 1.1, rotate: 10 }}
               transition={{ type: "spring", stiffness: 300 }}
             >
-              <LeafIcon className="h-6 w-6 text-primary-foreground" />
+              <LeafIcon className="h-5 w-5 sm:h-6 sm:w-6 text-primary-foreground" />
             </motion.div>
             <div>
-              <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-green-600 bg-clip-text text-transparent">RHHS ECO Club</h1>
-              <p className="text-xs text-muted-foreground">Classroom Champion</p>
+              <h1 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-primary to-green-600 bg-clip-text text-transparent leading-tight">RHHS ECO Club</h1>
+              <p className="text-[10px] sm:text-xs text-muted-foreground hidden sm:block">Classroom Champion</p>
             </div>
           </Link>
 
           <nav className="flex items-center gap-2">
+            <Link href="/about" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors mr-2 hidden sm:block">
+              About Us
+            </Link>
             {!loading && (
               <>
                 {user ? (

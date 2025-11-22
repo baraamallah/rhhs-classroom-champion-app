@@ -10,29 +10,41 @@ interface ClassroomSelectorProps {
   onSelect: (classroom: Classroom) => void
 }
 
+import { motion } from "framer-motion"
+import { Search } from "lucide-react"
+import { Input } from "@/components/ui/input"
+
 export function ClassroomSelector({ onSelect }: ClassroomSelectorProps) {
   const [classrooms, setClassrooms] = useState<Classroom[]>([])
+  const [filteredClassrooms, setFilteredClassrooms] = useState<Classroom[]>([])
   const [loading, setLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState("")
   const [currentUser, setCurrentUser] = useState<any>(null)
 
   useEffect(() => {
     const fetchClassrooms = async () => {
       try {
         const response = await fetch("/api/auth/me", { credentials: "include" })
+        let data: Classroom[] = []
+
         if (response.ok) {
           const { user } = (await response.json()) as { user?: { id: string; role: string } }
           if (user) {
             setCurrentUser(user)
             if (user.role === "supervisor") {
-              const supervisorClassrooms = await getClassroomsBySupervisor(user.id)
-              setClassrooms(supervisorClassrooms)
-              setLoading(false)
-              return
+              data = await getClassroomsBySupervisor(user.id)
+            } else {
+              data = await getClassrooms()
             }
+          } else {
+            data = await getClassrooms()
           }
+        } else {
+          data = await getClassrooms()
         }
-        const data = await getClassrooms()
+
         setClassrooms(data)
+        setFilteredClassrooms(data)
       } catch (error) {
         console.error("Error fetching classrooms:", error)
       } finally {
@@ -43,41 +55,68 @@ export function ClassroomSelector({ onSelect }: ClassroomSelectorProps) {
     fetchClassrooms()
   }, [])
 
+  useEffect(() => {
+    const filtered = classrooms.filter(c =>
+      c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.grade.toString().includes(searchQuery) ||
+      (c.division && c.division.toLowerCase().includes(searchQuery.toLowerCase()))
+    )
+    setFilteredClassrooms(filtered)
+  }, [searchQuery, classrooms])
+
   if (loading) {
     return (
-      <div className="max-w-4xl mx-auto">
-        <Card>
-          <CardContent className="py-12 text-center">
-            <p className="text-muted-foreground">Loading classrooms...</p>
-          </CardContent>
-        </Card>
+      <div className="py-12 text-center">
+        <p className="text-muted-foreground">Loading classrooms...</p>
       </div>
     )
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <Card>
-        <CardHeader>
-          <CardTitle>Select a Classroom to Evaluate</CardTitle>
-          <CardDescription>Choose the classroom you want to evaluate today</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {classrooms.map((classroom) => (
+    <div className="space-y-4">
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Search classrooms..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-9"
+        />
+      </div>
+
+      {filteredClassrooms.length === 0 ? (
+        <div className="text-center py-8 text-muted-foreground">
+          No classrooms found.
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {filteredClassrooms.map((classroom, index) => (
+            <motion.div
+              key={classroom.id}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: index * 0.05 }}
+            >
               <Button
-                key={classroom.id}
                 variant="outline"
-                className="h-auto p-4 flex flex-col items-start hover:bg-primary/10 hover:border-primary transition-colors bg-transparent"
+                className="w-full h-auto p-4 flex flex-col items-start hover:bg-primary/5 hover:border-primary/50 transition-all bg-card text-left whitespace-normal"
                 onClick={() => onSelect(classroom)}
               >
-                <span className="font-semibold text-lg text-foreground">{classroom.name}</span>
-                <span className="text-xs text-muted-foreground">{classroom.grade}</span>
+                <span className="font-semibold text-lg text-foreground w-full truncate">{classroom.name}</span>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground w-full">
+                  <span>Grade {classroom.grade}</span>
+                  {classroom.division && (
+                    <>
+                      <span>•</span>
+                      <span>{classroom.division}</span>
+                    </>
+                  )}
+                </div>
               </Button>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+            </motion.div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

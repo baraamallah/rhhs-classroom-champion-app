@@ -111,15 +111,26 @@ export default function HomePage() {
           </motion.div>
         ) : (
           <Tabs defaultValue="all" className="w-full max-w-4xl mx-auto mb-16 relative z-10">
-            <div className="flex justify-center mb-8">
-              <TabsList className="grid grid-cols-3 md:grid-cols-6 h-auto">
-                <TabsTrigger value="all">All</TabsTrigger>
-                <TabsTrigger value="Pre-School">Pre-School</TabsTrigger>
-                <TabsTrigger value="Elementary">Elementary</TabsTrigger>
-                <TabsTrigger value="Middle School">Middle School</TabsTrigger>
-                <TabsTrigger value="High School">High School</TabsTrigger>
-                <TabsTrigger value="Technical Institute">Technical Institute</TabsTrigger>
-              </TabsList>
+            <div className="sticky top-[70px] z-40 -mx-4 px-4 pb-4 pt-2 bg-background/80 backdrop-blur-md border-b border-border/40 mb-8 transition-all duration-200">
+              <div className="relative max-w-4xl mx-auto">
+                {/* Gradient Masks for Scroll Indication */}
+                <div className="absolute left-0 top-0 bottom-0 w-4 bg-gradient-to-r from-background/80 to-transparent z-10 pointer-events-none" />
+                <div className="absolute right-0 top-0 bottom-0 w-4 bg-gradient-to-l from-background/80 to-transparent z-10 pointer-events-none" />
+
+                <div className="flex justify-start sm:justify-center overflow-x-auto pb-2 no-scrollbar snap-x snap-mandatory">
+                  <TabsList className="inline-flex h-auto p-1.5 bg-muted/50 backdrop-blur-sm rounded-full border border-border/50 shadow-sm min-w-max">
+                    {["all", "Pre-School", "Elementary", "Middle School", "High School", "Technical Institute"].map((tab) => (
+                      <TabsTrigger
+                        key={tab}
+                        value={tab}
+                        className="rounded-full px-4 py-2 text-sm font-medium transition-all data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md snap-center"
+                      >
+                        {tab === "all" ? "All Classrooms" : tab}
+                      </TabsTrigger>
+                    ))}
+                  </TabsList>
+                </div>
+              </div>
             </div>
 
             {["all", "Pre-School", "Elementary", "Middle School", "High School", "Technical Institute"].map((division) => {
@@ -128,24 +139,32 @@ export default function HomePage() {
                 : leaderboard.filter(c => c.classroom.division === division);
 
               return (
-                <TabsContent key={division} value={division}>
+                <TabsContent key={division} value={division} className="mt-0">
                   <motion.div
                     className="space-y-3"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    transition={{ delay: 0.6 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.3 }}
+                    layout
                   >
                     {filteredLeaderboard.length === 0 ? (
-                      <div className="text-center py-8 text-muted-foreground">
-                        No classrooms found in this division.
-                      </div>
+                      <motion.div
+                        className="text-center py-12 text-muted-foreground bg-card/50 backdrop-blur-sm rounded-xl border border-border/50"
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                      >
+                        <LeafIcon className="h-12 w-12 text-muted-foreground/20 mx-auto mb-3" />
+                        <p>No classrooms found in this division.</p>
+                      </motion.div>
                     ) : (
                       filteredLeaderboard.map((classroom, index) => (
                         <motion.div
-                          key={`${classroom.classroom.id}-${division}-${index}`}
-                          initial={{ opacity: 0, x: -20 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: 0.1 * index, duration: 0.5 }}
+                          key={`${classroom.classroom.id}-${division}`}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 0.05 * index, duration: 0.4, ease: "easeOut" }}
+                          layoutId={`${classroom.classroom.id}-${division}`}
                         >
                           <SimpleClassroomCard
                             classroom={classroom}
