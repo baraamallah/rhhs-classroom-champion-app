@@ -34,9 +34,12 @@ export function Footer() {
             </div>
           </div>
 
-          <div className="text-center">
-            <p className="text-sm text-muted-foreground">
-              ECO Club Classroom Champion • Making our school greener, one classroom at a time
+          <div className="w-full border-t border-border/40 pt-6 mt-2 text-center">
+            <p className="text-sm text-muted-foreground mb-2">
+              ECO Club Classroom Champion • Leading the way in sustainability and environmental impact.
+            </p>
+            <p className="text-xs text-muted-foreground/80">
+              © {new Date().getFullYear()} All rights reserved to Rafic Hariri High School
             </p>
           </div>
         </div>

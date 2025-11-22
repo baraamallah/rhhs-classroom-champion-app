@@ -4,6 +4,7 @@ import { motion } from "framer-motion"
 import { Header } from "@/components/header"
 import { LeafIcon, TrophyIcon, StarIcon } from "@/components/icons"
 import Image from "next/image"
+import { Mail } from "lucide-react"
 
 export default function AboutPage() {
     return (
@@ -27,7 +28,7 @@ export default function AboutPage() {
                         <LeafIcon className="h-12 w-12 text-primary" />
                     </motion.div>
                     <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-primary to-green-600 bg-clip-text text-transparent">
-                        About Green Classrooms
+                        About Us
                     </h1>
                     <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
                         Empowering students to build a sustainable future, one classroom at a time.
@@ -43,29 +44,36 @@ export default function AboutPage() {
                         transition={{ duration: 0.6 }}
                     >
                         <h2 className="text-3xl font-bold mb-6">Our Mission</h2>
-                        <p className="text-lg text-muted-foreground mb-6 leading-relaxed">
-                            The Green Classrooms initiative at Rafic Hariri High School aims to foster a culture of environmental responsibility and sustainability among students. By integrating eco-friendly practices into daily classroom life, we encourage students to become active participants in preserving our planet.
-                        </p>
-                        <ul className="space-y-4">
-                            {[
-                                "Promote energy efficiency and waste reduction",
-                                "Encourage recycling and proper waste sorting",
-                                "Foster a sense of environmental stewardship",
-                                "Reward innovative sustainability practices"
-                            ].map((item, index) => (
-                                <motion.li
-                                    key={index}
-                                    className="flex items-center gap-3"
-                                    initial={{ opacity: 0, x: -20 }}
-                                    whileInView={{ opacity: 1, x: 0 }}
-                                    viewport={{ once: true }}
-                                    transition={{ delay: index * 0.1 }}
-                                >
-                                    <div className="h-2 w-2 rounded-full bg-primary" />
-                                    <span>{item}</span>
-                                </motion.li>
-                            ))}
-                        </ul>
+                        <div className="space-y-6 text-lg text-muted-foreground leading-relaxed">
+                            <p>
+                                <span className="font-semibold text-foreground">Green Classrooms Initiative:</span> Fostering a culture of sustainability at Rafic Hariri High School. We empower students to protect our planet through daily eco-friendly habits.
+                            </p>
+                            <p>
+                                <span className="font-semibold text-foreground">Tech Meets Eco:</span> Built by <span className="text-primary font-medium">Technical Students</span> in partnership with the <span className="text-green-600 font-medium">ECO Club</span>. We merged code with conscience to create this platform—proving that technology can drive real, green change.
+                            </p>
+                        </div>
+
+                        <div className="mt-8">
+                            <ul className="space-y-3">
+                                {[
+                                    "Promoting energy efficiency & waste reduction",
+                                    "Encouraging recycling & smart sorting",
+                                    "Rewarding innovation in sustainability"
+                                ].map((item, index) => (
+                                    <motion.li
+                                        key={index}
+                                        className="flex items-center gap-3"
+                                        initial={{ opacity: 0, x: -20 }}
+                                        whileInView={{ opacity: 1, x: 0 }}
+                                        viewport={{ once: true }}
+                                        transition={{ delay: index * 0.1 }}
+                                    >
+                                        <div className="h-2 w-2 rounded-full bg-primary" />
+                                        <span className="font-medium">{item}</span>
+                                    </motion.li>
+                                ))}
+                            </ul>
+                        </div>
                     </motion.div>
                     <motion.div
                         className="relative h-[400px] rounded-2xl overflow-hidden shadow-2xl bg-muted/50 flex items-center justify-center"
@@ -84,7 +92,7 @@ export default function AboutPage() {
 
                 {/* How It Works Cards */}
                 <div className="mb-20">
-                    <h2 className="text-3xl font-bold text-center mb-12">How It Works</h2>
+                    <h2 className="text-3xl font-bold text-center mb-12">How The App Works?</h2>
                     <div className="grid md:grid-cols-3 gap-8">
                         {[
                             {
@@ -118,6 +126,75 @@ export default function AboutPage() {
                                 <p className="text-muted-foreground">{card.description}</p>
                             </motion.div>
                         ))}
+                    </div>
+                </div>
+
+                {/* Meet the Team Section */}
+                <div className="mb-20">
+                    <h2 className="text-3xl font-bold text-center mb-12">Meet the Team</h2>
+
+                    <div className="grid md:grid-cols-2 gap-12">
+                        {/* Technical Team */}
+                        <div>
+                            <h3 className="text-2xl font-semibold mb-6 flex items-center gap-2">
+                                <span className="p-2 bg-primary/10 rounded-lg text-primary text-xl">💻</span>
+                                Technical Team
+                            </h3>
+                            <div className="grid gap-4">
+                                {[
+                                    { name: "Baraa El-Mallah", role: "Lead Developer", email: "baraa.elmallah@rhhs.edu.lb" },
+                                    { name: "Ziad Naholi", role: "Developer", email: "ziad.naholi@rhhs.edu.lb" },
+                                ].map((member, index) => (
+                                    <motion.div
+                                        key={index}
+                                        className="flex items-center justify-between p-4 bg-card border border-border rounded-xl hover:border-primary/50 transition-colors"
+                                        initial={{ opacity: 0, x: -20 }}
+                                        whileInView={{ opacity: 1, x: 0 }}
+                                        viewport={{ once: true }}
+                                        transition={{ delay: index * 0.1 }}
+                                    >
+                                        <div>
+                                            <p className="font-medium">{member.name}</p>
+                                            <p className="text-sm text-muted-foreground">{member.role}</p>
+                                        </div>
+                                        <a href={`mailto:${member.email}`} className="p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-full transition-colors">
+                                            <Mail className="h-5 w-5" />
+                                        </a>
+                                    </motion.div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* ECO Club Team */}
+                        <div>
+                            <h3 className="text-2xl font-semibold mb-6 flex items-center gap-2">
+                                <span className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg text-green-600 text-xl">🌱</span>
+                                ECO Club Team
+                            </h3>
+                            <div className="grid gap-4">
+                                {[
+                                    { name: "Member Name", role: "Club President", email: "president@example.com" },
+                                    { name: "Member Name", role: "Coordinator", email: "coordinator@example.com" },
+                                ].map((member, index) => (
+                                    <motion.div
+                                        key={index}
+                                        className="flex items-center justify-between p-4 bg-card border border-border rounded-xl hover:border-green-500/50 transition-colors"
+                                        initial={{ opacity: 0, x: 20 }}
+                                        whileInView={{ opacity: 1, x: 0 }}
+                                        viewport={{ once: true }}
+                                        transition={{ delay: index * 0.1 }}
+                                    >
+                                        <div>
+                                            <p className="font-medium">{member.name}</p>
+                                            <p className="text-sm text-muted-foreground">{member.role}</p>
+                                        </div>
+                                        <a href={`mailto:${member.email}`} className="p-2 text-muted-foreground hover:text-green-600 hover:bg-green-100 dark:hover:bg-green-900/30 rounded-full transition-colors">
+                                            <Mail className="h-5 w-5" />
+                                        </a>
+                                    </motion.div>
+                                ))}
+                            </div>
+                        </div>
                     </div>
                 </div>
             </main>
