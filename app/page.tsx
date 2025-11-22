@@ -114,7 +114,7 @@ export default function HomePage() {
             <p className="text-muted-foreground">No evaluations yet. Check back soon!</p>
           </motion.div>
         ) : (
-          <Tabs defaultValue="all" className="w-full max-w-4xl mx-auto mb-16 relative z-10">
+          <Tabs defaultValue="Pre-School" className="w-full max-w-4xl mx-auto mb-16 relative z-10">
             <div className="sticky top-[70px] z-40 -mx-4 px-4 pb-4 pt-2 bg-background/80 backdrop-blur-md border-b border-border/40 mb-8 transition-all duration-200">
               <div className="relative max-w-4xl mx-auto">
                 {/* Gradient Masks for Scroll Indication */}
@@ -123,13 +123,13 @@ export default function HomePage() {
 
                 <div className="flex justify-start sm:justify-center overflow-x-auto pb-2 no-scrollbar snap-x snap-mandatory">
                   <TabsList className="inline-flex h-auto p-1.5 bg-muted/50 backdrop-blur-sm rounded-full border border-border/50 shadow-sm min-w-max">
-                    {["all", "Pre-School", "Elementary", "Middle School", "High School", "Technical Institute"].map((tab) => (
+                    {["Pre-School", "Elementary", "Middle School", "High School", "Technical Institute"].map((tab) => (
                       <TabsTrigger
                         key={tab}
                         value={tab}
                         className="rounded-full px-4 py-2 text-sm font-medium transition-all data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md snap-center"
                       >
-                        {tab === "all" ? "All Classrooms" : tab}
+                        {tab}
                       </TabsTrigger>
                     ))}
                   </TabsList>
@@ -137,10 +137,8 @@ export default function HomePage() {
               </div>
             </div>
 
-            {["all", "Pre-School", "Elementary", "Middle School", "High School", "Technical Institute"].map((division) => {
-              const filteredLeaderboard = division === "all"
-                ? leaderboard
-                : leaderboard.filter(c => c.classroom.division === division);
+            {["Pre-School", "Elementary", "Middle School", "High School", "Technical Institute"].map((division) => {
+              const filteredLeaderboard = leaderboard.filter(c => c.classroom.division === division);
 
               return (
                 <TabsContent key={division} value={division} className="mt-0">

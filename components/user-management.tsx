@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { UserPlus, Trash2, Mail, Shield, Eye, KeyRound, MoreVertical, RefreshCw } from "lucide-react"
+import { UserPlus, Trash2, Mail, Shield, Eye, KeyRound, MoreVertical, RefreshCw, Filter } from "lucide-react"
 import { createUserAccount, getAllUsers, deleteUser, sendUserPasswordReset, updateUser, updateUserPassword, getSupervisorClassrooms, getAvailableClassrooms, assignSupervisorToClassrooms } from "@/app/actions/user-actions"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import type { User } from "@/lib/types"
@@ -33,8 +33,9 @@ export function UserManagement({ currentUser }: UserManagementProps) {
   const [showChangePassword, setShowChangePassword] = useState(false)
   const [showClassroomAssignment, setShowClassroomAssignment] = useState(false)
   const [selectedSupervisor, setSelectedSupervisor] = useState<User | null>(null)
-  const [availableClassrooms, setAvailableClassrooms] = useState<{id: string, name: string, grade: string}[]>([])
+  const [availableClassrooms, setAvailableClassrooms] = useState<{ id: string, name: string, grade: string, division?: string }[]>([])
   const [selectedClassrooms, setSelectedClassrooms] = useState<string[]>([])
+  const [classroomDivisionFilter, setClassroomDivisionFilter] = useState<string>("all")
 
   const [formData, setFormData] = useState<{ email: string; name: string; role: ManagedRole; password: string }>({
     email: "",
@@ -206,27 +207,27 @@ export function UserManagement({ currentUser }: UserManagementProps) {
 
   const handleAssignClassrooms = async (supervisor: User) => {
     setSelectedSupervisor(supervisor)
-    
+
     // Load available classrooms
     const classroomsResult = await getAvailableClassrooms()
     if (classroomsResult.success) {
       setAvailableClassrooms(classroomsResult.data)
     }
-    
+
     // Load supervisor's current classrooms
     const supervisorClassroomsResult = await getSupervisorClassrooms(supervisor.id)
     if (supervisorClassroomsResult.success) {
       setSelectedClassrooms(supervisorClassroomsResult.data.map(c => c.id))
     }
-    
+
     setShowClassroomAssignment(true)
   }
 
   const handleSaveClassroomAssignment = async () => {
     if (!selectedSupervisor) return
-    
+
     const result = await assignSupervisorToClassrooms(selectedSupervisor.id, selectedClassrooms)
-    
+
     if (result.success) {
       setMessage({ type: "success", text: result.message || "Classroom assignments updated successfully" })
       setShowClassroomAssignment(false)
@@ -299,215 +300,215 @@ export function UserManagement({ currentUser }: UserManagementProps) {
           </CardHeader>
           <CardContent>
             <form id="user-form" onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Full Name</Label>
-                <Input
-                  id="name"
-                  name="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="John Doe"
-                  autoComplete="name"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  placeholder="user@example.com"
-                  autoComplete="email"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <div className="flex gap-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Full Name</Label>
                   <Input
-                    id="password"
-                    name="password"
-                    type={showPassword ? "text" : "password"}
-                    value={editingUser ? currentPassword : formData.password}
-                    onChange={(e) => !editingUser && setFormData({ ...formData, password: e.target.value })}
-                    placeholder={editingUser ? "Current password (hidden)" : "Enter password (min 8 characters)"}
-                    autoComplete={editingUser ? "current-password" : "new-password"}
-                    required={!editingUser}
-                    minLength={8}
-                    className="flex-1"
-                    disabled={editingUser}
+                    id="name"
+                    name="name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="John Doe"
+                    autoComplete="name"
+                    required
                   />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    onClick={() => {
-                      if (editingUser) {
-                        const newPassword = showPassword ? "••••••••" : (editingUser.password_hash || "••••••••")
-                        setCurrentPassword(newPassword)
-                      }
-                      setShowPassword(!showPassword)
-                    }}
-                    title={showPassword ? "Hide password" : "Show password"}
-                  >
-                    <Eye className="h-4 w-4" />
-                  </Button>
-                  {!editingUser && (
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    placeholder="user@example.com"
+                    autoComplete="email"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="password"
+                      name="password"
+                      type={showPassword ? "text" : "password"}
+                      value={editingUser ? currentPassword : formData.password}
+                      onChange={(e) => !editingUser && setFormData({ ...formData, password: e.target.value })}
+                      placeholder={editingUser ? "Current password (hidden)" : "Enter password (min 8 characters)"}
+                      autoComplete={editingUser ? "current-password" : "new-password"}
+                      required={!editingUser}
+                      minLength={8}
+                      className="flex-1"
+                      disabled={editingUser}
+                    />
                     <Button
                       type="button"
                       variant="outline"
                       size="icon"
-                      onClick={generatePassword}
-                      title="Generate password"
+                      onClick={() => {
+                        if (editingUser) {
+                          const newPassword = showPassword ? "••••••••" : (editingUser.password_hash || "••••••••")
+                          setCurrentPassword(newPassword)
+                        }
+                        setShowPassword(!showPassword)
+                      }}
+                      title={showPassword ? "Hide password" : "Show password"}
                     >
-                      <RefreshCw className="h-4 w-4" />
+                      <Eye className="h-4 w-4" />
                     </Button>
-                  )}
-                  {editingUser && !showChangePassword && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowChangePassword(true)}
-                    >
-                      Change Password
-                    </Button>
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="role">Role</Label>
-                <Select
-                  value={formData.role}
-                  onValueChange={(value: ManagedRole) => setFormData({ ...formData, role: value })}
-                >
-                  <SelectTrigger id="role" name="role">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {currentUser.role === "super_admin" && <SelectItem value="admin">Admin</SelectItem>}
-                    <SelectItem value="supervisor">Supervisor</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {editingUser && showChangePassword && (
-              <div className="space-y-4 border-t pt-4">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-medium">Change Password</h4>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setShowChangePassword(false)
-                      setPasswordChangeData({ newPassword: "", confirmPassword: "" })
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="newPassword">New Password</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        id="newPassword"
-                        name="newPassword"
-                        type={showNewPassword ? "text" : "password"}
-                        value={passwordChangeData.newPassword}
-                        onChange={(e) => setPasswordChangeData({ ...passwordChangeData, newPassword: e.target.value })}
-                        placeholder="Enter new password"
-                        autoComplete="new-password"
-                        minLength={8}
-                        className="flex-1"
-                      />
+                    {!editingUser && (
                       <Button
                         type="button"
                         variant="outline"
                         size="icon"
-                        onClick={() => setShowNewPassword(!showNewPassword)}
-                        title={showNewPassword ? "Hide password" : "Show password"}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        onClick={generatePasswordForChange}
+                        onClick={generatePassword}
                         title="Generate password"
                       >
                         <RefreshCw className="h-4 w-4" />
                       </Button>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="confirmPassword">Confirm Password</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        id="confirmPassword"
-                        name="confirmPassword"
-                        type={showConfirmPassword ? "text" : "password"}
-                        value={passwordChangeData.confirmPassword}
-                        onChange={(e) => setPasswordChangeData({ ...passwordChangeData, confirmPassword: e.target.value })}
-                        placeholder="Confirm new password"
-                        autoComplete="new-password"
-                        minLength={8}
-                        className="flex-1"
-                      />
+                    )}
+                    {editingUser && !showChangePassword && (
                       <Button
                         type="button"
                         variant="outline"
-                        size="icon"
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        title={showConfirmPassword ? "Hide password" : "Show password"}
+                        size="sm"
+                        onClick={() => setShowChangePassword(true)}
                       >
-                        <Eye className="h-4 w-4" />
+                        Change Password
                       </Button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="role">Role</Label>
+                  <Select
+                    value={formData.role}
+                    onValueChange={(value: ManagedRole) => setFormData({ ...formData, role: value })}
+                  >
+                    <SelectTrigger id="role" name="role">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {currentUser.role === "super_admin" && <SelectItem value="admin">Admin</SelectItem>}
+                      <SelectItem value="supervisor">Supervisor</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {editingUser && showChangePassword && (
+                <div className="space-y-4 border-t pt-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-medium">Change Password</h4>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setShowChangePassword(false)
+                        setPasswordChangeData({ newPassword: "", confirmPassword: "" })
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="newPassword">New Password</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          id="newPassword"
+                          name="newPassword"
+                          type={showNewPassword ? "text" : "password"}
+                          value={passwordChangeData.newPassword}
+                          onChange={(e) => setPasswordChangeData({ ...passwordChangeData, newPassword: e.target.value })}
+                          placeholder="Enter new password"
+                          autoComplete="new-password"
+                          minLength={8}
+                          className="flex-1"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          onClick={() => setShowNewPassword(!showNewPassword)}
+                          title={showNewPassword ? "Hide password" : "Show password"}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          onClick={generatePasswordForChange}
+                          title="Generate password"
+                        >
+                          <RefreshCw className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="confirmPassword">Confirm Password</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          id="confirmPassword"
+                          name="confirmPassword"
+                          type={showConfirmPassword ? "text" : "password"}
+                          value={passwordChangeData.confirmPassword}
+                          onChange={(e) => setPasswordChangeData({ ...passwordChangeData, confirmPassword: e.target.value })}
+                          placeholder="Confirm new password"
+                          autoComplete="new-password"
+                          minLength={8}
+                          className="flex-1"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          title={showConfirmPassword ? "Hide password" : "Show password"}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </div>
+              )}
+
+              {message && (
+                <Alert variant={message.type === "error" ? "destructive" : "default"}>
+                  <AlertDescription>
+                    {message.text}
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              <div className="flex gap-2 justify-end">
+                <Button type="submit" disabled={creating} size="sm">
+                  {creating ? (editingUser ? "Updating..." : "Creating...") : (editingUser ? "Update User" : "Create User")}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setShowCreateForm(false)
+                    setEditingUser(null)
+                    setFormData({ email: "", name: "", role: "supervisor", password: "" })
+                    setPasswordChangeData({ newPassword: "", confirmPassword: "" })
+                  }}
+                  size="sm"
+                >
+                  Cancel
+                </Button>
               </div>
-            )}
-
-            {message && (
-              <Alert variant={message.type === "error" ? "destructive" : "default"}>
-                <AlertDescription>
-                  {message.text}
-                </AlertDescription>
-              </Alert>
-            )}
-
-            <div className="flex gap-2 justify-end">
-              <Button type="submit" disabled={creating} size="sm">
-                {creating ? (editingUser ? "Updating..." : "Creating...") : (editingUser ? "Update User" : "Create User")}
-              </Button>
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={() => {
-                  setShowCreateForm(false)
-                  setEditingUser(null)
-                  setFormData({ email: "", name: "", role: "supervisor", password: "" })
-                  setPasswordChangeData({ newPassword: "", confirmPassword: "" })
-                }}
-                size="sm"
-              >
-                Cancel
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+            </form>
+          </CardContent>
+        </Card>
       )}
 
       {/* Users List */}
@@ -519,7 +520,7 @@ export function UserManagement({ currentUser }: UserManagementProps) {
               <CardDescription>Manage existing users in the system</CardDescription>
             </div>
             {currentUser.role === "super_admin" && !showCreateForm && !editingUser && (
-              <Button 
+              <Button
                 onClick={() => setShowCreateForm(true)}
                 size="sm"
               >
@@ -565,7 +566,7 @@ export function UserManagement({ currentUser }: UserManagementProps) {
                           <p className="text-sm text-muted-foreground">{user.email}</p>
                           <div className="mt-1">
                             <p className="text-xs text-muted-foreground">
-                              Classrooms: {user.classrooms && user.classrooms.length > 0 
+                              Classrooms: {user.classrooms && user.classrooms.length > 0
                                 ? user.classrooms.map(c => c.name).join(", ")
                                 : "No classrooms assigned"
                               }
@@ -707,30 +708,56 @@ export function UserManagement({ currentUser }: UserManagementProps) {
             <h3 className="text-lg font-semibold mb-4">
               Assign Classrooms to {selectedSupervisor.name}
             </h3>
-            
-            <div className="space-y-3 max-h-60 overflow-y-auto">
-              {availableClassrooms.map((classroom) => (
-                <div key={classroom.id} className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id={`classroom-${classroom.id}`}
-                    checked={selectedClassrooms.includes(classroom.id)}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setSelectedClassrooms([...selectedClassrooms, classroom.id])
-                      } else {
-                        setSelectedClassrooms(selectedClassrooms.filter(id => id !== classroom.id))
-                      }
-                    }}
-                    className="rounded border-border"
-                  />
-                  <label htmlFor={`classroom-${classroom.id}`} className="text-sm">
-                    {classroom.name} (Grade {classroom.grade})
-                  </label>
-                </div>
-              ))}
+
+            {/* Division Filter */}
+            <div className="mb-4">
+              <Label className="text-sm font-medium mb-2 block">Filter by Division:</Label>
+              <Select value={classroomDivisionFilter} onValueChange={setClassroomDivisionFilter}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Divisions</SelectItem>
+                  <SelectItem value="Pre-School">Pre-School</SelectItem>
+                  <SelectItem value="Elementary">Elementary</SelectItem>
+                  <SelectItem value="Middle School">Middle School</SelectItem>
+                  <SelectItem value="High School">High School</SelectItem>
+                  <SelectItem value="Technical Institute">Technical Institute</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            
+
+            <div className="space-y-3 max-h-60 overflow-y-auto border rounded-md p-3">
+              {availableClassrooms
+                .filter(classroom => classroomDivisionFilter === "all" || classroom.division === classroomDivisionFilter)
+                .map((classroom) => (
+                  <div key={classroom.id} className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id={`classroom-${classroom.id}`}
+                      checked={selectedClassrooms.includes(classroom.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedClassrooms([...selectedClassrooms, classroom.id])
+                        } else {
+                          setSelectedClassrooms(selectedClassrooms.filter(id => id !== classroom.id))
+                        }
+                      }}
+                      className="rounded border-border"
+                    />
+                    <label htmlFor={`classroom-${classroom.id}`} className="text-sm cursor-pointer">
+                      {classroom.name} (Grade {classroom.grade})
+                      {classroom.division && <span className="text-xs text-muted-foreground ml-2">• {classroom.division}</span>}
+                    </label>
+                  </div>
+                ))}
+              {availableClassrooms.filter(classroom => classroomDivisionFilter === "all" || classroom.division === classroomDivisionFilter).length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  {classroomDivisionFilter === "all" ? "No classrooms available" : `No classrooms in ${classroomDivisionFilter}`}
+                </p>
+              )}
+            </div>
+
             <div className="flex justify-end gap-2 mt-6">
               <Button variant="outline" onClick={handleCancelClassroomAssignment}>
                 Cancel
