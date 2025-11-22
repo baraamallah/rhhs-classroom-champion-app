@@ -148,7 +148,7 @@ export default function HomePage() {
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.3 }}
-                    layout
+
                   >
                     {filteredLeaderboard.length === 0 ? (
                       <motion.div
@@ -166,7 +166,7 @@ export default function HomePage() {
                           initial={{ opacity: 0, y: 20 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: 0.05 * index, duration: 0.4, ease: "easeOut" }}
-                          layoutId={`${classroom.classroom.id}-${division}`}
+
                         >
                           <SimpleClassroomCard
                             classroom={classroom}

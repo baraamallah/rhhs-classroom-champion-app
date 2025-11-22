@@ -144,12 +144,11 @@ export function EvaluationForm({ classroom, user, onComplete, onCancel }: Evalua
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.05 }}
                     className={cn(
-                      "relative flex items-start gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border transition-all duration-200 cursor-pointer active:scale-[0.99]",
+                      "relative flex items-start gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border transition-all duration-200",
                       isChecked
                         ? "bg-primary/10 border-primary/50 shadow-sm"
                         : "bg-card border-border hover:bg-muted/50",
                     )}
-                    onClick={() => handleCheckChange(item.id, !isChecked)}
                   >
                     <div className="mt-1">
                       <Checkbox
@@ -163,7 +162,6 @@ export function EvaluationForm({ classroom, user, onComplete, onCancel }: Evalua
                       <Label
                         htmlFor={item.id}
                         className="text-sm sm:text-base font-medium cursor-pointer text-foreground block leading-tight"
-                        onClick={(e) => e.preventDefault()} // Prevent double toggle since parent has onClick
                       >
                         {item.title}
                       </Label>
@@ -225,6 +223,6 @@ export function EvaluationForm({ classroom, user, onComplete, onCancel }: Evalua
           </form>
         </CardContent>
       </Card>
-    </div>
+    </div >
   )
 }
