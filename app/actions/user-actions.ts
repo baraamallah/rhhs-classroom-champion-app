@@ -61,7 +61,7 @@ export async function createUserAccount(formData: { email: string; role: Managed
   }
 
   const supabase = await createClient()
-  
+
   try {
     const { error } = await supabase
       .from('users')
@@ -99,7 +99,7 @@ export async function getAllUsers() {
   }
 
   const supabase = await createClient()
-  
+
   try {
     let query = supabase
       .from('users')
@@ -122,7 +122,7 @@ export async function getAllUsers() {
     const formattedData = await Promise.all(
       data?.map(async (row) => {
         let classrooms: { id: string; name: string; grade: string }[] = []
-        
+
         // If user is a supervisor, fetch their classroom assignments
         if (row.role === 'supervisor') {
           const { data: classroomData, error: classroomError } = await supabase
@@ -130,7 +130,7 @@ export async function getAllUsers() {
             .select('id, name, grade')
             .eq('supervisor_id', row.id)
             .eq('is_active', true)
-          
+
           if (!classroomError && classroomData) {
             classrooms = classroomData
           }
@@ -169,7 +169,7 @@ export async function deleteUser(userId: string) {
   }
 
   const supabase = await createClient()
-  
+
   try {
     const { data: targetData, error: targetError } = await supabase
       .from('users')
@@ -220,7 +220,7 @@ export async function updateUser(formData: { userId: string; email: string; name
   }
 
   const supabase = await createClient()
-  
+
   try {
     // Check if user exists and current user has permission to edit
     const { data: targetData, error: targetError } = await supabase
@@ -275,7 +275,7 @@ export async function updateUserPassword(formData: { userId: string; password: s
   }
 
   const supabase = await createClient()
-  
+
   try {
     // Check if user exists and current user has permission to edit
     const { data: targetData, error: targetError } = await supabase
@@ -340,7 +340,7 @@ export async function sendUserPasswordReset(email: string) {
 
     const { error: updateError } = await supabase
       .from('users')
-      .update({ 
+      .update({
         password_hash: tempPassword
       })
       .eq('id', userData.id)
@@ -368,7 +368,7 @@ export async function getSupervisorClassrooms(supervisorId: string) {
   }
 
   const supabase = await createClient()
-  
+
   try {
     const { data, error: queryError } = await supabase
       .from('classrooms')
@@ -395,11 +395,11 @@ export async function getAvailableClassrooms() {
   }
 
   const supabase = await createClient()
-  
+
   try {
     const { data, error: queryError } = await supabase
       .from('classrooms')
-      .select('id, name, grade')
+      .select('id, name, grade, division')
       .eq('is_active', true)
       .order('name')
 
@@ -422,7 +422,7 @@ export async function assignSupervisorToClassrooms(supervisorId: string, classro
   }
 
   const supabase = await createClient()
-  
+
   try {
     // First, remove all existing assignments for this supervisor
     const { error: removeError } = await supabase
