@@ -5,8 +5,8 @@ import { motion } from "framer-motion"
 import { Header } from "@/components/header"
 import { SimpleClassroomCard } from "@/components/simple-classroom-card"
 import { calculateLeaderboard } from "@/lib/utils-leaderboard"
-import { getEvaluationsServer } from "@/lib/supabase-data-server"
-import { getClassrooms } from "@/lib/supabase-data"
+import { getClassrooms, getEvaluations } from "@/lib/supabase-data"
+
 import { LeafIcon } from "@/components/icons"
 import type { ClassroomScore } from "@/lib/types"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -38,7 +38,7 @@ export default function HomePage() {
   useEffect(() => {
     const loadData = async () => {
       const [evaluations, classrooms] = await Promise.all([
-        getEvaluationsServer(),
+        getEvaluations(),
         getClassrooms()
       ])
       const board = calculateLeaderboard(evaluations, classrooms)
