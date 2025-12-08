@@ -8,11 +8,18 @@ export function Footer() {
           <div className="flex items-center justify-center gap-8 sm:gap-12">
             {/* RHHS Logo */}
             <div className="flex items-center justify-center">
-              <img
-                src="/rhhs-logo.png"
-                alt="RHHS Logo"
-                className="h-12 sm:h-16 w-auto object-contain opacity-90 hover:opacity-100 transition-opacity"
-              />
+              <a
+                href="https://rhhs.edu.lb"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="cursor-pointer"
+              >
+                <img
+                  src="/rhhs-logo.png"
+                  alt="RHHS Logo"
+                  className="h-12 sm:h-16 w-auto object-contain opacity-90 hover:opacity-100 transition-opacity"
+                />
+              </a>
             </div>
 
             {/* RHI Logo (formerly SchoolLogo) */}
