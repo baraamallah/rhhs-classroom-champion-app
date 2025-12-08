@@ -49,7 +49,7 @@ export default function AboutPage() {
                                 <span className="font-semibold text-foreground">Green Classrooms Initiative:</span> Fostering a culture of sustainability at Rafic Hariri High School. We empower students to protect our planet through daily eco-friendly habits.
                             </p>
                             <p>
-                                <span className="font-semibold text-foreground">Tech Meets Eco:</span> Built by <span className="text-primary font-medium">Technical Students</span> in partnership with the <span className="text-green-600 font-medium">ECO Club</span>. We merged code with conscience to create this platform—proving that technology can drive real, green change.
+                                <span className="font-semibold text-foreground">Tech Meets Eco:</span> This App was built by the <span className="text-primary font-medium">Technical Institute Students</span> in partnership with the <span className="text-green-600 font-medium">RHHS ECO Club</span>. We merged the codes with the consciences to build this platform—demonstrating that technology, when guided by purpose, can deliver real, measurable environmental impact.
                             </p>
                         </div>
 
@@ -173,8 +173,8 @@ export default function AboutPage() {
                             </h3>
                             <div className="grid gap-4">
                                 {[
-                                    { name: "Member Name", role: "Club President", email: "president@example.com" },
-                                    { name: "Member Name", role: "Coordinator", email: "coordinator@example.com" },
+                                    { name: "Elio Saab", role: "Club President", email: "elio.saab@rhhs.edu.lb" },
+                                    { name: "Vanessa Haddad", role: "Coordinator", email: "Vanessa.AlHaddad@rhhs.edu.lb" },
                                 ].map((member, index) => (
                                     <motion.div
                                         key={index}

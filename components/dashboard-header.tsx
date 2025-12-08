@@ -39,7 +39,7 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
               <LeafIcon className="h-6 w-6 text-primary-foreground" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-foreground">ECO Club</h1>
+              <h1 className="text-xl font-bold text-foreground">RHHS ECO Club</h1>
               <p className="text-xs text-muted-foreground">
                 {user.role === "super_admin" || user.role === "admin" ? "Admin Dashboard" : "Supervisor Dashboard"}
               </p>
