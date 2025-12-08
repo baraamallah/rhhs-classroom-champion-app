@@ -199,17 +199,23 @@ export function EvaluationForm({ classroom, user, onComplete, onCancel }: Evalua
             {/* Score Summary */}
             <Card className="bg-muted/50">
               <CardContent className="pt-6">
+                {/* Supervisor Specific Score */}
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-muted-foreground">Items Completed</p>
-                    <p className="text-2xl font-bold text-foreground">
-                      {completedCount} / {checklistItems.length}
-                    </p>
+                    <p className="text-sm text-muted-foreground">Supervisor Score</p>
+                    <p className="text-xs text-muted-foreground">(Your specific items)</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm text-muted-foreground">Total Score</p>
-                    <p className="text-3xl font-bold text-primary">
-                      {totalScore} / {maxScore}
+                    <p className="text-2xl font-bold text-blue-600">
+                      {checklistItems.reduce((total, item) => {
+                        const isSupervisorSpecific = (item.assigned_supervisors || []).length > 0
+                        if (!isSupervisorSpecific) return total
+                        return total + (checkedItems.includes(item.id) ? item.points : 0)
+                      }, 0)} / {checklistItems.reduce((sum, item) => {
+                        const isSupervisorSpecific = (item.assigned_supervisors || []).length > 0
+                        if (!isSupervisorSpecific) return sum
+                        return sum + item.points
+                      }, 0)}
                     </p>
                   </div>
                 </div>

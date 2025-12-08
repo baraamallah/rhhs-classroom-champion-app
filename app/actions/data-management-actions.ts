@@ -18,7 +18,9 @@ async function requireSuperAdmin(): Promise<{ currentUser?: CurrentUser; error?:
     return { error: "Not authenticated" }
   }
 
-  const supabase = await createClient()
+  // Use admin client to bypass RLS for authentication check
+  // This is safe because we're only checking the user's own data based on their session
+  const supabase = await createAdminClient()
   const { data: userData, error: userError } = await supabase
     .from("users")
     .select("id, role, is_active")
@@ -26,6 +28,7 @@ async function requireSuperAdmin(): Promise<{ currentUser?: CurrentUser; error?:
     .single()
 
   if (userError || !userData) {
+    console.error("[requireSuperAdmin] User lookup failed:", userError)
     await clearSessionCookie()
     return { error: "Not authenticated" }
   }
@@ -35,16 +38,19 @@ async function requireSuperAdmin(): Promise<{ currentUser?: CurrentUser; error?:
     return { error: "Not authenticated" }
   }
 
-  if (userData.role !== "super_admin") {
-    return { error: "Unauthorized: Super admin access required" }
+  // Allow both admin and super_admin roles (matches admin page access and RLS policies)
+  if (userData.role !== "super_admin" && userData.role !== "admin") {
+    return { error: "Unauthorized: Admin access required" }
   }
 
   return { currentUser: { id: userData.id, role: userData.role } }
 }
 
 export async function archiveAndReset() {
+  console.log("[archiveAndReset] Starting archive and reset operation")
   const { currentUser, error } = await requireSuperAdmin()
   if (error || !currentUser) {
+    console.error("[archiveAndReset] Auth failed:", error)
     return { success: false, error }
   }
 
@@ -53,11 +59,15 @@ export async function archiveAndReset() {
 
   try {
     // Archive evaluations
+    console.log("[archiveAndReset] Fetching evaluations to archive...")
     const { data: evaluations, error: evalFetchError } = await supabase.from("evaluations").select("*")
 
     if (evalFetchError) {
-      return { success: false, error: "Failed to fetch evaluations for archiving" }
+      console.error("[archiveAndReset] Failed to fetch evaluations:", evalFetchError)
+      return { success: false, error: `Failed to fetch evaluations for archiving: ${evalFetchError.message}` }
     }
+
+    console.log(`[archiveAndReset] Found ${evaluations?.length || 0} evaluations to archive`)
 
     if (evaluations && evaluations.length > 0) {
       // Use upsert to handle cases where data might already exist in archive (e.g. from a failed previous run)
@@ -65,22 +75,28 @@ export async function archiveAndReset() {
 
       if (archiveEvalError) {
         console.error("Archive evaluations error:", archiveEvalError)
-        return { success: false, error: "Failed to archive evaluations" }
+        return { success: false, error: `Failed to archive evaluations: ${archiveEvalError.message}` }
       }
 
+      console.log("[archiveAndReset] Evaluations archived, now deleting from main table...")
       const { error: deleteEvalError } = await supabase.from("evaluations").delete().neq("id", "") // Delete all
 
       if (deleteEvalError) {
-        return { success: false, error: "Failed to delete evaluations" }
+        console.error("[archiveAndReset] Failed to delete evaluations:", deleteEvalError)
+        return { success: false, error: `Failed to delete evaluations: ${deleteEvalError.message}` }
       }
     }
 
     // Archive classrooms
+    console.log("[archiveAndReset] Fetching classrooms to archive...")
     const { data: classrooms, error: classFetchError } = await supabase.from("classrooms").select("*")
 
     if (classFetchError) {
-      return { success: false, error: "Failed to fetch classrooms for archiving" }
+      console.error("[archiveAndReset] Failed to fetch classrooms:", classFetchError)
+      return { success: false, error: `Failed to fetch classrooms for archiving: ${classFetchError.message}` }
     }
+
+    console.log(`[archiveAndReset] Found ${classrooms?.length || 0} classrooms to archive`)
 
     if (classrooms && classrooms.length > 0) {
       // Use upsert to handle cases where data might already exist in archive
@@ -88,16 +104,19 @@ export async function archiveAndReset() {
 
       if (archiveClassError) {
         console.error("Archive classrooms error:", archiveClassError)
-        return { success: false, error: "Failed to archive classrooms" }
+        return { success: false, error: `Failed to archive classrooms: ${archiveClassError.message}` }
       }
 
+      console.log("[archiveAndReset] Classrooms archived, now deleting from main table...")
       const { error: deleteClassError } = await supabase.from("classrooms").delete().neq("id", "") // Delete all
 
       if (deleteClassError) {
-        return { success: false, error: "Failed to delete classrooms" }
+        console.error("[archiveAndReset] Failed to delete classrooms:", deleteClassError)
+        return { success: false, error: `Failed to delete classrooms: ${deleteClassError.message}` }
       }
     }
 
+    console.log("[archiveAndReset] Archive and reset completed successfully")
     revalidatePath("/admin")
     return {
       success: true,
@@ -105,13 +124,15 @@ export async function archiveAndReset() {
     }
   } catch (dbError: any) {
     console.error("[data-management-actions] archiveAndReset error", dbError)
-    return { success: false, error: "Failed to archive and reset data" }
+    return { success: false, error: `Failed to archive and reset data: ${dbError.message || "Unknown error"}` }
   }
 }
 
 export async function deleteEvaluation(evaluationId: string) {
+  console.log("[deleteEvaluation] Starting deletion for ID:", evaluationId)
   const { currentUser, error } = await requireSuperAdmin()
   if (error || !currentUser) {
+    console.error("[deleteEvaluation] Auth failed:", error)
     return { success: false, error }
   }
 
@@ -122,45 +143,51 @@ export async function deleteEvaluation(evaluationId: string) {
 
     if (deleteError) {
       console.error("[data-management-actions] deleteEvaluation error", deleteError)
-      return { success: false, error: "Failed to delete evaluation" }
+      return { success: false, error: `Failed to delete evaluation: ${deleteError.message}` }
     }
 
+    console.log("[deleteEvaluation] Successfully deleted evaluation:", evaluationId)
     revalidatePath("/admin")
     return { success: true, message: "Evaluation deleted successfully" }
   } catch (dbError: any) {
     console.error("[data-management-actions] deleteEvaluation error", dbError)
-    return { success: false, error: "Failed to delete evaluation" }
+    return { success: false, error: `Failed to delete evaluation: ${dbError.message || "Unknown error"}` }
   }
 }
 
 export async function deleteClassroom(classroomId: string) {
+  console.log("[deleteClassroom] Starting deletion for ID:", classroomId)
   const { currentUser, error } = await requireSuperAdmin()
   if (error || !currentUser) {
+    console.error("[deleteClassroom] Auth failed:", error)
     return { success: false, error }
   }
 
   const supabase = await createAdminClient()
 
   try {
+    // First delete all evaluations for this classroom
     const { error: deleteEvalsError } = await supabase.from("evaluations").delete().eq("classroom_id", classroomId)
 
     if (deleteEvalsError) {
       console.error("[data-management-actions] deleteClassroom evaluations error", deleteEvalsError)
-      return { success: false, error: "Failed to delete classroom evaluations" }
+      return { success: false, error: `Failed to delete classroom evaluations: ${deleteEvalsError.message}` }
     }
 
+    // Then delete the classroom
     const { error: deleteClassError } = await supabase.from("classrooms").delete().eq("id", classroomId)
 
     if (deleteClassError) {
       console.error("[data-management-actions] deleteClassroom error", deleteClassError)
-      return { success: false, error: "Failed to delete classroom" }
+      return { success: false, error: `Failed to delete classroom: ${deleteClassError.message}` }
     }
 
+    console.log("[deleteClassroom] Successfully deleted classroom:", classroomId)
     revalidatePath("/admin")
     return { success: true, message: "Classroom and all related evaluations deleted successfully" }
   } catch (dbError: any) {
     console.error("[data-management-actions] deleteClassroom error", dbError)
-    return { success: false, error: "Failed to delete classroom" }
+    return { success: false, error: `Failed to delete classroom: ${dbError.message || "Unknown error"}` }
   }
 }
 
@@ -248,9 +275,12 @@ export async function getAllEvaluationsForManagement() {
     return { success: false, error, data: [] }
   }
 
-  const supabase = await createClient()
+  // Use admin client to bypass RLS since we already verified super admin access
+  const supabase = await createAdminClient()
 
   try {
+    console.log("[getAllEvaluationsForManagement] Fetching evaluations...")
+
     const { data, error: fetchError } = await supabase
       .from("evaluations")
       .select(`
@@ -271,13 +301,14 @@ export async function getAllEvaluationsForManagement() {
 
     if (fetchError) {
       console.error("[data-management-actions] getAllEvaluationsForManagement error", fetchError)
-      return { success: false, error: "Failed to fetch evaluations", data: [] }
+      return { success: false, error: `Failed to fetch evaluations: ${fetchError.message}`, data: [] }
     }
 
+    console.log(`[getAllEvaluationsForManagement] Successfully fetched ${data?.length || 0} evaluations`)
     return { success: true, data: data || [] }
   } catch (dbError: any) {
     console.error("[data-management-actions] getAllEvaluationsForManagement error", dbError)
-    return { success: false, error: "Failed to fetch evaluations", data: [] }
+    return { success: false, error: `Failed to fetch evaluations: ${dbError.message || "Unknown error"}`, data: [] }
   }
 }
 
@@ -403,5 +434,151 @@ export async function getArchivedEvaluations() {
   } catch (dbError: any) {
     console.error("[data-management-actions] getArchivedEvaluations error", dbError)
     return { success: false, error: "Failed to fetch archived evaluations", data: [] }
+  }
+}
+
+export async function restoreEvaluation(evaluationId: string) {
+  const { currentUser, error } = await requireSuperAdmin()
+  if (error || !currentUser) {
+    return { success: false, error }
+  }
+
+  if (!evaluationId || evaluationId.trim() === "") {
+    return { success: false, error: "Invalid evaluation ID" }
+  }
+
+  const supabase = await createAdminClient()
+
+  try {
+    console.log("[restoreEvaluation] Starting restore process for ID:", evaluationId)
+
+    const { data: evaluation, error: fetchError } = await supabase
+      .from("archive_evaluations")
+      .select("*")
+      .eq("id", evaluationId)
+      .single()
+
+    if (fetchError) {
+      console.error("[restoreEvaluation] Fetch error:", fetchError)
+      return { success: false, error: `Failed to fetch archived evaluation: ${fetchError.message}` }
+    }
+
+    if (!evaluation) {
+      console.error("[restoreEvaluation] No archived evaluation found with ID:", evaluationId)
+      return { success: false, error: "Archived evaluation not found" }
+    }
+
+    console.log("[restoreEvaluation] Archived evaluation fetched:", evaluation.id)
+
+    // Remove archived_at field before restoring to main table
+    const { archived_at, ...evaluationToRestore } = evaluation
+
+    const { data: restoreData, error: restoreError } = await supabase
+      .from("evaluations")
+      .upsert(evaluationToRestore, { onConflict: "id" })
+      .select()
+
+    if (restoreError) {
+      console.error("[restoreEvaluation] Restore insert error:", restoreError)
+      return { success: false, error: `Failed to restore evaluation: ${restoreError.message}` }
+    }
+
+    console.log("[restoreEvaluation] Restored successfully:", restoreData)
+
+    const { data: deleteData, error: deleteError, count } = await supabase
+      .from("archive_evaluations")
+      .delete()
+      .eq("id", evaluationId)
+      .select()
+
+    if (deleteError) {
+      console.error("[restoreEvaluation] Delete from archive error:", deleteError)
+      return {
+        success: false,
+        error: `Evaluation was restored but failed to delete from archive: ${deleteError.message}`,
+      }
+    }
+
+    console.log("[restoreEvaluation] Deleted from archive:", deleteData, "Count:", count)
+
+    if (!deleteData || deleteData.length === 0) {
+      console.error("[restoreEvaluation] No rows deleted from archive for ID:", evaluationId)
+      return {
+        success: false,
+        error: "Evaluation was restored but no rows were deleted from archive. Check RLS policies.",
+      }
+    }
+
+    revalidatePath("/admin")
+    console.log("[restoreEvaluation] Process completed successfully for ID:", evaluationId)
+    return { success: true, message: `Evaluation restored and removed from archive successfully (ID: ${evaluationId})` }
+  } catch (dbError: any) {
+    console.error("[restoreEvaluation] Unexpected error:", dbError)
+    return { success: false, error: `Failed to restore evaluation: ${dbError.message || "Unknown error"}` }
+  }
+}
+
+export async function restoreEvaluations(evaluationIds: string[]) {
+  const { currentUser, error } = await requireSuperAdmin()
+  if (error || !currentUser) {
+    return { success: false, error }
+  }
+
+  if (!evaluationIds || evaluationIds.length === 0) {
+    return { success: false, error: "No evaluations selected" }
+  }
+
+  const supabase = await createAdminClient()
+
+  try {
+    console.log(`[restoreEvaluations] Starting bulk restore for ${evaluationIds.length} evaluations`)
+
+    // 1. Fetch the evaluations to be restored
+    const { data: evaluations, error: fetchError } = await supabase
+      .from("archive_evaluations")
+      .select("*")
+      .in("id", evaluationIds)
+
+    if (fetchError) {
+      console.error("[restoreEvaluations] Fetch error:", fetchError)
+      return { success: false, error: `Failed to fetch archived evaluations: ${fetchError.message}` }
+    }
+
+    if (!evaluations || evaluations.length === 0) {
+      return { success: false, error: "No archived evaluations found to restore" }
+    }
+
+    // 2. Prepare data without archived_at timestamp for main table
+    const evaluationsToRestore = evaluations.map(({ archived_at, ...rest }) => rest)
+
+    // 3. Insert into main table (upsert to be safe)
+    const { error: restoreError } = await supabase
+      .from("evaluations")
+      .upsert(evaluationsToRestore, { onConflict: "id" })
+
+    if (restoreError) {
+      console.error("[restoreEvaluations] Restore insert error:", restoreError)
+      return { success: false, error: `Failed to restore evaluations: ${restoreError.message}` }
+    }
+
+    // 4. Delete from archive table
+    const { error: deleteError } = await supabase
+      .from("archive_evaluations")
+      .delete()
+      .in("id", evaluationIds)
+
+    if (deleteError) {
+      console.error("[restoreEvaluations] Delete from archive error:", deleteError)
+      return {
+        success: false,
+        error: `Evaluations restored but failed to delete from archive: ${deleteError.message}`,
+      }
+    }
+
+    revalidatePath("/admin")
+    return { success: true, message: `Successfully restored ${evaluations.length} evaluations` }
+  } catch (dbError: any) {
+    console.error("[restoreEvaluations] Unexpected error:", dbError)
+    return { success: false, error: `Failed to restore evaluations: ${dbError.message || "Unknown error"}` }
   }
 }

@@ -12,10 +12,15 @@ import { ClassroomManagement } from "@/components/classroom-management"
 import { DataManagementPanel } from "@/components/data-management-panel"
 
 interface AdminDashboardContentProps {
-  currentUser: User
+  currentUser?: User
 }
 
 function AdminDashboardContent({ currentUser }: AdminDashboardContentProps) {
+  // This should always be provided by ProtectedRoute via cloneElement
+  if (!currentUser) {
+    return null
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <DashboardHeader user={currentUser} />
