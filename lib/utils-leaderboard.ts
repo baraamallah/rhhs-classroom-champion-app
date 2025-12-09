@@ -72,12 +72,12 @@ export function calculateLeaderboard(
     lastEvaluated: stats.lastDate,
   }))
 
-  // Sort by average score (descending), then by evaluation count
+  // Sort by total score (descending), then by average score
   return scores.sort((a, b) => {
-    if (b.averageScore !== a.averageScore) {
-      return b.averageScore - a.averageScore
+    if (b.totalScore !== a.totalScore) {
+      return b.totalScore - a.totalScore
     }
-    return b.evaluationCount - a.evaluationCount
+    return b.averageScore - a.averageScore
   })
 }
 
