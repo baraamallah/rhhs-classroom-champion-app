@@ -103,9 +103,9 @@ export function SimpleClassroomCard({ classroom, rank }: SimpleClassroomCardProp
                     animate={{ scale: [1, 1.1, 1] }}
                     transition={{ duration: 1, delay: 0.5 }}
                   >
-                    {classroom.averageScore}
+                    {classroom.totalScore}
                   </motion.span>
-                  <div className="text-[10px] sm:text-xs text-muted-foreground hidden sm:block">Eco-Score</div>
+                  <div className="text-[10px] sm:text-xs text-muted-foreground hidden sm:block">Total Points</div>
                 </div>
               </motion.div>
             </div>

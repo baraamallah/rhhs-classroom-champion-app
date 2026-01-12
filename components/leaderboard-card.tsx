@@ -25,11 +25,11 @@ export function LeaderboardCard({ score, rank }: LeaderboardCardProps) {
       <div className={cn(
         "absolute left-0 top-0 bottom-0 w-1",
         scoreColor.includes("yellow") ? "bg-yellow-500 dark:bg-yellow-400" :
-        scoreColor.includes("green") ? "bg-green-500 dark:bg-green-400" :
-        scoreColor.includes("blue") ? "bg-blue-500 dark:bg-blue-400" :
-        "bg-gray-500 dark:bg-gray-400"
+          scoreColor.includes("green") ? "bg-green-500 dark:bg-green-400" :
+            scoreColor.includes("blue") ? "bg-blue-500 dark:bg-blue-400" :
+              "bg-gray-500 dark:bg-gray-400"
       )} />
-      
+
       <CardContent className="p-3">
         <div className="flex items-start justify-between gap-2">
           {/* Rank and Trophy */}
@@ -60,10 +60,10 @@ export function LeaderboardCard({ score, rank }: LeaderboardCardProps) {
           <div className="flex flex-col items-end">
             <div className="flex items-center gap-1 mb-1">
               <StarIcon className={cn("h-5 w-5", scoreColor)} />
-              <span className={cn("text-2xl font-bold", scoreColor)}>{score.averageScore}</span>
+              <span className={cn("text-2xl font-bold", scoreColor)}>{score.totalScore}</span>
             </div>
-            <span className="text-xs text-muted-foreground mb-1">Eco-Score</span>
-            
+            <span className="text-xs text-muted-foreground mb-1">Total Points</span>
+
             {/* Score Range Badge */}
             <span className={cn(
               "text-xs px-2 py-1 rounded-full border",
@@ -71,7 +71,7 @@ export function LeaderboardCard({ score, rank }: LeaderboardCardProps) {
             )}>
               {scoreRange.label}
             </span>
-            
+
             {isTopThree && (
               <span className={cn("text-xs font-medium mt-1", badge.color)}>
                 {badge.label}
