@@ -173,7 +173,7 @@ export default function AboutPage() {
                             </h3>
                             <div className="grid gap-4">
                                 {[
-                                    { name: "Elio Saab", role: "Club President", email: "elio.saab@rhhs.edu.lb" },
+                                    { name: "Adam Yehya", role: "Club President", email: "adam.yehya@rhhs.edu.lb" },
                                     { name: "Vanessa Haddad", role: "Coordinator", email: "Vanessa.AlHaddad@rhhs.edu.lb" },
                                 ].map((member, index) => (
                                     <motion.div
