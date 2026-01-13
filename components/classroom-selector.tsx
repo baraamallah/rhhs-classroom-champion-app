@@ -89,26 +89,39 @@ export function ClassroomSelector({ onSelect }: ClassroomSelectorProps) {
           No classrooms found.
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
           {filteredClassrooms.map((classroom, index) => (
             <motion.div
               key={classroom.id}
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: index * 0.05 }}
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: index * 0.05, type: "spring", stiffness: 100 }}
+              whileHover={{ scale: 1.02, y: -2 }}
+              whileTap={{ scale: 0.98 }}
             >
               <Button
                 variant="outline"
-                className="w-full h-auto p-4 flex flex-col items-start hover:bg-primary/5 hover:border-primary/50 transition-all bg-card text-left whitespace-normal"
+                className="w-full h-auto p-4 sm:p-5 flex flex-col items-start hover:bg-primary/10 hover:border-primary/70 transition-all bg-card text-left whitespace-normal shadow-sm hover:shadow-md group"
                 onClick={() => onSelect(classroom)}
               >
-                <span className="font-semibold text-lg text-foreground w-full truncate">{classroom.name}</span>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground w-full">
-                  <span>Grade {classroom.grade}</span>
+                <div className="flex items-center gap-2 w-full mb-2">
+                  <motion.div
+                    className="w-2 h-2 rounded-full bg-primary opacity-0 group-hover:opacity-100"
+                    animate={{ scale: [1, 1.5, 1] }}
+                    transition={{ duration: 1.5, repeat: Infinity }}
+                  />
+                  <span className="font-semibold text-base sm:text-lg text-foreground flex-1 truncate">
+                    {classroom.name}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground w-full">
+                  <span className="font-medium">Grade {classroom.grade}</span>
                   {classroom.division && (
                     <>
                       <span>•</span>
-                      <span>{classroom.division}</span>
+                      <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+                        {classroom.division}
+                      </span>
                     </>
                   )}
                 </div>

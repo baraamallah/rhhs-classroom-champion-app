@@ -118,21 +118,40 @@ export function EvaluationForm({ classroom, user, onComplete, onCancel }: Evalua
   const completedCount = checkedItems.length
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <Card>
-        <CardHeader>
-          <div className="flex items-start justify-between">
-            <div>
-              <CardTitle className="text-2xl">Evaluate {classroom.name}</CardTitle>
-              <CardDescription>{classroom.grade}</CardDescription>
+    <div className="max-w-4xl mx-auto px-2 sm:px-0">
+      <Card className="shadow-lg">
+        <CardHeader className="pb-4 sm:pb-6">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1 min-w-0">
+              <CardTitle className="text-xl sm:text-2xl mb-1">Evaluate {classroom.name}</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">Grade {classroom.grade}</CardDescription>
             </div>
-            <Button variant="ghost" onClick={onCancel}>
-              Cancel
+            <Button variant="ghost" onClick={onCancel} className="flex-shrink-0 text-sm sm:text-base">
+              ✕ Cancel
             </Button>
           </div>
+          {/* Progress Indicator */}
+          <div className="mt-4 space-y-2">
+            <div className="flex items-center justify-between text-xs sm:text-sm">
+              <span className="text-muted-foreground">
+                {completedCount} of {checklistItems.length} items completed
+              </span>
+              <span className="font-semibold text-primary">
+                Score: {totalScore} / {maxScore}
+              </span>
+            </div>
+            <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+              <motion.div
+                className="h-full bg-gradient-to-r from-primary to-green-500"
+                initial={{ width: 0 }}
+                animate={{ width: `${(completedCount / checklistItems.length) * 100}%` }}
+                transition={{ duration: 0.3 }}
+              />
+            </div>
+          </div>
         </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
+        <CardContent className="px-3 sm:px-6">
+          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
             {/* Checklist Items */}
             <div className="space-y-4">
               {checklistItems.map((item, index) => {
@@ -197,35 +216,62 @@ export function EvaluationForm({ classroom, user, onComplete, onCancel }: Evalua
             </div>
 
             {/* Score Summary */}
-            <Card className="bg-muted/50">
-              <CardContent className="pt-6">
-                {/* Supervisor Specific Score */}
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Supervisor Score</p>
-                    <p className="text-xs text-muted-foreground">(Your specific items)</p>
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+            >
+              <Card className="bg-gradient-to-br from-primary/10 to-green-500/10 border-primary/20">
+                <CardContent className="pt-4 sm:pt-6">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm sm:text-base font-medium text-foreground">Total Score</p>
+                      <p className="text-xs text-muted-foreground">All checklist items</p>
+                    </div>
+                    <motion.div 
+                      className="text-right"
+                      animate={{ scale: [1, 1.05, 1] }}
+                      transition={{ duration: 0.5, delay: 0.5 }}
+                    >
+                      <p className="text-3xl sm:text-4xl font-bold text-primary">
+                        {totalScore} <span className="text-lg sm:text-xl text-muted-foreground">/ {maxScore}</span>
+                      </p>
+                    </motion.div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-2xl font-bold text-blue-600">
-                      {checklistItems.reduce((total, item) => {
-                        const isSupervisorSpecific = (item.assigned_supervisors || []).length > 0
-                        if (!isSupervisorSpecific) return total
-                        return total + (checkedItems.includes(item.id) ? item.points : 0)
-                      }, 0)} / {checklistItems.reduce((sum, item) => {
-                        const isSupervisorSpecific = (item.assigned_supervisors || []).length > 0
-                        if (!isSupervisorSpecific) return sum
-                        return sum + item.points
-                      }, 0)}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </motion.div>
 
             {/* Submit Button */}
-            <Button type="submit" size="lg" className="w-full" disabled={submitting}>
-              {submitting ? "Submitting Evaluation..." : "Submit Evaluation"}
-            </Button>
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+            >
+              <Button 
+                type="submit" 
+                size="lg" 
+                className="w-full h-12 sm:h-auto text-base sm:text-lg font-semibold shadow-lg hover:shadow-xl transition-all" 
+                disabled={submitting}
+              >
+                {submitting ? (
+                  <>
+                    <motion.span
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                      className="inline-block mr-2"
+                    >
+                      ⏳
+                    </motion.span>
+                    Submitting...
+                  </>
+                ) : (
+                  <>
+                    ✓ Submit Evaluation
+                  </>
+                )}
+              </Button>
+            </motion.div>
           </form>
         </CardContent>
       </Card>

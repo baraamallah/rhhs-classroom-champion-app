@@ -87,40 +87,17 @@ export async function archiveAndReset() {
       }
     }
 
-    // Archive classrooms
-    console.log("[archiveAndReset] Fetching classrooms to archive...")
-    const { data: classrooms, error: classFetchError } = await supabase.from("classrooms").select("*")
-
-    if (classFetchError) {
-      console.error("[archiveAndReset] Failed to fetch classrooms:", classFetchError)
-      return { success: false, error: `Failed to fetch classrooms for archiving: ${classFetchError.message}` }
-    }
-
-    console.log(`[archiveAndReset] Found ${classrooms?.length || 0} classrooms to archive`)
-
-    if (classrooms && classrooms.length > 0) {
-      // Use upsert to handle cases where data might already exist in archive
-      const { error: archiveClassError } = await supabase.from("archive_classrooms").upsert(classrooms, { onConflict: "id" })
-
-      if (archiveClassError) {
-        console.error("Archive classrooms error:", archiveClassError)
-        return { success: false, error: `Failed to archive classrooms: ${archiveClassError.message}` }
-      }
-
-      console.log("[archiveAndReset] Classrooms archived, now deleting from main table...")
-      const { error: deleteClassError } = await supabase.from("classrooms").delete().neq("id", "") // Delete all
-
-      if (deleteClassError) {
-        console.error("[archiveAndReset] Failed to delete classrooms:", deleteClassError)
-        return { success: false, error: `Failed to delete classrooms: ${deleteClassError.message}` }
-      }
-    }
+    // Note: We do NOT archive/delete classrooms because:
+    // 1. Monthly winners reference classrooms
+    // 2. Classrooms are persistent entities that should remain
+    // 3. Only evaluations are archived/reset monthly
+    console.log("[archiveAndReset] Skipping classroom archiving - classrooms are preserved for monthly winners")
 
     console.log("[archiveAndReset] Archive and reset completed successfully")
     revalidatePath("/admin")
     return {
       success: true,
-      message: `Successfully archived ${evaluations?.length || 0} evaluations and ${classrooms?.length || 0} classrooms. All data has been reset.`,
+      message: `Successfully archived ${evaluations?.length || 0} evaluations. Classrooms preserved for monthly winners tracking.`,
     }
   } catch (dbError: any) {
     console.error("[data-management-actions] archiveAndReset error", dbError)

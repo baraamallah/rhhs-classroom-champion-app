@@ -76,15 +76,19 @@ function SupervisorEvaluateContent({ currentUser }: SupervisorEvaluateContentPro
     <div className="min-h-screen bg-background">
       <DashboardHeader user={currentUser} />
 
-      <main className="container mx-auto px-4 py-12">
-        <div className="mb-8">
-          <div className="flex items-center gap-4 mb-4">
-            <Button variant="outline" onClick={handleBackToDashboard}>
-              ← Back to Dashboard
+      <main className="container mx-auto px-4 py-6 sm:py-12 max-w-6xl">
+        <div className="mb-6 sm:mb-8">
+          <div className="flex items-center gap-2 sm:gap-4 mb-4">
+            <Button 
+              variant="outline" 
+              onClick={handleBackToDashboard}
+              className="text-sm sm:text-base h-9 sm:h-auto"
+            >
+              ← Back
             </Button>
           </div>
-          <h2 className="text-3xl font-bold text-foreground mb-2">Classroom Evaluation</h2>
-          <p className="text-muted-foreground">Evaluate classroom eco-friendly practices</p>
+          <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">Classroom Evaluation</h2>
+          <p className="text-sm sm:text-base text-muted-foreground">Evaluate classroom eco-friendly practices</p>
         </div>
 
         {viewState === "select" && (

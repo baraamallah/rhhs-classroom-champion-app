@@ -79,17 +79,27 @@ export function SupervisorEvaluationsHistory({ supervisorId, onEvaluateClassroom
         ) : (
           <div className="space-y-4">
             {/* Summary Stats */}
-            <div className="grid grid-cols-2 gap-4 mb-6">
-              <div className="text-center p-3 rounded-lg bg-muted">
-                <p className="text-2xl font-bold text-primary">{evaluations.length}</p>
-                <p className="text-sm text-muted-foreground">Total Evaluations</p>
-              </div>
-              <div className="text-center p-3 rounded-lg bg-muted">
-                <p className="text-2xl font-bold text-primary">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6">
+              <motion.div 
+                className="text-center p-3 sm:p-4 rounded-lg bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20"
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.1 }}
+              >
+                <p className="text-2xl sm:text-3xl font-bold text-primary">{evaluations.length}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground mt-1">Total Evaluations</p>
+              </motion.div>
+              <motion.div 
+                className="text-center p-3 sm:p-4 rounded-lg bg-gradient-to-br from-green-500/10 to-green-500/5 border border-green-500/20"
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.2 }}
+              >
+                <p className="text-2xl sm:text-3xl font-bold text-green-600 dark:text-green-400">
                   {Math.round(evaluations.reduce((sum, e) => sum + e.total_score, 0) / evaluations.length)}
                 </p>
-                <p className="text-sm text-muted-foreground">Average Score</p>
-              </div>
+                <p className="text-xs sm:text-sm text-muted-foreground mt-1">Average Score</p>
+              </motion.div>
             </div>
 
             {/* Evaluation List */}
@@ -97,28 +107,32 @@ export function SupervisorEvaluationsHistory({ supervisorId, onEvaluateClassroom
               {evaluations.map((evaluation, index) => (
                 <motion.div
                   key={evaluation.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                  className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-lg border bg-card gap-4"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.05, type: "spring", stiffness: 100 }}
+                  whileHover={{ scale: 1.02, x: 4 }}
+                  className="flex flex-col sm:flex-row sm:items-center justify-between p-4 sm:p-5 rounded-lg border bg-card hover:bg-accent/5 transition-all gap-4 shadow-sm hover:shadow-md"
                 >
-                  <div className="flex-1">
-                    <h4 className="font-medium text-foreground">{evaluation.classroom?.name || "Unknown Classroom"}</h4>
-                    <p className="text-sm text-muted-foreground">
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-semibold text-base sm:text-lg text-foreground mb-1 truncate">
+                      {evaluation.classroom?.name || "Unknown Classroom"}
+                    </h4>
+                    <p className="text-xs sm:text-sm text-muted-foreground">
                       Grade {evaluation.classroom?.grade} • {formatDate(evaluation.evaluation_date)}
                     </p>
                   </div>
                   <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
                     <div className="text-left sm:text-right">
-                      <p className="text-xl font-bold text-primary">{evaluation.total_score}</p>
+                      <p className="text-2xl sm:text-3xl font-bold text-primary">{evaluation.total_score}</p>
                       <p className="text-xs text-muted-foreground">points</p>
                     </div>
                     <Button
                       size="sm"
                       variant="outline"
                       onClick={() => handleEvaluateAgain(evaluation)}
+                      className="text-sm sm:text-base h-9 sm:h-auto min-w-[120px] sm:min-w-[140px]"
                     >
-                      Evaluate Again
+                      🔄 Evaluate Again
                     </Button>
                   </div>
                 </motion.div>

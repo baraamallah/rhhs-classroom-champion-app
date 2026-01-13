@@ -8,8 +8,8 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Building2, Plus, Pencil, Trash2, Users, MoreVertical, Filter } from "lucide-react"
-import { createClassroom, updateClassroom, deleteClassroom, getAllUsers } from "@/lib/supabase-data"
+import { Building2, Plus, Pencil, Trash2, Users, MoreVertical, Filter, CheckSquare, Square } from "lucide-react"
+import { createClassroom, updateClassroom, deleteClassroom, getAllUsers, bulkUpdateClassroomDivisions } from "@/lib/supabase-data"
 import { createClient } from "@/lib/supabase/client"
 import type { Classroom, User } from "@/lib/types"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
@@ -35,6 +35,8 @@ export function ClassroomManagement({ currentUser }: ClassroomManagementProps) {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [isAdding, setIsAdding] = useState(false)
   const [selectedDivision, setSelectedDivision] = useState<string>("all")
+  const [selectedClassrooms, setSelectedClassrooms] = useState<Set<string>>(new Set())
+  const [bulkUpdating, setBulkUpdating] = useState(false)
   const { toast } = useToast()
 
   const [formData, setFormData] = useState<ClassroomFormData>({
@@ -209,6 +211,79 @@ export function ClassroomManagement({ currentUser }: ClassroomManagementProps) {
     setFormData({ name: "", grade: "", division: "", description: "", supervisorIds: [] })
   }
 
+  const handleToggleSelect = (classroomId: string) => {
+    const newSelected = new Set(selectedClassrooms)
+    if (newSelected.has(classroomId)) {
+      newSelected.delete(classroomId)
+    } else {
+      newSelected.add(classroomId)
+    }
+    setSelectedClassrooms(newSelected)
+  }
+
+  const handleSelectAll = () => {
+    if (selectedClassrooms.size === filteredClassrooms.length) {
+      setSelectedClassrooms(new Set())
+    } else {
+      setSelectedClassrooms(new Set(filteredClassrooms.map(c => c.id)))
+    }
+  }
+
+  const handleBulkUpdateDivision = async (division: string) => {
+    if (selectedClassrooms.size === 0) {
+      toast({
+        title: "No Selection",
+        description: "Please select at least one classroom",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setBulkUpdating(true)
+    const result = await bulkUpdateClassroomDivisions(Array.from(selectedClassrooms), division)
+
+    if (result.success) {
+      toast({
+        title: "Success",
+        description: `Updated division for ${result.updatedCount || selectedClassrooms.size} classroom(s)`,
+      })
+      setSelectedClassrooms(new Set())
+      loadClassrooms()
+    } else {
+      toast({
+        title: "Error",
+        description: result.error || "Failed to update divisions",
+        variant: "destructive",
+      })
+    }
+
+    setBulkUpdating(false)
+  }
+
+  const handleQuickDivisionChange = async (classroomId: string, division: string) => {
+    const classroom = classrooms.find(c => c.id === classroomId)
+    if (!classroom) return
+
+    setBulkUpdating(true)
+    const result = await bulkUpdateClassroomDivisions([classroomId], division)
+
+    if (result.success) {
+      toast({
+        title: "Success",
+        description: "Division updated successfully",
+      })
+      loadClassrooms()
+    } else {
+      toast({
+        title: "Error",
+        description: result.error || "Failed to update division",
+        variant: "destructive",
+      })
+    }
+
+    setBulkUpdating(false)
+  }
+
   const handleAddNew = () => {
     setIsAdding(true)
     setEditingId(null)
@@ -219,6 +294,11 @@ export function ClassroomManagement({ currentUser }: ClassroomManagementProps) {
   const filteredClassrooms = selectedDivision === "all"
     ? classrooms
     : classrooms.filter(classroom => classroom.division === selectedDivision)
+
+  // Clear selection when filter changes
+  useEffect(() => {
+    setSelectedClassrooms(new Set())
+  }, [selectedDivision])
 
   return (
     <Card>
@@ -240,23 +320,62 @@ export function ClassroomManagement({ currentUser }: ClassroomManagementProps) {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Division Filter */}
-        <div className="flex items-center gap-2 p-3 bg-muted/30 rounded-lg border">
-          <Filter className="h-4 w-4 text-muted-foreground" />
-          <Label className="text-sm font-medium">Filter by Division:</Label>
-          <Select value={selectedDivision} onValueChange={setSelectedDivision}>
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Select division" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Divisions</SelectItem>
-              <SelectItem value="Pre-School">Pre-School</SelectItem>
-              <SelectItem value="Elementary">Elementary</SelectItem>
-              <SelectItem value="Middle School">Middle School</SelectItem>
-              <SelectItem value="High School">High School</SelectItem>
-              <SelectItem value="Technical Institute">Technical Institute</SelectItem>
-            </SelectContent>
-          </Select>
+        {/* Division Filter and Bulk Actions */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 p-3 bg-muted/30 rounded-lg border">
+            <Filter className="h-4 w-4 text-muted-foreground" />
+            <Label className="text-sm font-medium">Filter by Division:</Label>
+            <Select value={selectedDivision} onValueChange={setSelectedDivision}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Select division" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Divisions</SelectItem>
+                <SelectItem value="Pre-School">Pre-School</SelectItem>
+                <SelectItem value="Elementary">Elementary</SelectItem>
+                <SelectItem value="Middle School">Middle School</SelectItem>
+                <SelectItem value="High School">High School</SelectItem>
+                <SelectItem value="Technical Institute">Technical Institute</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Bulk Action Bar */}
+          {selectedClassrooms.size > 0 && (
+            <div className="flex items-center justify-between p-3 bg-primary/10 border border-primary/20 rounded-lg">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium">
+                  {selectedClassrooms.size} classroom{selectedClassrooms.size !== 1 ? 's' : ''} selected
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Label className="text-sm font-medium">Bulk Change Division:</Label>
+                <Select
+                  onValueChange={handleBulkUpdateDivision}
+                  disabled={bulkUpdating}
+                >
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="Select division" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Pre-School">Pre-School</SelectItem>
+                    <SelectItem value="Elementary">Elementary</SelectItem>
+                    <SelectItem value="Middle School">Middle School</SelectItem>
+                    <SelectItem value="High School">High School</SelectItem>
+                    <SelectItem value="Technical Institute">Technical Institute</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSelectedClassrooms(new Set())}
+                  disabled={bulkUpdating}
+                >
+                  Clear Selection
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Classrooms List */}
@@ -371,6 +490,21 @@ export function ClassroomManagement({ currentUser }: ClassroomManagementProps) {
             </p>
           ) : (
             <div className="space-y-3">
+              {/* Select All Header */}
+              <div className="flex items-center gap-2 p-2 border-b">
+                <button
+                  onClick={handleSelectAll}
+                  className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {selectedClassrooms.size === filteredClassrooms.length && filteredClassrooms.length > 0 ? (
+                    <CheckSquare className="h-4 w-4" />
+                  ) : (
+                    <Square className="h-4 w-4" />
+                  )}
+                  <span>Select All ({filteredClassrooms.length})</span>
+                </button>
+              </div>
+
               {filteredClassrooms.map((classroom) => (
                 <div key={classroom.id} className="border border-border rounded-lg bg-card">
                   {editingId === classroom.id ? (
@@ -478,11 +612,21 @@ export function ClassroomManagement({ currentUser }: ClassroomManagementProps) {
                     // Normal display view
                     <div className="flex items-center justify-between p-4 hover:bg-accent/5 transition-colors">
                       <div className="flex items-center gap-4 flex-1">
+                        <button
+                          onClick={() => handleToggleSelect(classroom.id)}
+                          className="flex-shrink-0"
+                        >
+                          {selectedClassrooms.has(classroom.id) ? (
+                            <CheckSquare className="h-5 w-5 text-primary" />
+                          ) : (
+                            <Square className="h-5 w-5 text-muted-foreground" />
+                          )}
+                        </button>
                         <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10">
                           <Building2 className="h-5 w-5 text-primary" />
                         </div>
                         <div className="flex-1">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <p className="font-medium text-foreground">{classroom.name}</p>
                             <span className="text-sm text-muted-foreground">{classroom.grade}</span>
                             {classroom.division && (
@@ -514,6 +658,26 @@ export function ClassroomManagement({ currentUser }: ClassroomManagementProps) {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
+                        {/* Quick Division Change */}
+                        <div className="flex items-center gap-1 border rounded-md p-1">
+                          <span className="text-xs text-muted-foreground px-2">Division:</span>
+                          <Select
+                            value={classroom.division || ""}
+                            onValueChange={(value) => handleQuickDivisionChange(classroom.id, value)}
+                            disabled={bulkUpdating}
+                          >
+                            <SelectTrigger className="h-8 w-[140px] border-0 shadow-none">
+                              <SelectValue placeholder="Set division" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Pre-School">Pre-School</SelectItem>
+                              <SelectItem value="Elementary">Elementary</SelectItem>
+                              <SelectItem value="Middle School">Middle School</SelectItem>
+                              <SelectItem value="High School">High School</SelectItem>
+                              <SelectItem value="Technical Institute">Technical Institute</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button

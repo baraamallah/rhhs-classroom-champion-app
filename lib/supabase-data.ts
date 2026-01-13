@@ -345,6 +345,43 @@ export async function updateClassroom(
   }
 }
 
+export async function bulkUpdateClassroomDivisions(
+  classroomIds: string[],
+  division: string
+): Promise<{ success: boolean; error?: string; updatedCount?: number }> {
+  try {
+    if (!classroomIds || classroomIds.length === 0) {
+      return { success: false, error: "No classrooms selected" }
+    }
+
+    const supabase = createClient()
+    const updateData: any = {}
+
+    // Only include division if it's not empty to avoid violating the constraint
+    if (division) {
+      updateData.division = division
+    } else {
+      updateData.division = null
+    }
+
+    const { data, error } = await supabase
+      .from("classrooms")
+      .update(updateData)
+      .in("id", classroomIds)
+      .select("id")
+
+    if (error) {
+      console.error("[v0] Error bulk updating classroom divisions:", error)
+      return { success: false, error: error.message }
+    }
+
+    return { success: true, updatedCount: data?.length || 0 }
+  } catch (error) {
+    console.error("[v0] Exception bulk updating classroom divisions:", error)
+    return { success: false, error: "Failed to update classroom divisions" }
+  }
+}
+
 export async function deleteClassroom(id: string): Promise<{ success: boolean; error?: string }> {
   try {
     const supabase = createClient()

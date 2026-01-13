@@ -24,7 +24,10 @@ import {
   restoreEvaluations,
   archiveAndReset
 } from "@/app/actions/data-management-actions"
-import { Loader2, Trash2, Archive, Search, History, RotateCcw } from "lucide-react"
+import { Loader2, Trash2, Archive, Search, History, RotateCcw, Download } from "lucide-react"
+import { MonthlyWinnersManager } from "@/components/monthly-winners-manager"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { exportAllDataAsZip } from "@/app/actions/export-data-actions"
 
 interface EvaluationData {
   id: string
@@ -65,6 +68,7 @@ export function DataManagementPanel() {
   const [archivedSearchTerm, setArchivedSearchTerm] = useState("")
   const [selectedEvaluations, setSelectedEvaluations] = useState<string[]>([])
   const [selectedArchivedEvaluations, setSelectedArchivedEvaluations] = useState<string[]>([])
+  const [exporting, setExporting] = useState(false)
 
   useEffect(() => {
     loadEvaluations()
@@ -277,6 +281,103 @@ export function DataManagementPanel() {
     }
   }
 
+  const handleExportAllData = async () => {
+    setExporting(true)
+    try {
+      const result = await exportAllDataAsZip()
+      
+      if (result.success && result.files) {
+        // Check if JSZip is already loaded
+        // @ts-ignore
+        if (window.JSZip) {
+          createZipFile(result.files)
+        } else {
+          // Load JSZip from CDN
+          const script = document.createElement('script')
+          script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js'
+          script.onload = () => {
+            createZipFile(result.files)
+          }
+          script.onerror = () => {
+            toast({
+              title: "Error",
+              description: "Failed to load ZIP library. Please check your internet connection.",
+              variant: "destructive",
+            })
+            setExporting(false)
+          }
+          document.body.appendChild(script)
+        }
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || "Failed to export data",
+          variant: "destructive",
+        })
+        setExporting(false)
+      }
+    } catch (error) {
+      console.error("Export error:", error)
+      toast({
+        title: "Error",
+        description: "Failed to export data",
+        variant: "destructive",
+      })
+      setExporting(false)
+    }
+  }
+
+  const createZipFile = (files: { filename: string; content: string }[]) => {
+    try {
+      // @ts-ignore - JSZip loaded from CDN
+      const JSZip = window.JSZip
+      if (!JSZip) {
+        throw new Error("JSZip not available")
+      }
+
+      const zip = new JSZip()
+
+      // Add all files to ZIP
+      files.forEach((file) => {
+        zip.file(file.filename, file.content)
+      })
+
+      // Generate ZIP and download
+      zip.generateAsync({ type: 'blob' }).then((blob: Blob) => {
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `rhhs-eco-data-export-${new Date().toISOString().split('T')[0]}.zip`
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+
+        toast({
+          title: "Success",
+          description: `Exported ${files.length} files successfully`,
+        })
+        setExporting(false)
+      }).catch((error: any) => {
+        console.error("ZIP generation error:", error)
+        toast({
+          title: "Error",
+          description: "Failed to generate ZIP file",
+          variant: "destructive",
+        })
+        setExporting(false)
+      })
+    } catch (error) {
+      console.error("ZIP creation error:", error)
+      toast({
+        title: "Error",
+        description: "Failed to create ZIP file",
+        variant: "destructive",
+      })
+      setExporting(false)
+    }
+  }
+
   const handleDeleteClassroom = async () => {
     if (!classroomId.trim()) {
       toast({
@@ -321,8 +422,15 @@ export function DataManagementPanel() {
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
+      <Tabs defaultValue="archive">
+        <TabsList>
+          <TabsTrigger value="archive">Archive & Reset</TabsTrigger>
+          <TabsTrigger value="winners">Monthly Winners</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="archive" className="space-y-6 mt-6">
+        <Card>
+          <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Archive className="h-5 w-5" />
@@ -605,18 +713,65 @@ export function DataManagementPanel() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
+            <Download className="h-5 w-5" />
+            Export All Data
+          </CardTitle>
+          <CardDescription>
+            Download all system data as a ZIP file containing text files for evaluations, archives, classrooms, supervisors, leaderboard, and winners.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="text-sm text-muted-foreground">
+              <p>This will generate a ZIP file containing:</p>
+              <ul className="list-disc list-inside mt-2 space-y-1 text-xs">
+                <li>Summary statistics</li>
+                <li>Active evaluations with full details</li>
+                <li>Archived evaluations</li>
+                <li>All classrooms and assignments</li>
+                <li>Supervisor information</li>
+                <li>Complete leaderboard by division</li>
+                <li>Monthly winners history</li>
+              </ul>
+            </div>
+            <Button
+              variant="default"
+              onClick={handleExportAllData}
+              disabled={exporting || loading}
+              className="w-full sm:w-auto"
+            >
+              {exporting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Generating ZIP...
+                </>
+              ) : (
+                <>
+                  <Download className="mr-2 h-4 w-4" />
+                  Download All Data as ZIP
+                </>
+              )}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
             <Archive className="h-5 w-5" />
             Archive and Reset
           </CardTitle>
           <CardDescription>
-            Archive all current data and reset the system for a new evaluation period.
+            Archive all current evaluations and reset the system for a new evaluation period.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              This will archive all current evaluations and classrooms, moving them to the archive tables.
-              After archiving, all current tables will be emptied to start fresh for the next evaluation period.
+              This will archive all current evaluations, moving them to the archive table.
+              Classrooms are preserved to maintain monthly winners tracking.
+              After archiving, evaluations will be reset to start fresh for the next evaluation period.
             </p>
             <Button
               variant="destructive"
@@ -717,6 +872,12 @@ export function DataManagementPanel() {
           </AlertDialogAction>
         </AlertDialogContent>
       </AlertDialog>
+        </TabsContent>
+
+        <TabsContent value="winners" className="mt-6">
+          <MonthlyWinnersManager />
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

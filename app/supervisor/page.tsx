@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useRouter } from "next/navigation"
 import type { User } from "@/lib/types"
+import { ClipboardCheckIcon } from "@/components/icons"
 
 interface SupervisorDashboardContentProps {
   currentUser: User
@@ -28,21 +29,26 @@ function SupervisorDashboardContent({ currentUser }: SupervisorDashboardContentP
     <div className="min-h-screen bg-background">
       <DashboardHeader user={currentUser} />
 
-      <main className="container mx-auto px-4 py-12">
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold text-foreground mb-2">Supervisor Dashboard</h2>
-          <p className="text-muted-foreground">Evaluate classrooms and track eco-friendly practices</p>
+      <main className="container mx-auto px-4 py-6 sm:py-12 max-w-6xl">
+        <div className="mb-6 sm:mb-8">
+          <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">Supervisor Dashboard</h2>
+          <p className="text-sm sm:text-base text-muted-foreground">Evaluate classrooms and track eco-friendly practices</p>
         </div>
 
         {/* New Evaluation Button */}
-        <div className="mb-8">
-          <Card>
-            <CardHeader>
-              <CardTitle>Start New Evaluation</CardTitle>
-              <CardDescription>Evaluate a classroom's eco-friendly practices</CardDescription>
+        <div className="mb-6 sm:mb-8">
+          <Card className="shadow-lg hover:shadow-xl transition-shadow">
+            <CardHeader className="pb-3 sm:pb-4">
+              <CardTitle className="text-lg sm:text-xl">Start New Evaluation</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">Evaluate a classroom's eco-friendly practices</CardDescription>
             </CardHeader>
             <CardContent>
-              <Button onClick={handleNewEvaluation} size="lg" className="w-full sm:w-auto">
+              <Button 
+                onClick={handleNewEvaluation} 
+                size="lg" 
+                className="w-full sm:w-auto text-base sm:text-lg h-12 sm:h-auto"
+              >
+                <ClipboardCheckIcon className="h-4 w-4 mr-2" />
                 Evaluate New Classroom
               </Button>
             </CardContent>

@@ -182,8 +182,7 @@ export async function deleteUser(userId: string) {
       return { success: false, error: "User not found" }
     }
 
-    // For now, allow all super_admins to manage any user
-    // TODO: Add created_by column to users table if needed for permission control
+    // Allow admins and super_admins to manage any user
 
     const { error: updateError } = await supabase
       .from('users')
@@ -215,9 +214,7 @@ export async function updateUser(formData: { userId: string; email: string; name
     return { success: false, error: "Name and email are required" }
   }
 
-  if (currentUser.role === "admin" && formData.role === "admin") {
-    return { success: false, error: "Unauthorized: Only super admins can create admin accounts" }
-  }
+  // Allow admins to edit admin accounts, but not create them (restriction remains in createUserAccount)
 
   const supabase = await createClient()
 
@@ -233,8 +230,7 @@ export async function updateUser(formData: { userId: string; email: string; name
       return { success: false, error: "User not found" }
     }
 
-    // For now, allow all super_admins to edit any user
-    // TODO: Add created_by column to users table if needed for permission control
+    // Allow admins and super_admins to edit any user
 
     const { error } = await supabase
       .from('users')
@@ -289,8 +285,7 @@ export async function updateUserPassword(formData: { userId: string; password: s
       return { success: false, error: "User not found" }
     }
 
-    // For now, allow all super_admins to edit any user
-    // TODO: Add created_by column to users table if needed for permission control
+    // Allow admins and super_admins to edit any user's password
 
     const { error } = await supabase
       .from('users')

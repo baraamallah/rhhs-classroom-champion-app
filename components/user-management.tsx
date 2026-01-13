@@ -185,10 +185,12 @@ export function UserManagement({ currentUser }: UserManagementProps) {
 
   const handleEditUser = (user: User) => {
     setEditingUser(user)
+    // Handle super_admin role - default to admin since it's not in ManagedRole
+    const editableRole: ManagedRole = user.role === "super_admin" ? "admin" : (user.role as ManagedRole)
     setFormData({
       email: user.email,
       name: user.name || "",
-      role: user.role as ManagedRole,
+      role: editableRole,
       password: "",
     })
     setPasswordChangeData({ newPassword: "", confirmPassword: "" })
@@ -393,7 +395,7 @@ export function UserManagement({ currentUser }: UserManagementProps) {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {currentUser.role === "super_admin" && <SelectItem value="admin">Admin</SelectItem>}
+                      {(currentUser.role === "super_admin" || currentUser.role === "admin") && <SelectItem value="admin">Admin</SelectItem>}
                       <SelectItem value="supervisor">Supervisor</SelectItem>
                     </SelectContent>
                   </Select>
@@ -519,7 +521,7 @@ export function UserManagement({ currentUser }: UserManagementProps) {
               <CardTitle>All Users</CardTitle>
               <CardDescription>Manage existing users in the system</CardDescription>
             </div>
-            {currentUser.role === "super_admin" && !showCreateForm && !editingUser && (
+            {(currentUser.role === "admin" || currentUser.role === "super_admin") && !showCreateForm && !editingUser && (
               <Button
                 onClick={() => setShowCreateForm(true)}
                 size="sm"
@@ -581,40 +583,42 @@ export function UserManagement({ currentUser }: UserManagementProps) {
                       </div>
                       <div className="flex items-center gap-2">
                         {(currentUser.role === "admin" || currentUser.role === "super_admin") && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleAssignClassrooms(user)}
-                          >
-                            <Shield className="h-4 w-4 mr-2" />
-                            Assign to Classrooms
-                          </Button>
-                        )}
-                        {currentUser.role === "super_admin" && (
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="text-muted-foreground hover:text-foreground"
-                              >
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => handleEditUser(user)}>
-                                <UserPlus className="h-4 w-4 mr-2" />
-                                Edit User
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => handleDelete(user.id)}
-                                variant="destructive"
-                              >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Delete User
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          <>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleAssignClassrooms(user)}
+                            >
+                              <Shield className="h-4 w-4 mr-2" />
+                              Assign to Classrooms
+                            </Button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="text-muted-foreground hover:text-foreground"
+                                >
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => handleEditUser(user)}>
+                                  <UserPlus className="h-4 w-4 mr-2" />
+                                  Edit User
+                                </DropdownMenuItem>
+                                {currentUser.role === "super_admin" && (
+                                  <DropdownMenuItem
+                                    onClick={() => handleDelete(user.id)}
+                                    variant="destructive"
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Delete User
+                                  </DropdownMenuItem>
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </>
                         )}
                       </div>
                     </div>
@@ -660,7 +664,7 @@ export function UserManagement({ currentUser }: UserManagementProps) {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        {currentUser.role === "super_admin" && (
+                        {(currentUser.role === "admin" || currentUser.role === "super_admin") && (
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button
@@ -676,7 +680,7 @@ export function UserManagement({ currentUser }: UserManagementProps) {
                                 <UserPlus className="h-4 w-4 mr-2" />
                                 Edit User
                               </DropdownMenuItem>
-                              {user.id !== currentUser.id && (
+                              {currentUser.role === "super_admin" && user.id !== currentUser.id && (
                                 <DropdownMenuItem
                                   onClick={() => handleDelete(user.id)}
                                   variant="destructive"
