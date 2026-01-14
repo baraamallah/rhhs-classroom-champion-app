@@ -175,6 +175,9 @@ export default function AboutPage() {
                                 {[
                                     { name: "Adam Yehya", role: "Club President", email: "adam.yehya@rhhs.edu.lb" },
                                     { name: "Mariam Baalbaky", role: "Vice President", email: "mariam.baalbaky@rhhs.edu.lb" },
+                                    { name: "Lana Bechara", role: "Secretary", email: "lana.bechara@rhhs.edu.lb" },
+                                    { name: "Malek Khobeiz", role: "School Affairs Logistics", email: "malek.khobeiz@rhhs.edu.lb" },
+                                    { name: "Bana Akra", role: "Logistics Coordinator", email: "bana.akra@rhhs.edu.lb" },
                                 ].map((member, index) => (
                                     <motion.div
                                         key={index}

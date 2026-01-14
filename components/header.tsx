@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
-import { LeafIcon } from "@/components/icons"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { LayoutDashboard, LogOut, Sun, Moon, User } from "lucide-react"
 import { useTheme } from "next-themes"
@@ -63,7 +63,7 @@ export function Header() {
 
   return (
     <motion.header
-      className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50"
+      className="border-b border-border bg-white dark:bg-card/80 backdrop-blur-sm sticky top-0 z-50"
       initial={{ y: -100 }}
       animate={{ y: 0 }}
       transition={{ duration: 0.5, ease: "easeOut" }}
@@ -72,11 +72,17 @@ export function Header() {
         <div className="flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 sm:gap-3 group">
             <motion.div
-              className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-gradient-to-br from-primary to-green-600 flex items-center justify-center shadow-lg"
-              whileHover={{ scale: 1.1, rotate: 10 }}
+              className="h-8 w-8 sm:h-10 sm:w-10 rounded-full overflow-hidden flex items-center justify-center shadow-lg"
+              whileHover={{ scale: 1.1 }}
               transition={{ type: "spring", stiffness: 300 }}
             >
-              <LeafIcon className="h-5 w-5 sm:h-6 sm:w-6 text-primary-foreground" />
+              <Image 
+                src="/Eco Champ.png" 
+                alt="Eco Champ Logo" 
+                width={40} 
+                height={40} 
+                className="h-full w-full object-contain"
+              />
             </motion.div>
             <div>
               <h1 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-primary to-green-600 bg-clip-text text-transparent leading-tight">RHHS ECO Club</h1>

@@ -2,8 +2,8 @@
 
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
-import { LeafIcon } from "@/components/icons"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { LogOut, Sun, Moon, User, Home } from "lucide-react"
 import { useTheme } from "next-themes"
@@ -31,12 +31,18 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
   }
 
   return (
-    <header className="border-b border-border bg-card/80 backdrop-blur-md sticky top-0 z-50 shadow-sm">
+    <header className="border-b border-border bg-white dark:bg-card/80 backdrop-blur-md sticky top-0 z-50 shadow-sm">
       <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4">
         <div className="flex items-center justify-between gap-2 sm:gap-4">
           <Link href="/" className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-            <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
-              <LeafIcon className="h-4 w-4 sm:h-6 sm:w-6 text-primary-foreground" />
+            <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full overflow-hidden flex items-center justify-center flex-shrink-0">
+              <Image 
+                src="/Eco Champ.png" 
+                alt="Eco Champ Logo" 
+                width={40} 
+                height={40} 
+                className="h-full w-full object-contain"
+              />
             </div>
             <div className="min-w-0">
               <h1 className="text-base sm:text-xl font-bold text-foreground truncate">RHHS ECO Club</h1>
