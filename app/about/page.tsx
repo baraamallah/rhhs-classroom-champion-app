@@ -174,7 +174,7 @@ export default function AboutPage() {
                             <div className="grid gap-4">
                                 {[
                                     { name: "Adam Yehya", role: "Club President", email: "adam.yehya@rhhs.edu.lb" },
-                                    { name: "Vanessa Haddad", role: "Coordinator", email: "Vanessa.AlHaddad@rhhs.edu.lb" },
+                                    { name: "Mariam Baalbaky", role: "Coordinator", email: "mariam.baalbaky@rhhs.edu.lb" },
                                 ].map((member, index) => (
                                     <motion.div
                                         key={index}
