@@ -9,6 +9,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { LayoutDashboard, LogOut, Sun, Moon, User } from "lucide-react"
 import { useTheme } from "next-themes"
 import { motion } from "framer-motion"
+import { WinnersLink } from "@/components/winners-link"
 
 export function Header() {
   const router = useRouter()
@@ -91,6 +92,7 @@ export function Header() {
           </Link>
 
           <nav className="flex items-center gap-2">
+            <WinnersLink />
             <Link href="/about" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors mr-2 hidden sm:block">
               About Us
             </Link>

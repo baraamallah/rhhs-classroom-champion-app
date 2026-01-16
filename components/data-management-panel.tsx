@@ -26,6 +26,7 @@ import {
 } from "@/app/actions/data-management-actions"
 import { Loader2, Trash2, Archive, Search, History, RotateCcw, Download } from "lucide-react"
 import { MonthlyWinnersManager } from "@/components/monthly-winners-manager"
+import { WinnersPageToggle } from "@/components/winners-page-toggle"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { exportAllDataAsZip } from "@/app/actions/export-data-actions"
 
@@ -422,6 +423,7 @@ export function DataManagementPanel() {
 
   return (
     <div className="space-y-6">
+      <WinnersPageToggle />
       <Tabs defaultValue="archive">
         <TabsList>
           <TabsTrigger value="archive">Archive & Reset</TabsTrigger>

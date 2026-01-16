@@ -112,6 +112,7 @@ export async function declareMonthlyWinner(
       }
 
       revalidatePath("/admin")
+      revalidatePath("/winners")
       return { success: true, message: `Updated winner for ${division} - ${month}/${year}` }
     } else {
       // Insert new winner
@@ -125,6 +126,7 @@ export async function declareMonthlyWinner(
       }
 
       revalidatePath("/admin")
+      revalidatePath("/winners")
       return { success: true, message: `Declared winner for ${division} - ${month}/${year}` }
     }
   } catch (dbError: any) {
