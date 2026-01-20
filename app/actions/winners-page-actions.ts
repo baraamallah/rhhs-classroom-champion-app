@@ -105,4 +105,3 @@ export async function setWinnersPageVisibility(visible: boolean): Promise<{ succ
     return { success: false, error: error.message || "Failed to update visibility setting" }
   }
 }
-

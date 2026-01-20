@@ -98,4 +98,3 @@ export function CelebrationAnimation({ show, title, subtitle }: CelebrationAnima
     </div>
   )
 }
-

@@ -1,18 +1,8 @@
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
 
-// Cache the cookie store to avoid repeated calls
-let cachedCookieStore: ReturnType<typeof cookies> | null = null
-
-async function getCookieStore() {
-  if (!cachedCookieStore) {
-    cachedCookieStore = cookies()
-  }
-  return cachedCookieStore
-}
-
 export async function createClient() {
-  const cookieStore = await getCookieStore()
+  const cookieStore = await cookies()
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -29,8 +19,6 @@ export async function createClient() {
             )
           } catch {
             // The `setAll` method was called from a Server Component.
-            // This can be ignored if you have middleware refreshing
-            // user sessions.
           }
         },
       },
@@ -39,7 +27,7 @@ export async function createClient() {
 }
 
 export async function createAdminClient() {
-  const cookieStore = await getCookieStore()
+  const cookieStore = await cookies()
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -56,8 +44,6 @@ export async function createAdminClient() {
             )
           } catch {
             // The `setAll` method was called from a Server Component.
-            // This can be ignored if you have middleware refreshing
-            // user sessions.
           }
         },
       },

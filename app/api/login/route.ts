@@ -17,17 +17,22 @@ export async function POST(request: Request) {
 
     const supabase = await createClient()
 
-    // Query user with active status
+    // Query user with active status - use maybeSingle to avoid 406 error when no rows found
     const { data: userData, error: userError } = await supabase
       .from("users")
       .select("id, email, name, role, password_hash, is_active")
       .eq("email", email)
       .eq("is_active", true)
-      .single()
+      .maybeSingle()
 
     console.log("[v0] User query result - Found user:", !!userData, "Error:", userError?.message)
 
-    if (userError || !userData) {
+    if (userError) {
+      console.log("[v0] Database query error:", userError.message)
+      return NextResponse.json({ error: "Unable to verify credentials" }, { status: 500 })
+    }
+
+    if (!userData) {
       console.log("[v0] User not found or inactive")
       return NextResponse.json({ error: "Invalid email or password" }, { status: 401 })
     }

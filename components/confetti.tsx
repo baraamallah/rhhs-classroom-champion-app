@@ -86,4 +86,3 @@ export function Confetti({ active = true, duration = 3000 }: { active?: boolean;
     </div>
   )
 }
-

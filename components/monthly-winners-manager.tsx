@@ -393,4 +393,3 @@ export function MonthlyWinnersManager() {
     </div>
   )
 }
-

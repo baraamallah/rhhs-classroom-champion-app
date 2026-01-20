@@ -56,4 +56,3 @@ COMMENT ON COLUMN monthly_winners.month IS 'The month number (1-12)';
 COMMENT ON COLUMN monthly_winners.total_score IS 'Total score achieved by the winning classroom';
 COMMENT ON COLUMN monthly_winners.average_score IS 'Average score across all evaluations';
 COMMENT ON COLUMN monthly_winners.evaluation_count IS 'Number of evaluations for this classroom in the winning month';
-

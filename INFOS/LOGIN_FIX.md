@@ -21,7 +21,7 @@ Run `scripts/check-users.sql` in Supabase SQL Editor to see:
 **Option A - If user doesn't exist:**
 You need to create a user in the `users` table. Use Supabase Table Editor or run:
 
-```sql
+\`\`\`sql
 -- Enable pgcrypto extension if not already enabled
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
@@ -34,7 +34,7 @@ VALUES (
   'admin',
   true
 );
-```
+\`\`\`
 
 **Option B - If column is named `password` instead of `password_hash`:**
 The login code expects `password_hash` but your table might use `password`. Either:
