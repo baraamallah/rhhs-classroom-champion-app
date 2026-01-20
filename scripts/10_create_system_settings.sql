@@ -23,4 +23,3 @@ COMMENT ON COLUMN system_settings.key IS 'Unique key identifier for the setting'
 COMMENT ON COLUMN system_settings.value IS 'JSON value of the setting (can be any JSON type)';
 COMMENT ON COLUMN system_settings.description IS 'Human-readable description of what this setting controls';
 COMMENT ON COLUMN system_settings.updated_by IS 'User who last updated this setting';
-

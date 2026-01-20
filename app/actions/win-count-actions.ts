@@ -32,4 +32,3 @@ export async function getClassroomWinCounts(): Promise<{ success: boolean; data?
     return { success: false, error: error.message || "Failed to get win counts" }
   }
 }
-

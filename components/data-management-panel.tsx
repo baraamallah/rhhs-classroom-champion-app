@@ -24,11 +24,11 @@ import {
   restoreEvaluations,
   archiveAndReset
 } from "@/app/actions/data-management-actions"
-import { Loader2, Trash2, Archive, Search, History, RotateCcw, Download } from "lucide-react"
+import { Loader2, Trash2, Archive, Search, History, RotateCcw, Download, FileSpreadsheet } from "lucide-react"
 import { MonthlyWinnersManager } from "@/components/monthly-winners-manager"
 import { WinnersPageToggle } from "@/components/winners-page-toggle"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { exportAllDataAsZip } from "@/app/actions/export-data-actions"
+import { exportAllDataAsZip, exportDataAsExcel } from "@/app/actions/export-data-actions"
 
 interface EvaluationData {
   id: string
@@ -70,6 +70,7 @@ export function DataManagementPanel() {
   const [selectedEvaluations, setSelectedEvaluations] = useState<string[]>([])
   const [selectedArchivedEvaluations, setSelectedArchivedEvaluations] = useState<string[]>([])
   const [exporting, setExporting] = useState(false)
+  const [exportingExcel, setExportingExcel] = useState(false)
 
   useEffect(() => {
     loadEvaluations()
@@ -325,6 +326,130 @@ export function DataManagementPanel() {
         variant: "destructive",
       })
       setExporting(false)
+    }
+  }
+
+  const handleExportExcel = async () => {
+    setExportingExcel(true)
+    try {
+      const result = await exportDataAsExcel()
+      
+      if (result.success && result.sheets) {
+        // Check if SheetJS is already loaded
+        // @ts-ignore
+        if (window.XLSX) {
+          createExcelFile(result.sheets)
+        } else {
+          // Load SheetJS from CDN
+          const script = document.createElement('script')
+          script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
+          script.onload = () => {
+            createExcelFile(result.sheets)
+          }
+          script.onerror = () => {
+            toast({
+              title: "Error",
+              description: "Failed to load Excel library. Please check your internet connection.",
+              variant: "destructive",
+            })
+            setExportingExcel(false)
+          }
+          document.body.appendChild(script)
+        }
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || "Failed to export data",
+          variant: "destructive",
+        })
+        setExportingExcel(false)
+      }
+    } catch (error) {
+      console.error("Excel export error:", error)
+      toast({
+        title: "Error",
+        description: "Failed to export data to Excel",
+        variant: "destructive",
+      })
+      setExportingExcel(false)
+    }
+  }
+
+  const createExcelFile = (sheets: { name: string; headers: string[]; rows: (string | number)[][]; stats?: { label: string; value: string | number }[] }[]) => {
+    try {
+      // @ts-ignore - XLSX loaded from CDN
+      const XLSX = window.XLSX
+      if (!XLSX) {
+        throw new Error("XLSX not available")
+      }
+
+      const workbook = XLSX.utils.book_new()
+
+      sheets.forEach((sheet) => {
+        // Create worksheet data with stats section at the top
+        const wsData: (string | number)[][] = []
+        
+        // Add stats section if available
+        if (sheet.stats && sheet.stats.length > 0) {
+          wsData.push(["=== STATISTICS ===", ""])
+          sheet.stats.forEach(stat => {
+            wsData.push([stat.label, stat.value])
+          })
+          wsData.push([]) // Empty row separator
+          wsData.push([]) // Another empty row for spacing
+        }
+        
+        // Add headers
+        wsData.push(sheet.headers)
+        
+        // Add data rows
+        sheet.rows.forEach(row => {
+          wsData.push(row)
+        })
+
+        // Create worksheet
+        const ws = XLSX.utils.aoa_to_sheet(wsData)
+
+        // Set column widths
+        const colWidths = sheet.headers.map((_, i) => {
+          const maxLen = Math.max(
+            sheet.headers[i]?.toString().length || 10,
+            ...sheet.rows.map(row => row[i]?.toString().length || 0)
+          )
+          return { wch: Math.min(Math.max(maxLen + 2, 10), 50) }
+        })
+        ws['!cols'] = colWidths
+
+        // Add worksheet to workbook (sheet name limited to 31 chars)
+        const sheetName = sheet.name.substring(0, 31)
+        XLSX.utils.book_append_sheet(workbook, ws, sheetName)
+      })
+
+      // Generate Excel file and download
+      const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' })
+      const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `RHHS-Eco-Champion-Report-${new Date().toISOString().split('T')[0]}.xlsx`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+
+      toast({
+        title: "Success",
+        description: `Exported ${sheets.length} sheets to Excel successfully`,
+      })
+      setExportingExcel(false)
+    } catch (error) {
+      console.error("Excel creation error:", error)
+      toast({
+        title: "Error",
+        description: "Failed to create Excel file",
+        variant: "destructive",
+      })
+      setExportingExcel(false)
     }
   }
 
@@ -715,45 +840,82 @@ export function DataManagementPanel() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Download className="h-5 w-5" />
-            Export All Data
+            <FileSpreadsheet className="h-5 w-5" />
+            Export Data Reports
           </CardTitle>
           <CardDescription>
-            Download all system data as a ZIP file containing text files for evaluations, archives, classrooms, supervisors, leaderboard, and winners.
+            Export comprehensive reports with statistics for tracking and analysis.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            <div className="text-sm text-muted-foreground">
-              <p>This will generate a ZIP file containing:</p>
-              <ul className="list-disc list-inside mt-2 space-y-1 text-xs">
-                <li>Summary statistics</li>
-                <li>Active evaluations with full details</li>
-                <li>Archived evaluations</li>
-                <li>All classrooms and assignments</li>
-                <li>Supervisor information</li>
-                <li>Complete leaderboard by division</li>
-                <li>Monthly winners history</li>
+          <div className="space-y-6">
+            {/* Excel Export - Primary */}
+            <div className="p-4 rounded-lg border-2 border-primary/20 bg-primary/5">
+              <div className="flex items-center gap-2 mb-2">
+                <FileSpreadsheet className="h-5 w-5 text-primary" />
+                <h4 className="font-semibold">Excel Report (Recommended)</h4>
+              </div>
+              <p className="text-sm text-muted-foreground mb-3">
+                Professional Excel workbook with multiple sheets and detailed statistics:
+              </p>
+              <ul className="list-disc list-inside mb-4 space-y-1 text-xs text-muted-foreground">
+                <li><strong>Summary Dashboard</strong> - Overview metrics and performance stats</li>
+                <li><strong>Division Statistics</strong> - Performance breakdown by division</li>
+                <li><strong>Active Evaluations</strong> - All current evaluations with details</li>
+                <li><strong>Monthly Breakdown</strong> - Month-by-month trends and analysis</li>
+                <li><strong>Classroom Rankings</strong> - All classrooms ranked by performance</li>
+                <li><strong>Supervisor Performance</strong> - Supervisor activity and stats</li>
+                <li><strong>Monthly Winners</strong> - Complete winners history</li>
+                <li><strong>Archived Evaluations</strong> - Historical evaluation data</li>
               </ul>
+              <Button
+                variant="default"
+                onClick={handleExportExcel}
+                disabled={exportingExcel || loading}
+                className="w-full sm:w-auto"
+              >
+                {exportingExcel ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Generating Excel...
+                  </>
+                ) : (
+                  <>
+                    <FileSpreadsheet className="mr-2 h-4 w-4" />
+                    Download Excel Report
+                  </>
+                )}
+              </Button>
             </div>
-            <Button
-              variant="default"
-              onClick={handleExportAllData}
-              disabled={exporting || loading}
-              className="w-full sm:w-auto"
-            >
-              {exporting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Generating ZIP...
-                </>
-              ) : (
-                <>
-                  <Download className="mr-2 h-4 w-4" />
-                  Download All Data as ZIP
-                </>
-              )}
-            </Button>
+
+            {/* ZIP Export - Secondary */}
+            <div className="p-4 rounded-lg border bg-muted/30">
+              <div className="flex items-center gap-2 mb-2">
+                <Download className="h-5 w-5 text-muted-foreground" />
+                <h4 className="font-medium text-sm">Text Files (ZIP Archive)</h4>
+              </div>
+              <p className="text-xs text-muted-foreground mb-3">
+                Alternative format - plain text files in a ZIP archive for backup or data import purposes.
+              </p>
+              <Button
+                variant="outline"
+                onClick={handleExportAllData}
+                disabled={exporting || loading}
+                size="sm"
+              >
+                {exporting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Download className="mr-2 h-4 w-4" />
+                    Download as ZIP
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>

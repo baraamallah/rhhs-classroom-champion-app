@@ -112,4 +112,3 @@ export async function getPublicTopClassroomsByDivision(division: string, year: n
     return { success: false, error: "Failed to calculate top classrooms", data: [] }
   }
 }
-
