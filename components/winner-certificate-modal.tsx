@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { TrophyIcon, StarIcon, MedalIcon, CrownIcon } from "@/components/icons"
 import { X, Award, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { getDivisionDisplayName } from "@/lib/division-display"
 
 interface WinnerCertificateModalProps {
   isOpen: boolean
@@ -187,7 +188,7 @@ export function WinnerCertificateModal({ isOpen, onClose, winner }: WinnerCertif
                 transition={{ delay: 0.5 }}
                 className="space-y-1"
               >
-                <p className="text-sm text-muted-foreground">{winner.division} Division</p>
+                <p className="text-sm text-muted-foreground">{getDivisionDisplayName(winner.division)} Division</p>
                 <p className="text-lg font-semibold text-foreground">
                   {winner.month} {winner.year}
                 </p>

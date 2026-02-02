@@ -27,8 +27,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { DIVISION_OPTIONS, getDivisionDisplayName } from "@/lib/division-display"
 
-const DIVISIONS = ['Pre-School', 'Elementary', 'Middle School', 'High School', 'Technical Institute']
+const DIVISIONS = DIVISION_OPTIONS.map(opt => opt.value)
 const MONTHS = [
   { value: 1, label: 'January' },
   { value: 2, label: 'February' },
@@ -228,7 +229,7 @@ export function MonthlyWinnersManager() {
               <Card className={winner ? "border-primary border-2" : ""}>
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center justify-between">
-                    <span>{division}</span>
+                    <span>{getDivisionDisplayName(division)}</span>
                     {winner && (
                       <Award className="h-5 w-5 text-yellow-500" />
                     )}
@@ -345,7 +346,7 @@ export function MonthlyWinnersManager() {
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <TrophyIcon className="h-4 w-4 text-yellow-500" />
-                      <span className="font-semibold">{winner.division}</span>
+                      <span className="font-semibold">{getDivisionDisplayName(winner.division)}</span>
                     </div>
                     <p className="font-medium">{winner.classrooms?.name || "Unknown"}</p>
                     <p className="text-sm text-muted-foreground">

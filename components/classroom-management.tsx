@@ -14,6 +14,7 @@ import { createClient } from "@/lib/supabase/client"
 import type { Classroom, User } from "@/lib/types"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { useToast } from "@/components/ui/use-toast"
+import { DIVISION_OPTIONS, getDivisionDisplayName } from "@/lib/division-display"
 
 interface ClassroomManagementProps {
   currentUser: User
@@ -331,11 +332,9 @@ export function ClassroomManagement({ currentUser }: ClassroomManagementProps) {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Divisions</SelectItem>
-                <SelectItem value="Pre-School">Pre-School</SelectItem>
-                <SelectItem value="Elementary">Elementary</SelectItem>
-                <SelectItem value="Middle School">Middle School</SelectItem>
-                <SelectItem value="High School">High School</SelectItem>
-                <SelectItem value="Technical Institute">Technical Institute</SelectItem>
+                {DIVISION_OPTIONS.map(option => (
+                  <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -358,11 +357,9 @@ export function ClassroomManagement({ currentUser }: ClassroomManagementProps) {
                     <SelectValue placeholder="Select division" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Pre-School">Pre-School</SelectItem>
-                    <SelectItem value="Elementary">Elementary</SelectItem>
-                    <SelectItem value="Middle School">Middle School</SelectItem>
-                    <SelectItem value="High School">High School</SelectItem>
-                    <SelectItem value="Technical Institute">Technical Institute</SelectItem>
+                    {DIVISION_OPTIONS.map(option => (
+                      <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 <Button
@@ -414,11 +411,9 @@ export function ClassroomManagement({ currentUser }: ClassroomManagementProps) {
                       <SelectValue placeholder="Select division" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Pre-School">Pre-School</SelectItem>
-                      <SelectItem value="Elementary">Elementary</SelectItem>
-                      <SelectItem value="Middle School">Middle School</SelectItem>
-                      <SelectItem value="High School">High School</SelectItem>
-                      <SelectItem value="Technical Institute">Technical Institute</SelectItem>
+                      {DIVISION_OPTIONS.map(option => (
+                        <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -542,11 +537,9 @@ export function ClassroomManagement({ currentUser }: ClassroomManagementProps) {
                               <SelectValue placeholder="Select division" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="Pre-School">Pre-School</SelectItem>
-                              <SelectItem value="Elementary">Elementary</SelectItem>
-                              <SelectItem value="Middle School">Middle School</SelectItem>
-                              <SelectItem value="High School">High School</SelectItem>
-                              <SelectItem value="Technical Institute">Technical Institute</SelectItem>
+                              {DIVISION_OPTIONS.map(option => (
+                                <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
                         </div>
@@ -631,7 +624,7 @@ export function ClassroomManagement({ currentUser }: ClassroomManagementProps) {
                             <span className="text-sm text-muted-foreground">{classroom.grade}</span>
                             {classroom.division && (
                               <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
-                                {classroom.division}
+                                {getDivisionDisplayName(classroom.division)}
                               </span>
                             )}
                           </div>
@@ -670,11 +663,9 @@ export function ClassroomManagement({ currentUser }: ClassroomManagementProps) {
                               <SelectValue placeholder="Set division" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="Pre-School">Pre-School</SelectItem>
-                              <SelectItem value="Elementary">Elementary</SelectItem>
-                              <SelectItem value="Middle School">Middle School</SelectItem>
-                              <SelectItem value="High School">High School</SelectItem>
-                              <SelectItem value="Technical Institute">Technical Institute</SelectItem>
+                              {DIVISION_OPTIONS.map(option => (
+                                <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
                         </div>

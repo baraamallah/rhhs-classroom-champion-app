@@ -14,8 +14,9 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Calendar, RefreshCw, Eye, EyeOff } from "lucide-react"
 import { WinnerCertificateModal } from "@/components/winner-certificate-modal"
+import { DIVISION_OPTIONS, getDivisionDisplayName } from "@/lib/division-display"
 
-const DIVISIONS = ['Pre-School', 'Elementary', 'Middle School', 'High School', 'Technical Institute']
+const DIVISIONS = DIVISION_OPTIONS.map(opt => opt.value)
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December'
@@ -325,7 +326,7 @@ export default function WinnersPage() {
                   <CardContent className="p-6">
                     {/* Division Header */}
                     <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-xl font-bold text-foreground">{division}</h3>
+                      <h3 className="text-xl font-bold text-foreground">{getDivisionDisplayName(division)}</h3>
                       {winner && (
                         <motion.div
                           animate={{ rotate: [0, 10, -10, 0] }}

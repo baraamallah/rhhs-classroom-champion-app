@@ -10,6 +10,7 @@ import { getClassrooms, getEvaluations } from "@/lib/supabase-data"
 import { LeafIcon } from "@/components/icons"
 import type { ClassroomScore } from "@/lib/types"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { DIVISION_OPTIONS } from "@/lib/division-display"
 
 const FloatingLeaf = ({ delay = 0, x = 0 }: { delay?: number, x?: number }) => (
   <motion.div
@@ -123,13 +124,13 @@ export default function HomePage() {
 
                 <div className="flex justify-start sm:justify-center overflow-x-auto pb-2 no-scrollbar snap-x snap-mandatory">
                   <TabsList className="inline-flex h-auto p-1.5 bg-muted/50 backdrop-blur-sm rounded-full border border-border/50 shadow-sm min-w-max">
-                    {["Pre-School", "Elementary", "Middle School", "High School", "Technical Institute"].map((tab) => (
+                    {DIVISION_OPTIONS.map((option) => (
                       <TabsTrigger
-                        key={tab}
-                        value={tab}
+                        key={option.value}
+                        value={option.value}
                         className="rounded-full px-4 py-2 text-sm font-medium transition-all data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md snap-center"
                       >
-                        {tab}
+                        {option.label}
                       </TabsTrigger>
                     ))}
                   </TabsList>
@@ -137,11 +138,11 @@ export default function HomePage() {
               </div>
             </div>
 
-            {["Pre-School", "Elementary", "Middle School", "High School", "Technical Institute"].map((division) => {
-              const filteredLeaderboard = leaderboard.filter(c => c.classroom.division === division);
+            {DIVISION_OPTIONS.map((option) => {
+              const filteredLeaderboard = leaderboard.filter(c => c.classroom.division === option.value);
 
               return (
-                <TabsContent key={division} value={division} className="mt-0">
+                <TabsContent key={option.value} value={option.value} className="mt-0">
                   <motion.div
                     className="space-y-3"
                     initial={{ opacity: 0 }}
@@ -162,7 +163,7 @@ export default function HomePage() {
                     ) : (
                       filteredLeaderboard.map((classroom, index) => (
                         <motion.div
-                          key={`${classroom.classroom.id}-${division}`}
+                          key={`${classroom.classroom.id}-${option.value}`}
                           initial={{ opacity: 0, y: 20 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: 0.05 * index, duration: 0.4, ease: "easeOut" }}

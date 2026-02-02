@@ -4,6 +4,7 @@ import { Poppins } from "next/font/google"
 
 import { ThemeProvider } from "@/components/theme-provider"
 import { Footer } from "@/components/footer"
+import { AutoArchiveChecker } from "@/components/auto-archive-checker"
 import "./globals.css"
 
 const poppins = Poppins({
@@ -32,6 +33,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
+          <AutoArchiveChecker />
           <div className="min-h-screen flex flex-col">
             {children}
             <Footer />

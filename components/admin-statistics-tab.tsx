@@ -5,8 +5,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { getEvaluations, getClassrooms, getEvaluationsByDateRange } from "@/lib/supabase-data"
 import type { Evaluation, Classroom } from "@/lib/types"
-import { TrophyIcon, LeafIcon, StarIcon } from "@/components/icons"
+import { LeafIcon, TrophyIcon, StarIcon } from "@/components/icons"
 import { Filter } from "lucide-react"
+import { DIVISION_OPTIONS, getDivisionDisplayName } from "@/lib/division-display"
 
 interface ClassroomStats {
   classroom: Classroom
@@ -208,11 +209,9 @@ export function AdminStatisticsTab() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Divisions</SelectItem>
-                <SelectItem value="Pre-School">Pre-School</SelectItem>
-                <SelectItem value="Elementary">Elementary</SelectItem>
-                <SelectItem value="Middle School">Middle School</SelectItem>
-                <SelectItem value="High School">High School</SelectItem>
-                <SelectItem value="Technical Institute">Technical Institute</SelectItem>
+                {DIVISION_OPTIONS.map(option => (
+                  <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -245,7 +244,7 @@ export function AdminStatisticsTab() {
                         <p className="font-medium">{stat.classroom.name}</p>
                         <p className="text-sm text-muted-foreground">
                           Grade {stat.classroom.grade}
-                          {stat.classroom.division && ` • ${stat.classroom.division}`}
+                          {stat.classroom.division && ` • ${getDivisionDisplayName(stat.classroom.division)}`}
                         </p>
                       </div>
                     </div>
@@ -293,7 +292,7 @@ export function AdminStatisticsTab() {
                               <p className="font-medium text-sm">{stat.classroom.name}</p>
                               <p className="text-xs text-muted-foreground">
                                 Grade {stat.classroom.grade}
-                                {stat.classroom.division && ` • ${stat.classroom.division}`}
+                                {stat.classroom.division && ` • ${getDivisionDisplayName(stat.classroom.division)}`}
                               </p>
                             </div>
                           </div>

@@ -13,6 +13,7 @@ interface ClassroomSelectorProps {
 import { motion } from "framer-motion"
 import { Search } from "lucide-react"
 import { Input } from "@/components/ui/input"
+import { getDivisionDisplayName } from "@/lib/division-display"
 
 export function ClassroomSelector({ onSelect }: ClassroomSelectorProps) {
   const [classrooms, setClassrooms] = useState<Classroom[]>([])
@@ -120,7 +121,7 @@ export function ClassroomSelector({ onSelect }: ClassroomSelectorProps) {
                     <>
                       <span>•</span>
                       <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
-                        {classroom.division}
+                        {getDivisionDisplayName(classroom.division)}
                       </span>
                     </>
                   )}

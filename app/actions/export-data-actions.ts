@@ -3,6 +3,7 @@
 import { createAdminClient } from "@/lib/supabase/server"
 import { getSessionFromCookies, clearSessionCookie } from "@/lib/auth/session"
 import { calculateLeaderboard } from "@/lib/utils-leaderboard"
+import { DIVISION_OPTIONS, getDivisionDisplayName } from "@/lib/division-display"
 
 type UserRole = "super_admin" | "admin" | "supervisor" | "viewer"
 
@@ -65,7 +66,7 @@ export async function exportDataAsExcel() {
   const sheets: ExcelSheet[] = []
 
   try {
-    const DIVISIONS = ['Pre-School', 'Elementary', 'Middle School', 'High School', 'Technical Institute']
+    const DIVISIONS = DIVISION_OPTIONS.map(opt => opt.value)
     const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 
     // 1. Fetch all data
@@ -151,7 +152,7 @@ export async function exportDataAsExcel() {
       name: "Division Statistics",
       headers: ["Division", "Classrooms", "Evaluations", "Total Points", "Avg Score", "Winners Declared", "Performance Rating"],
       rows: divisionStats.map(d => [
-        d.division,
+        getDivisionDisplayName(d.division),
         d.classrooms,
         d.evaluations,
         d.totalPoints,
@@ -175,7 +176,7 @@ export async function exportDataAsExcel() {
           new Date(e.evaluation_date).toLocaleDateString(),
           e.classrooms?.name || "Unknown",
           e.classrooms?.grade || "N/A",
-          e.classrooms?.division || "N/A",
+          getDivisionDisplayName(e.classrooms?.division) || "N/A",
           e.users?.name || "Unknown",
           e.total_score,
           e.max_score,
@@ -509,15 +510,15 @@ export async function exportAllDataAsZip() {
 
       leaderboard.forEach((entry, index) => {
         const rank = index + 1
-        leaderContent += `${rank.toString().padStart(4)} | ${entry.classroom.name.padEnd(20)} | ${entry.classroom.grade.padEnd(5)} | ${(entry.classroom.division || "N/A").padEnd(15)} | ${entry.totalScore.toString().padStart(11)} | ${entry.averageScore.toString().padStart(9)} | ${entry.evaluationCount.toString().padStart(12)}\n`
+        leaderContent += `${rank.toString().padStart(4)} | ${entry.classroom.name.padEnd(20)} | ${entry.classroom.grade.padEnd(5)} | ${(getDivisionDisplayName(entry.classroom.division) || "N/A").padEnd(15)} | ${entry.totalScore.toString().padStart(11)} | ${entry.averageScore.toString().padStart(9)} | ${entry.evaluationCount.toString().padStart(12)}\n`
       })
 
       // Group by division
-      const divisions = ['Pre-School', 'Elementary', 'Middle School', 'High School', 'Technical Institute']
+      const divisions = DIVISION_OPTIONS.map(opt => opt.value)
       divisions.forEach(division => {
         const divLeaderboard = leaderboard.filter(l => l.classroom.division === division)
         if (divLeaderboard.length > 0) {
-          leaderContent += `\n\n${division.toUpperCase()} DIVISION LEADERBOARD\n`
+          leaderContent += `\n\n${getDivisionDisplayName(division).toUpperCase()} DIVISION LEADERBOARD\n`
           leaderContent += "=".repeat(80) + "\n"
           divLeaderboard.forEach((entry, index) => {
             const rank = index + 1
@@ -552,7 +553,7 @@ export async function exportAllDataAsZip() {
       winners.forEach((winner, index) => {
         winnersContent += `\n[Winner ${index + 1}]\n`
         winnersContent += `- Month: ${months[winner.month - 1]} ${winner.year}\n`
-        winnersContent += `- Division: ${winner.division}\n`
+        winnersContent += `- Division: ${getDivisionDisplayName(winner.division)}\n`
         winnersContent += `- Classroom: ${winner.classrooms?.name || "Unknown"} (Grade ${winner.classrooms?.grade || "N/A"})\n`
         winnersContent += `- Total Score: ${winner.total_score}\n`
         winnersContent += `- Average Score: ${winner.average_score.toFixed(2)}\n`

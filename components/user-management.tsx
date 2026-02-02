@@ -11,6 +11,7 @@ import { UserPlus, Trash2, Mail, Shield, Eye, KeyRound, MoreVertical, RefreshCw,
 import { createUserAccount, getAllUsers, deleteUser, sendUserPasswordReset, updateUser, updateUserPassword, getSupervisorClassrooms, getAvailableClassrooms, assignSupervisorToClassrooms } from "@/app/actions/user-actions"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import type { User } from "@/lib/types"
+import { DIVISION_OPTIONS, getDivisionDisplayName } from "@/lib/division-display"
 
 type ManagedRole = "admin" | "supervisor"
 
@@ -722,11 +723,9 @@ export function UserManagement({ currentUser }: UserManagementProps) {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Divisions</SelectItem>
-                  <SelectItem value="Pre-School">Pre-School</SelectItem>
-                  <SelectItem value="Elementary">Elementary</SelectItem>
-                  <SelectItem value="Middle School">Middle School</SelectItem>
-                  <SelectItem value="High School">High School</SelectItem>
-                  <SelectItem value="Technical Institute">Technical Institute</SelectItem>
+                  {DIVISION_OPTIONS.map(option => (
+                    <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -782,7 +781,7 @@ export function UserManagement({ currentUser }: UserManagementProps) {
                     />
                     <label htmlFor={`classroom-${classroom.id}`} className="text-sm cursor-pointer">
                       {classroom.name} (Grade {classroom.grade})
-                      {classroom.division && <span className="text-xs text-muted-foreground ml-2">• {classroom.division}</span>}
+                      {classroom.division && <span className="text-xs text-muted-foreground ml-2">• {getDivisionDisplayName(classroom.division)}</span>}
                     </label>
                   </div>
                 ))}
