@@ -10,6 +10,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { UserManagement } from "@/components/user-management"
 import { ClassroomManagement } from "@/components/classroom-management"
 import { DataManagementPanel } from "@/components/data-management-panel"
+import { Button } from "@/components/ui/button"
+import { BarChart3 } from "lucide-react"
+import Link from "next/link"
 
 interface AdminDashboardContentProps {
   currentUser?: User
@@ -26,9 +29,19 @@ function AdminDashboardContent({ currentUser }: AdminDashboardContentProps) {
       <DashboardHeader user={currentUser} />
 
       <main className="container mx-auto px-4 py-12">
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold text-foreground mb-2">Admin Dashboard</h2>
-          <p className="text-muted-foreground">Manage checklist items and view all evaluations</p>
+        <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-3xl font-bold text-foreground mb-2">Admin Dashboard</h2>
+            <p className="text-muted-foreground">Manage checklist items and view all evaluations</p>
+          </div>
+          {currentUser?.role === "super_admin" && (
+            <Button asChild className="bg-primary hover:bg-primary/90 shadow-sm">
+              <Link href="/admin/tracking">
+                <BarChart3 className="mr-2 h-4 w-4" />
+                Submission Tracking
+              </Link>
+            </Button>
+          )}
         </div>
 
         {/* Tabs for different sections */}
