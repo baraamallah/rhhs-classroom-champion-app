@@ -5,8 +5,8 @@ import { createClient } from "@/lib/supabase/server"
 import { clearSessionCookie, getSessionFromCookies } from "@/lib/auth/session"
 import { generateSecurePassword } from "./password-actions"
 
-type ManagedRole = "admin" | "supervisor"
-type UserRole = "super_admin" | "admin" | "supervisor" | "viewer"
+type ManagedRole = "admin" | "supervisor" | "stats"
+type UserRole = "super_admin" | "admin" | "supervisor" | "viewer" | "stats"
 
 interface CurrentUser {
   id: string

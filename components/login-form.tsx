@@ -42,6 +42,8 @@ export function LoginForm() {
 
       if (data.role === "super_admin" || data.role === "admin") {
         router.push("/admin")
+      } else if (data.role === "stats") {
+        router.push("/admin/tracking")
       } else if (data.role === "supervisor") {
         router.push("/supervisor")
       } else {

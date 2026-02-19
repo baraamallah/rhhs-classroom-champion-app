@@ -47,7 +47,8 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
             <div className="min-w-0">
               <h1 className="text-base sm:text-xl font-bold text-foreground truncate">RHHS ECO Club</h1>
               <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
-                {user.role === "super_admin" || user.role === "admin" ? "Admin Dashboard" : "Supervisor Dashboard"}
+                {user.role === "super_admin" || user.role === "admin" ? "Admin Dashboard" :
+                 user.role === "stats" ? "Stats Dashboard" : "Supervisor Dashboard"}
               </p>
             </div>
           </Link>

@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS users (
   email text UNIQUE NOT NULL,
   password_hash text NOT NULL,
   name text NOT NULL,
-  role text NOT NULL DEFAULT 'supervisor' CHECK (role IN ('super_admin', 'admin', 'supervisor', 'viewer')),
+  role text NOT NULL DEFAULT 'supervisor' CHECK (role IN ('super_admin', 'admin', 'supervisor', 'viewer', 'stats')),
   is_active boolean DEFAULT true,
   created_at timestamp with time zone DEFAULT now(),
   last_login_at timestamp with time zone

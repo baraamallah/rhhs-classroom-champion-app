@@ -13,7 +13,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import type { User } from "@/lib/types"
 import { DIVISION_OPTIONS, getDivisionDisplayName } from "@/lib/division-display"
 
-type ManagedRole = "admin" | "supervisor"
+type ManagedRole = "admin" | "supervisor" | "stats"
 
 interface UserManagementProps {
   currentUser: User
@@ -254,6 +254,8 @@ export function UserManagement({ currentUser }: UserManagementProps) {
         return <Shield className="h-4 w-4 text-red-500" />
       case "admin":
         return <Shield className="h-4 w-4 text-primary" />
+      case "stats":
+        return <RefreshCw className="h-4 w-4 text-purple-500" />
       case "supervisor":
         return <Eye className="h-4 w-4 text-blue-500" />
       default:
@@ -267,6 +269,8 @@ export function UserManagement({ currentUser }: UserManagementProps) {
         return "bg-red-500/10"
       case "admin":
         return "bg-primary/10"
+      case "stats":
+        return "bg-purple-500/10"
       case "supervisor":
         return "bg-blue-500/10"
       default:
@@ -280,6 +284,8 @@ export function UserManagement({ currentUser }: UserManagementProps) {
         return "bg-red-500/10 text-red-500 border-red-500/20"
       case "admin":
         return "bg-primary/10 text-primary border-primary/20"
+      case "stats":
+        return "bg-purple-500/10 text-purple-500 border-purple-500/20"
       case "supervisor":
         return "bg-blue-500/10 text-blue-500 border-blue-500/20"
       default:
@@ -396,7 +402,12 @@ export function UserManagement({ currentUser }: UserManagementProps) {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {(currentUser.role === "super_admin" || currentUser.role === "admin") && <SelectItem value="admin">Admin</SelectItem>}
+                      {(currentUser.role === "super_admin" || currentUser.role === "admin") && (
+                        <>
+                          <SelectItem value="admin">Admin</SelectItem>
+                          <SelectItem value="stats">Stats (Tracking Only)</SelectItem>
+                        </>
+                      )}
                       <SelectItem value="supervisor">Supervisor</SelectItem>
                     </SelectContent>
                   </Select>
@@ -626,6 +637,73 @@ export function UserManagement({ currentUser }: UserManagementProps) {
                   ))}
                   {users.filter(user => user.role === "supervisor").length === 0 && (
                     <p className="text-muted-foreground text-center py-4">No supervisors found</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Stats Users Section */}
+              <div>
+                <div className="flex items-center gap-2 mb-4">
+                  <RefreshCw className="h-5 w-5 text-purple-500" />
+                  <h3 className="text-lg font-semibold">Stats & Analysis</h3>
+                  <span className="text-sm text-muted-foreground">
+                    ({users.filter(user => user.role === "stats").length})
+                  </span>
+                </div>
+                <div className="space-y-3">
+                  {users.filter(user => user.role === "stats").map((user) => (
+                    <div
+                      key={user.id}
+                      className="flex items-center justify-between p-4 border border-border rounded-lg bg-card hover:bg-accent/5 transition-colors"
+                    >
+                      <div className="flex items-center gap-4 flex-1">
+                        <div className={`flex items-center justify-center w-10 h-10 rounded-full ${getRoleAvatarBg(user.role)}`}>
+                          {getRoleIcon(user.role)}
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium text-foreground">{user.name || "Unnamed User"}</p>
+                            <span className={`text-xs px-2 py-1 rounded-full border ${getRoleBadgeColor(user.role)}`}>
+                              {user.role}
+                            </span>
+                          </div>
+                          <p className="text-sm text-muted-foreground">{user.email}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {(currentUser.role === "admin" || currentUser.role === "super_admin") && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-muted-foreground hover:text-foreground"
+                              >
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleEditUser(user)}>
+                                <UserPlus className="h-4 w-4 mr-2" />
+                                Edit User
+                              </DropdownMenuItem>
+                              {currentUser.role === "super_admin" && (
+                                <DropdownMenuItem
+                                  onClick={() => handleDelete(user.id)}
+                                  variant="destructive"
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Delete User
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  {users.filter(user => user.role === "stats").length === 0 && (
+                    <p className="text-muted-foreground text-center py-4">No stats users found</p>
                   )}
                 </div>
               </div>
