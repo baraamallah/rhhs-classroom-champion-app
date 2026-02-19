@@ -12,7 +12,7 @@ export function WinnersLink({
   className?: string,
   showOnMobile?: boolean
 }) {
-  const [visible, setVisible] = useState(false)
+  const [visible, setVisible] = useState(true) // Default to true to match server-side default
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -22,7 +22,7 @@ export function WinnersLink({
   const checkVisibility = async () => {
     const result = await getWinnersPageVisibility()
     if (result.success) {
-      setVisible(result.visible ?? false)
+      setVisible(result.visible ?? true)
     }
     setLoading(false)
   }

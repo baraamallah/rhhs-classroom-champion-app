@@ -70,8 +70,8 @@ export function Header() {
       transition={{ duration: 0.5, ease: "easeOut" }}
     >
       <div className="container mx-auto px-4 py-4">
-        <div className="flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 sm:gap-3 group">
+        <div className="flex items-center justify-between gap-2">
+          <Link href="/" className="flex items-center gap-1.5 sm:gap-3 group shrink-0">
             <motion.div
               className="h-8 w-8 sm:h-10 sm:w-10 rounded-full overflow-hidden flex items-center justify-center shadow-lg"
               whileHover={{ scale: 1.1 }}
@@ -86,14 +86,14 @@ export function Header() {
               />
             </motion.div>
             <div>
-              <h1 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-primary to-green-600 bg-clip-text text-transparent leading-tight">RHHS ECO Club</h1>
+              <h1 className="text-sm sm:text-xl font-bold bg-gradient-to-r from-primary to-green-600 bg-clip-text text-transparent leading-tight whitespace-nowrap">RHHS ECO Club</h1>
               <p className="text-[10px] sm:text-xs text-muted-foreground hidden sm:block">Classroom Champion</p>
             </div>
           </Link>
 
-          <nav className="flex items-center gap-2">
-            <WinnersLink />
-            <Link href="/about" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors mr-2 hidden sm:block">
+          <nav className="flex items-center gap-2 sm:gap-4 overflow-x-auto no-scrollbar">
+            <WinnersLink showOnMobile={true} className="mr-0 whitespace-nowrap text-xs sm:text-sm" />
+            <Link href="/about" className="text-xs sm:text-sm font-medium text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap">
               About Us
             </Link>
             {!loading && (

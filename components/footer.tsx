@@ -1,19 +1,8 @@
-import Link from "next/link"
-import { WinnersLink } from "@/components/winners-link"
-
 export function Footer() {
   return (
     <footer className="border-t border-border bg-white dark:bg-card/80 backdrop-blur-sm mt-auto">
       <div className="container mx-auto px-4 py-8">
         <div className="flex flex-col items-center justify-center space-y-6">
-
-          {/* Quick Links */}
-          <div className="flex items-center justify-center gap-6 text-sm font-medium text-muted-foreground">
-            <WinnersLink className="hover:text-foreground transition-colors" showOnMobile={true} />
-            <Link href="/about" className="hover:text-foreground transition-colors">
-              About Us
-            </Link>
-          </div>
 
           {/* Logos Container */}
           <div className="flex items-center justify-center gap-8 sm:gap-12">
