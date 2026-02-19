@@ -260,12 +260,14 @@ export function SubmissionTracking({ currentUser }: SubmissionTrackingProps) {
           <p className="text-muted-foreground">Monitor daily and monthly evaluation progress</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" asChild>
-            <Link href="/admin">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Admin
-            </Link>
-          </Button>
+          {currentUser?.role !== "stats" && (
+            <Button variant="outline" asChild>
+              <Link href="/admin">
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back to Admin
+              </Link>
+            </Button>
+          )}
           <Button onClick={handleExportExcel} disabled={exporting || loading}>
             {exporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
             Export Excel

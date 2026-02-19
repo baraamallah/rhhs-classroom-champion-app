@@ -81,7 +81,7 @@ export interface User {
   id: string
   name: string
   email: string
-  role: "super_admin" | "admin" | "supervisor" | "viewer"
+  role: "super_admin" | "admin" | "supervisor" | "viewer" | "stats"
   password_hash?: string
   created_by?: string
   is_active: boolean

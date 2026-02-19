@@ -27,7 +27,7 @@ function TrackingDashboardContent({ currentUser }: TrackingDashboardContentProps
 
 export default function TrackingPage() {
   return (
-    <ProtectedRoute allowedRoles={["super_admin"]}>
+    <ProtectedRoute allowedRoles={["super_admin", "stats"]}>
       <TrackingDashboardContent />
     </ProtectedRoute>
   )

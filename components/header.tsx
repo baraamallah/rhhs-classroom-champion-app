@@ -58,6 +58,7 @@ export function Header() {
   const getControlPanelLink = () => {
     if (!user) return "/"
     if (user.role === "super_admin" || user.role === "admin") return "/admin"
+    if (user.role === "stats") return "/admin/tracking"
     if (user.role === "supervisor") return "/supervisor"
     return "/"
   }

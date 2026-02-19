@@ -13,14 +13,24 @@ import { DataManagementPanel } from "@/components/data-management-panel"
 import { Button } from "@/components/ui/button"
 import { BarChart3 } from "lucide-react"
 import Link from "next/link"
+import { useEffect } from "react"
+import { useRouter } from "next/navigation"
 
 interface AdminDashboardContentProps {
   currentUser?: User
 }
 
 function AdminDashboardContent({ currentUser }: AdminDashboardContentProps) {
+  const router = useRouter()
+
+  useEffect(() => {
+    if (currentUser?.role === "stats") {
+      router.push("/admin/tracking")
+    }
+  }, [currentUser, router])
+
   // This should always be provided by ProtectedRoute via cloneElement
-  if (!currentUser) {
+  if (!currentUser || currentUser.role === "stats") {
     return null
   }
 
@@ -86,7 +96,7 @@ function AdminDashboardContent({ currentUser }: AdminDashboardContentProps) {
 
 export default function AdminPage() {
   return (
-    <ProtectedRoute allowedRoles={["admin", "super_admin"]}>
+    <ProtectedRoute allowedRoles={["admin", "super_admin", "stats"]}>
       <AdminDashboardContent />
     </ProtectedRoute>
   )

@@ -8,7 +8,7 @@ import type { User } from "@/lib/types"
 
 interface ProtectedRouteProps {
   children: React.ReactElement
-  allowedRoles: Array<"super_admin" | "admin" | "supervisor" | "viewer">
+  allowedRoles: Array<"super_admin" | "admin" | "supervisor" | "viewer" | "stats">
 }
 
 export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
