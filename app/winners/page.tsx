@@ -90,20 +90,26 @@ export default function WinnersPage() {
   }, [visible, selectedYear, selectedMonth])
 
   const checkVisibility = async () => {
-    setLoading(true)
-    const result = await getWinnersPageVisibility()
-    if (result.success) {
-      const isVisible = result.visible ?? true
-      setVisible(isVisible)
-      if (!isVisible) {
-        router.replace("/")
-        return
+    try {
+      setLoading(true)
+      const result = await getWinnersPageVisibility()
+      if (result.success) {
+        const isVisible = result.visible ?? true
+        setVisible(isVisible)
+        if (!isVisible) {
+          router.replace("/")
+          return
+        }
+      } else {
+        // Default to visible if check fails
+        setVisible(true)
       }
-    } else {
-      // Default to visible if check fails
+    } catch (error) {
+      console.error("[WinnersPage] Visibility check failed:", error)
       setVisible(true)
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   const loadData = async () => {
