@@ -3,9 +3,16 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { getWinnersPageVisibility } from "@/app/actions/winners-page-actions"
+import { cn } from "@/lib/utils"
 
-export function WinnersLink() {
-  const [visible, setVisible] = useState(false)
+export function WinnersLink({
+  className,
+  showOnMobile = false
+}: {
+  className?: string,
+  showOnMobile?: boolean
+}) {
+  const [visible, setVisible] = useState(true) // Default to true to match server-side default
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -15,7 +22,7 @@ export function WinnersLink() {
   const checkVisibility = async () => {
     const result = await getWinnersPageVisibility()
     if (result.success) {
-      setVisible(result.visible ?? false)
+      setVisible(result.visible ?? true)
     }
     setLoading(false)
   }
@@ -25,7 +32,14 @@ export function WinnersLink() {
   }
 
   return (
-    <Link href="/winners" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors mr-2 hidden sm:block">
+    <Link
+      href="/winners"
+      className={cn(
+        "text-sm font-medium text-muted-foreground hover:text-foreground transition-colors mr-2",
+        !showOnMobile && "hidden sm:block",
+        className
+      )}
+    >
       Winners
     </Link>
   )

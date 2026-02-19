@@ -35,9 +35,9 @@ export async function getWinnersPageVisibility(): Promise<{ success: boolean; vi
       .from("system_settings")
       .select("value")
       .eq("key", "winners_page_visible")
-      .single()
+      .maybeSingle()
 
-    if (error && error.code !== "PGRST116") {
+    if (error) {
       console.error("[getWinnersPageVisibility] Error:", error)
       return { success: false, error: error.message }
     }
@@ -60,43 +60,24 @@ export async function setWinnersPageVisibility(visible: boolean): Promise<{ succ
   try {
     const supabase = await createAdminClient()
 
-    // Check if setting exists
-    const { data: existing } = await supabase
-      .from("system_settings")
-      .select("id")
-      .eq("key", "winners_page_visible")
-      .single()
-
     const settingData = {
       key: "winners_page_visible",
       value: visible,
       description: "Controls visibility of the animated winners/leaderboard page",
       updated_by: currentUser.id,
+      updated_at: new Date().toISOString(),
     }
 
-    if (existing) {
-      // Update existing
-      const { error: updateError } = await supabase
-        .from("system_settings")
-        .update(settingData)
-        .eq("id", existing.id)
+    const { error: upsertError } = await supabase
+      .from("system_settings")
+      .upsert(settingData, { onConflict: "key" })
 
-      if (updateError) {
-        console.error("[setWinnersPageVisibility] Update error:", updateError)
-        return { success: false, error: updateError.message }
-      }
-    } else {
-      // Insert new
-      const { error: insertError } = await supabase
-        .from("system_settings")
-        .insert(settingData)
-
-      if (insertError) {
-        console.error("[setWinnersPageVisibility] Insert error:", insertError)
-        return { success: false, error: insertError.message }
-      }
+    if (upsertError) {
+      console.error("[setWinnersPageVisibility] Upsert error:", upsertError)
+      return { success: false, error: upsertError.message }
     }
 
+    revalidatePath("/", "layout")
     revalidatePath("/winners")
     revalidatePath("/admin")
     return { success: true }
