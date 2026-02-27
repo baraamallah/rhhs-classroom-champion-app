@@ -21,7 +21,7 @@ import {
 } from "lucide-react"
 import { getClassrooms, getEvaluationsByDateRange } from "@/lib/supabase-data"
 import type { Evaluation, Classroom, User } from "@/lib/types"
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isWeekend } from "date-fns"
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isWeekend, startOfWeek, addDays } from "date-fns"
 import { cn } from "@/lib/utils"
 import { getDivisionDisplayName, DIVISION_OPTIONS } from "@/lib/division-display"
 import { useToast } from "@/hooks/use-toast"
@@ -35,7 +35,7 @@ interface SubmissionTrackingProps {
 export function SubmissionTracking({ currentUser }: SubmissionTrackingProps) {
   const { toast } = useToast()
   const [date, setDate] = useState<Date>(new Date())
-  const [viewType, setViewType] = useState<"daily" | "monthly">("daily")
+  const [viewType, setViewType] = useState<"daily" | "weekly" | "monthly">("daily")
   const [classrooms, setClassrooms] = useState<Classroom[]>([])
   const [evaluations, setEvaluations] = useState<Evaluation[]>([])
   const [loading, setLoading] = useState(true)
@@ -50,12 +50,19 @@ export function SubmissionTracking({ currentUser }: SubmissionTrackingProps) {
   const fetchData = async () => {
     setLoading(true)
     try {
-      const startDate = viewType === "daily"
-        ? format(date, "yyyy-MM-dd")
-        : format(startOfMonth(date), "yyyy-MM-dd")
-      const endDate = viewType === "daily"
-        ? format(date, "yyyy-MM-dd")
-        : format(endOfMonth(date), "yyyy-MM-dd")
+      let startDate, endDate
+      if (viewType === "daily") {
+        startDate = format(date, "yyyy-MM-dd")
+        endDate = format(date, "yyyy-MM-dd")
+      } else if (viewType === "weekly") {
+        const start = startOfWeek(date, { weekStartsOn: 1 }) // Monday
+        const end = addDays(start, 4) // Friday
+        startDate = format(start, "yyyy-MM-dd")
+        endDate = format(end, "yyyy-MM-dd")
+      } else {
+        startDate = format(startOfMonth(date), "yyyy-MM-dd")
+        endDate = format(endOfMonth(date), "yyyy-MM-dd")
+      }
 
       const [classroomsData, evaluationsData] = await Promise.all([
         getClassrooms(),
@@ -102,6 +109,31 @@ export function SubmissionTracking({ currentUser }: SubmissionTrackingProps) {
         submitted,
         notSubmitted,
         rate: filteredClassrooms.length > 0 ? (submitted.length / filteredClassrooms.length) * 100 : 0
+      }
+    } else if (viewType === "weekly") {
+      const start = startOfWeek(date, { weekStartsOn: 1 })
+      const workDays = Array.from({ length: 5 }, (_, i) => addDays(start, i))
+
+      const classroomPerformance = filteredClassrooms.map(c => {
+        const classEvals = evaluations.filter(e => e.classroom_id === c.id)
+        const submittedDays = new Set(classEvals.map(e => format(new Date(e.evaluation_date), "yyyy-MM-dd")))
+
+        return {
+          classroom: c,
+          submittedCount: workDays.filter(d => submittedDays.has(format(d, "yyyy-MM-dd"))).length,
+          totalDays: workDays.length,
+          workDays: workDays.map(d => ({
+            date: d,
+            isSubmitted: submittedDays.has(format(d, "yyyy-MM-dd"))
+          }))
+        }
+      })
+
+      return {
+        classroomPerformance,
+        avgRate: classroomPerformance.length > 0
+          ? classroomPerformance.reduce((sum, p) => sum + (p.submittedCount / p.totalDays), 0) / classroomPerformance.length * 100
+          : 0
       }
     } else {
       // Monthly stats
@@ -189,6 +221,39 @@ export function SubmissionTracking({ currentUser }: SubmissionTrackingProps) {
 
         const worksheet = XLSX.utils.aoa_to_sheet(data)
         XLSX.utils.book_append_sheet(workbook, worksheet, "Daily Tracking")
+      } else if (viewType === "weekly") {
+        // Weekly
+        const start = startOfWeek(date, { weekStartsOn: 1 })
+        const workDays = Array.from({ length: 5 }, (_, i) => addDays(start, i))
+
+        const headers = ["Classroom", "Grade", "Division", "Supervisor(s)", "Total Submitted"]
+        workDays.forEach(d => {
+          headers.push(format(d, "EEEE (MMM d)"))
+        })
+
+        const data = [
+          ["Week of", `${format(start, "PPP")} to ${format(addDays(start, 4), "PPP")}`],
+          [],
+          headers
+        ]
+
+        ;(submissionStats as any).classroomPerformance.forEach((p: any) => {
+          const row = [
+            p.classroom.name,
+            p.classroom.grade,
+            getDivisionDisplayName(p.classroom.division),
+            p.classroom.supervisors?.map((s: any) => s.name).join(", ") || "None",
+            `${p.submittedCount}/${p.totalDays}`
+          ]
+
+          p.workDays.forEach((day: any) => {
+            row.push(day.isSubmitted ? "YES" : "NO")
+          })
+          data.push(row)
+        })
+
+        const worksheet = XLSX.utils.aoa_to_sheet(data)
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Weekly Tracking")
       } else {
         // Monthly
         const daysInMonth = eachDayOfInterval({
@@ -233,7 +298,7 @@ export function SubmissionTracking({ currentUser }: SubmissionTrackingProps) {
         XLSX.utils.book_append_sheet(workbook, worksheet, "Monthly Tracking")
       }
 
-      const fileName = `Submission_Tracking_${format(date, viewType === "daily" ? "yyyy-MM-dd" : "yyyy-MM")}.xlsx`
+      const fileName = `Submission_Tracking_${format(date, viewType === "daily" ? "yyyy-MM-dd" : viewType === "weekly" ? "yyyy-'W'ww" : "yyyy-MM")}.xlsx`
       XLSX.writeFile(workbook, fileName)
 
       toast({
@@ -285,8 +350,9 @@ export function SubmissionTracking({ currentUser }: SubmissionTrackingProps) {
             <div className="space-y-2">
               <label className="text-xs font-medium text-muted-foreground">View Type</label>
               <Tabs value={viewType} onValueChange={(v) => setViewType(v as any)} className="w-full">
-                <TabsList className="grid grid-cols-2 w-full">
+                <TabsList className="grid grid-cols-3 w-full">
                   <TabsTrigger value="daily">Daily</TabsTrigger>
+                  <TabsTrigger value="weekly">Weekly</TabsTrigger>
                   <TabsTrigger value="monthly">Monthly</TabsTrigger>
                 </TabsList>
               </Tabs>
@@ -294,14 +360,14 @@ export function SubmissionTracking({ currentUser }: SubmissionTrackingProps) {
 
             <div className="space-y-2">
               <label className="text-xs font-medium text-muted-foreground">
-                {viewType === "daily" ? "Select Date" : "Select Month"}
+                {viewType === "daily" ? "Select Date" : viewType === "weekly" ? "Select Week" : "Select Month"}
               </label>
               <div className="relative">
                 <Calendar className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
                 <Input
-                  type={viewType === "daily" ? "date" : "month"}
+                  type={viewType === "monthly" ? "month" : "date"}
                   className="pl-8"
-                  value={format(date, viewType === "daily" ? "yyyy-MM-dd" : "yyyy-MM")}
+                  value={format(date, viewType === "monthly" ? "yyyy-MM" : "yyyy-MM-dd")}
                   onChange={(e) => {
                     const newDate = new Date(e.target.value)
                     if (!isNaN(newDate.getTime())) {
@@ -310,6 +376,11 @@ export function SubmissionTracking({ currentUser }: SubmissionTrackingProps) {
                   }}
                 />
               </div>
+              {viewType === "weekly" && (
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  Week of {format(startOfWeek(date, { weekStartsOn: 1 }), "MMM d")} - {format(addDays(startOfWeek(date, { weekStartsOn: 1 }), 4), "MMM d")}
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -402,6 +473,8 @@ export function SubmissionTracking({ currentUser }: SubmissionTrackingProps) {
               <CardTitle>
                 {viewType === "daily"
                   ? `Submission Status for ${format(date, "PPP")}`
+                  : viewType === "weekly"
+                  ? `Weekly Status (${format(startOfWeek(date, { weekStartsOn: 1 }), "MMM d")} - ${format(addDays(startOfWeek(date, { weekStartsOn: 1 }), 4), "MMM d")})`
                   : `Monthly Performance for ${format(date, "MMMM yyyy")}`}
               </CardTitle>
             </CardHeader>
@@ -472,6 +545,56 @@ export function SubmissionTracking({ currentUser }: SubmissionTrackingProps) {
                       })}
                     </div>
                   </div>
+                </div>
+              ) : viewType === "weekly" ? (
+                /* Weekly List */
+                <div className="space-y-4">
+                  {(submissionStats as any).classroomPerformance.map((p: any) => (
+                    <div key={p.classroom.id} className="p-4 rounded-lg border bg-card flex flex-col md:flex-row md:items-center justify-between gap-4">
+                      <div className="flex-1">
+                        <p className="font-bold">{p.classroom.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Grade {p.classroom.grade} • {getDivisionDisplayName(p.classroom.division)}
+                        </p>
+                        <div className="flex items-center gap-1 mt-1">
+                          <Users className="h-3 w-3 text-muted-foreground" />
+                          <p className="text-[10px] text-muted-foreground">
+                            {p.classroom.supervisors?.map((s: any) => s.name).join(", ") || "No supervisor"}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        {p.workDays.map((day: any, idx: number) => (
+                          <div key={idx} className="flex flex-col items-center gap-1">
+                            <span className="text-[10px] text-muted-foreground uppercase font-medium">
+                              {format(day.date, "eee").charAt(0)}
+                            </span>
+                            <div
+                              className={cn(
+                                "h-8 w-8 rounded-md flex items-center justify-center border transition-colors",
+                                day.isSubmitted
+                                  ? "bg-green-500/10 border-green-500/50 text-green-600"
+                                  : "bg-destructive/10 border-destructive/50 text-destructive"
+                              )}
+                              title={`${format(day.date, "EEEE, MMM d")}: ${day.isSubmitted ? "Submitted" : "Missing"}`}
+                            >
+                              {day.isSubmitted ? (
+                                <CheckCircle2 className="h-4 w-4" />
+                              ) : (
+                                <XCircle className="h-4 w-4" />
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="text-right min-w-[80px]">
+                        <p className="text-lg font-bold text-primary">{p.submittedCount}/{p.totalDays}</p>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Submitted</p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               ) : (
                 /* Monthly List */
