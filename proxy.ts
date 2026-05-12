@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { decodeSessionToken } from "@/lib/auth/session"
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   // Get session cookie
   const sessionCookie = request.cookies.get("eco_session")?.value
   const session = await decodeSessionToken(sessionCookie)

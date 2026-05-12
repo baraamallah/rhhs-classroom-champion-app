@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { getWinnersPageVisibility } from "@/app/actions/winners-page-actions"
-import { cn } from "@/lib/utils"
+// TODO: Refactor to avoid using cookies for static rendering or switch to dynamic rendering.import { cn } from "@/lib/utils"
 
 export function WinnersLink({
   className,

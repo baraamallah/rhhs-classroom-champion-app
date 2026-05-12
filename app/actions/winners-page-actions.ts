@@ -2,8 +2,8 @@
 
 import { revalidatePath } from "next/cache"
 import { createClient, createAdminClient } from "@/lib/supabase/server"
-import { getSessionFromCookies } from "@/lib/auth/session"
-
+// import { getSessionFromCookies } from "@/lib/auth/session"
+// TODO: Refactor this file to avoid using cookies for static rendering or switch to dynamic rendering for /winners.
 async function requireAdmin(): Promise<{ currentUser?: { id: string; role: string }; error?: string }> {
   const session = await getSessionFromCookies()
   if (!session) {
@@ -30,7 +30,7 @@ async function requireAdmin(): Promise<{ currentUser?: { id: string; role: strin
 
 export async function getWinnersPageVisibility(): Promise<{ success: boolean; visible?: boolean; error?: string }> {
   try {
-    const supabase = await createClient()
+    const supabase = await createAdminClient()
     const { data, error } = await supabase
       .from("system_settings")
       .select("value")
@@ -43,7 +43,11 @@ export async function getWinnersPageVisibility(): Promise<{ success: boolean; vi
     }
 
     // Default to visible if setting doesn't exist
-    const visible = data?.value ?? true
+    // Handle cases where value might be a string "true"/"false" from database
+    const rawValue = data?.value
+    const visible = rawValue === null || rawValue === undefined ? true : (rawValue === true || rawValue === "true")
+    
+    console.log(`[getWinnersPageVisibility] Returning visible: ${visible} (raw: ${rawValue})`)
     return { success: true, visible }
   } catch (error: any) {
     console.error("[getWinnersPageVisibility] Unexpected error:", error)
@@ -77,6 +81,7 @@ export async function setWinnersPageVisibility(visible: boolean): Promise<{ succ
       return { success: false, error: upsertError.message }
     }
 
+    console.log(`[setWinnersPageVisibility] Setting winners_page_visible to: ${visible}`)
     revalidatePath("/", "layout")
     revalidatePath("/winners")
     revalidatePath("/admin")

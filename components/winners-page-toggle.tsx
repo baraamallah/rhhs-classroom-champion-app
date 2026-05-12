@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
 import { Eye, EyeOff, Trophy } from "lucide-react"
 import { getWinnersPageVisibility, setWinnersPageVisibility } from "@/app/actions/winners-page-actions"
-
+// TODO: Refactor to avoid using cookies for static rendering or switch to dynamic rendering.
 export function WinnersPageToggle() {
   const { toast } = useToast()
   const [visible, setVisible] = useState<boolean>(true)
