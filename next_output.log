@@ -85,3 +85,89 @@ https://supabase.com/dashboard/project/_/settings/api
   digest: '1191248009'
 }
  POST /winners 500 in 532ms (compile: 7ms, proxy.ts: 7ms, render: 518ms)
+ GET / 200 in 1118ms (compile: 175ms, proxy.ts: 140ms, render: 803ms)
+ GET /api/auth/me 401 in 113ms (compile: 25ms, proxy.ts: 18ms, render: 70ms)
+[getWinnersPageVisibility] Unexpected error: Error: Your project's URL and Key are required to create a Supabase client!
+
+Check your Supabase project's API settings to find these values
+
+https://supabase.com/dashboard/project/_/settings/api
+    at <unknown> (https://supabase.com/dashboard/project/_/settings/api)
+    at createAdminClient (lib/supabase/server.ts:32:28)
+    at async getWinnersPageVisibility (app/actions/winners-page-actions.ts:33:22)
+  30 |   const cookieStore = await cookies()
+  31 |
+> 32 |   return createServerClient(
+     |                            ^
+  33 |     process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  34 |     process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  35 |     {
+ POST / 200 in 2.6s (compile: 8ms, proxy.ts: 13ms, render: 2.6s)
+[autoArchive] Unexpected error: Error: Your project's URL and Key are required to create a Supabase client!
+
+Check your Supabase project's API settings to find these values
+
+https://supabase.com/dashboard/project/_/settings/api
+    at <unknown> (https://supabase.com/dashboard/project/_/settings/api)
+    at createAdminClient (lib/supabase/server.ts:32:28)
+    at async checkAndAutoArchive (app/actions/auto-archive-actions.ts:11:22)
+  30 |   const cookieStore = await cookies()
+  31 |
+> 32 |   return createServerClient(
+     |                            ^
+  33 |     process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  34 |     process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  35 |     {
+ POST / 200 in 840ms (compile: 29ms, proxy.ts: 30ms, render: 782ms)
+ GET /winners 200 in 150ms (compile: 52ms, proxy.ts: 9ms, render: 89ms)
+ GET /api/auth/me 401 in 29ms (compile: 5ms, proxy.ts: 14ms, render: 9ms)
+[getWinnersPageVisibility] Unexpected error: Error: Your project's URL and Key are required to create a Supabase client!
+
+Check your Supabase project's API settings to find these values
+
+https://supabase.com/dashboard/project/_/settings/api
+    at <unknown> (https://supabase.com/dashboard/project/_/settings/api)
+    at createAdminClient (lib/supabase/server.ts:32:28)
+    at async getWinnersPageVisibility (app/actions/winners-page-actions.ts:33:22)
+  30 |   const cookieStore = await cookies()
+  31 |
+> 32 |   return createServerClient(
+     |                            ^
+  33 |     process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  34 |     process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  35 |     {
+ POST /winners 200 in 702ms (compile: 22ms, proxy.ts: 7ms, render: 674ms)
+[getClassroomWinCounts] Unexpected error: Error: Your project's URL and Key are required to create a Supabase client!
+
+Check your Supabase project's API settings to find these values
+
+https://supabase.com/dashboard/project/_/settings/api
+    at <unknown> (https://supabase.com/dashboard/project/_/settings/api)
+    at createAdminClient (lib/supabase/server.ts:32:28)
+    at async getClassroomWinCounts (app/actions/win-count-actions.ts:8:22)
+  30 |   const cookieStore = await cookies()
+  31 |
+> 32 |   return createServerClient(
+     |                            ^
+  33 |     process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  34 |     process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  35 |     {
+ POST /winners 200 in 711ms (compile: 7ms, proxy.ts: 7ms, render: 697ms)
+ ⨯ Error: Your project's URL and Key are required to create a Supabase client!
+
+Check your Supabase project's API settings to find these values
+
+https://supabase.com/dashboard/project/_/settings/api
+    at <unknown> (https://supabase.com/dashboard/project/_/settings/api)
+    at createAdminClient (lib/supabase/server.ts:32:28)
+    at async getPublicMonthlyWinners (app/actions/public-winners-actions.ts:7:20)
+  30 |   const cookieStore = await cookies()
+  31 |
+> 32 |   return createServerClient(
+     |                            ^
+  33 |     process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  34 |     process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  35 |     { {
+  digest: '1191248009'
+}
+ POST /winners 500 in 523ms (compile: 4ms, proxy.ts: 6ms, render: 512ms)

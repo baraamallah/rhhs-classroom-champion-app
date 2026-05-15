@@ -35,7 +35,10 @@ interface SubmissionTrackingProps {
 export function SubmissionTracking({ currentUser }: SubmissionTrackingProps) {
   const { toast } = useToast()
   const [date, setDate] = useState<Date>(new Date())
-  const [viewType, setViewType] = useState<"daily" | "weekly" | "monthly">("daily")
+  const [viewType, setViewType] = useState<"daily" | "weekly" | "monthly" | "custom">("daily")
+  const [customStartDate, setCustomStartDate] = useState<string>(format(startOfMonth(new Date()), "yyyy-MM-dd"))
+  const [customEndDate, setCustomEndDate] = useState<string>(format(endOfMonth(new Date()), "yyyy-MM-dd"))
+  const [sortBy, setSortBy] = useState<"name" | "score" | "time">("time")
   const [classrooms, setClassrooms] = useState<Classroom[]>([])
   const [evaluations, setEvaluations] = useState<Evaluation[]>([])
   const [loading, setLoading] = useState(true)
@@ -45,7 +48,7 @@ export function SubmissionTracking({ currentUser }: SubmissionTrackingProps) {
 
   useEffect(() => {
     fetchData()
-  }, [date, viewType])
+  }, [date, viewType, customStartDate, customEndDate])
 
   const fetchData = async () => {
     setLoading(true)
@@ -59,9 +62,12 @@ export function SubmissionTracking({ currentUser }: SubmissionTrackingProps) {
         const end = addDays(start, 4) // Friday
         startDate = format(start, "yyyy-MM-dd")
         endDate = format(end, "yyyy-MM-dd")
-      } else {
+      } else if (viewType === "monthly") {
         startDate = format(startOfMonth(date), "yyyy-MM-dd")
         endDate = format(endOfMonth(date), "yyyy-MM-dd")
+      } else {
+        startDate = customStartDate
+        endDate = customEndDate
       }
 
       const [classroomsData, evaluationsData] = await Promise.all([
@@ -350,37 +356,73 @@ export function SubmissionTracking({ currentUser }: SubmissionTrackingProps) {
             <div className="space-y-2">
               <label className="text-xs font-medium text-muted-foreground">View Type</label>
               <Tabs value={viewType} onValueChange={(v) => setViewType(v as any)} className="w-full">
-                <TabsList className="grid grid-cols-3 w-full">
+                <TabsList className="grid grid-cols-4 w-full">
                   <TabsTrigger value="daily">Daily</TabsTrigger>
-                  <TabsTrigger value="weekly">Weekly</TabsTrigger>
-                  <TabsTrigger value="monthly">Monthly</TabsTrigger>
+                  <TabsTrigger value="weekly">Week</TabsTrigger>
+                  <TabsTrigger value="monthly">Month</TabsTrigger>
+                  <TabsTrigger value="custom">Date Range</TabsTrigger>
                 </TabsList>
               </Tabs>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-xs font-medium text-muted-foreground">
-                {viewType === "daily" ? "Select Date" : viewType === "weekly" ? "Select Week" : "Select Month"}
-              </label>
-              <div className="relative">
-                <Calendar className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
-                <Input
-                  type={viewType === "monthly" ? "month" : "date"}
-                  className="pl-8"
-                  value={format(date, viewType === "monthly" ? "yyyy-MM" : "yyyy-MM-dd")}
-                  onChange={(e) => {
-                    const newDate = new Date(e.target.value)
-                    if (!isNaN(newDate.getTime())) {
-                      setDate(newDate)
-                    }
-                  }}
-                />
+            {viewType !== "custom" ? (
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-muted-foreground">
+                  {viewType === "daily" ? "Select Date" : viewType === "weekly" ? "Select Week" : "Select Month"}
+                </label>
+                <div className="relative">
+                  <Calendar className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
+                  <Input
+                    type={viewType === "monthly" ? "month" : "date"}
+                    className="pl-8"
+                    value={format(date, viewType === "monthly" ? "yyyy-MM" : "yyyy-MM-dd")}
+                    onChange={(e) => {
+                      const newDate = new Date(e.target.value)
+                      if (!isNaN(newDate.getTime())) {
+                        setDate(newDate)
+                      }
+                    }}
+                  />
+                </div>
+                {viewType === "weekly" && (
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    Week of {format(startOfWeek(date, { weekStartsOn: 1 }), "MMM d")} - {format(addDays(startOfWeek(date, { weekStartsOn: 1 }), 4), "MMM d")}
+                  </p>
+                )}
               </div>
-              {viewType === "weekly" && (
-                <p className="text-[10px] text-muted-foreground mt-1">
-                  Week of {format(startOfWeek(date, { weekStartsOn: 1 }), "MMM d")} - {format(addDays(startOfWeek(date, { weekStartsOn: 1 }), 4), "MMM d")}
-                </p>
-              )}
+            ) : (
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground">From Date</label>
+                  <Input
+                    type="date"
+                    value={customStartDate}
+                    onChange={(e) => setCustomStartDate(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground">To Date</label>
+                  <Input
+                    type="date"
+                    value={customEndDate}
+                    onChange={(e) => setCustomEndDate(e.target.value)}
+                  />
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-muted-foreground">Sort By (Submitted)</label>
+              <Select value={sortBy} onValueChange={(v) => setSortBy(v as any)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="time">Latest First</SelectItem>
+                  <SelectItem value="score">Higher Score First</SelectItem>
+                  <SelectItem value="name">Classroom Name</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
@@ -475,7 +517,9 @@ export function SubmissionTracking({ currentUser }: SubmissionTrackingProps) {
                   ? `Submission Status for ${format(date, "PPP")}`
                   : viewType === "weekly"
                   ? `Weekly Status (${format(startOfWeek(date, { weekStartsOn: 1 }), "MMM d")} - ${format(addDays(startOfWeek(date, { weekStartsOn: 1 }), 4), "MMM d")})`
-                  : `Monthly Performance for ${format(date, "MMMM yyyy")}`}
+                  : viewType === "monthly"
+                  ? `Monthly Performance for ${format(date, "MMMM yyyy")}`
+                  : `Custom Period Tracking (${format(new Date(customStartDate), "MMM d, yyyy")} - ${format(new Date(customEndDate), "MMM d, yyyy")})`}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -522,9 +566,22 @@ export function SubmissionTracking({ currentUser }: SubmissionTrackingProps) {
                       Submitted ({(submissionStats as any).submitted.length})
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {(submissionStats as any).submitted.map((c: Classroom) => {
-                        const eval_ = evaluations.find(e => e.classroom_id === c.id)
-                        return (
+                      {(submissionStats as any).submitted
+                        .map((c: Classroom) => {
+                          const eval_ = evaluations.find(e => e.classroom_id === c.id)
+                          return { classroom: c, evaluation: eval_ }
+                        })
+                        .sort((a: any, b: any) => {
+                          if (sortBy === "score") {
+                            return (b.evaluation?.total_score || 0) - (a.evaluation?.total_score || 0)
+                          } else if (sortBy === "name") {
+                            return a.classroom.name.localeCompare(b.classroom.name)
+                          } else {
+                            // time
+                            return new Date(b.evaluation?.created_at || 0).getTime() - new Date(a.evaluation?.created_at || 0).getTime()
+                          }
+                        })
+                        .map(({ classroom: c, evaluation: eval_ }: any) => (
                           <div key={c.id} className="p-3 rounded-lg border bg-card flex items-center justify-between">
                             <div>
                               <p className="font-medium text-sm">{c.name}</p>
@@ -541,8 +598,8 @@ export function SubmissionTracking({ currentUser }: SubmissionTrackingProps) {
                               <p className="text-[10px] text-muted-foreground">{eval_ ? format(new Date(eval_.created_at || ""), "p") : ""}</p>
                             </div>
                           </div>
-                        )
-                      })}
+                        ))
+                      }
                     </div>
                   </div>
                 </div>
