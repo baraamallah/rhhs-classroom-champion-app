@@ -5,10 +5,11 @@ import { motion } from "framer-motion"
 import { Header } from "@/components/header"
 import { SimpleClassroomCard } from "@/components/simple-classroom-card"
 import { calculateLeaderboard } from "@/lib/utils-leaderboard"
-import { getClassrooms, getEvaluations } from "@/lib/supabase-data"
+import { getClassrooms, getEvaluationsByDateRange } from "@/lib/supabase-data"
 
 import { LeafIcon } from "@/components/icons"
 import type { ClassroomScore } from "@/lib/types"
+import { format, startOfMonth, endOfMonth } from "date-fns"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { DIVISION_OPTIONS } from "@/lib/division-display"
 
@@ -38,8 +39,12 @@ export default function HomePage() {
 
   useEffect(() => {
     const loadData = async () => {
+      const now = new Date()
+      const startDate = format(startOfMonth(now), "yyyy-MM-dd")
+      const endDate = format(endOfMonth(now), "yyyy-MM-dd")
+
       const [evaluations, classrooms] = await Promise.all([
-        getEvaluations(),
+        getEvaluationsByDateRange(startDate, endDate),
         getClassrooms()
       ])
       const board = calculateLeaderboard(evaluations, classrooms)

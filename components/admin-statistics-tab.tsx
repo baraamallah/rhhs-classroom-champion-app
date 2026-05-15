@@ -3,11 +3,15 @@
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { getEvaluations, getClassrooms, getEvaluationsByDateRange } from "@/lib/supabase-data"
+import { getClassrooms, getEvaluationsByDateRange } from "@/lib/supabase-data"
 import type { Evaluation, Classroom } from "@/lib/types"
 import { LeafIcon, TrophyIcon, StarIcon } from "@/components/icons"
-import { Filter } from "lucide-react"
+import { Filter, Calendar as CalendarIcon } from "lucide-react"
 import { DIVISION_OPTIONS, getDivisionDisplayName } from "@/lib/division-display"
+import { format, startOfMonth, endOfMonth } from "date-fns"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Button } from "@/components/ui/button"
 
 interface ClassroomStats {
   classroom: Classroom
@@ -33,15 +37,22 @@ export function AdminStatisticsTab() {
   const [loading, setLoading] = useState(true)
   const [selectedDivision, setSelectedDivision] = useState<string>("all")
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [evaluationsData, classroomsData] = await Promise.all([
-          getEvaluations(),
-          getClassrooms()
-        ])
+  const [startDate, setStartDate] = useState<string>(format(startOfMonth(new Date()), "yyyy-MM-dd"))
+  const [endDate, setEndDate] = useState<string>(format(endOfMonth(new Date()), "yyyy-MM-dd"))
 
-        setEvaluations(evaluationsData)
+  useEffect(() => {
+    fetchData()
+  }, [])
+
+  const fetchData = async () => {
+    setLoading(true)
+    try {
+      const [evaluationsData, classroomsData] = await Promise.all([
+        getEvaluationsByDateRange(startDate, endDate),
+        getClassrooms()
+      ])
+
+      setEvaluations(evaluationsData)
         setClassrooms(classroomsData)
 
         // Calculate classroom statistics - INCLUDE ALL CLASSROOMS
@@ -116,15 +127,12 @@ export function AdminStatisticsTab() {
 
         setSupervisorStats(supervisorStatsArray.sort((a, b) => b.evaluationCount - a.evaluationCount))
 
-      } catch (error) {
-        console.error("Error fetching statistics:", error)
-      } finally {
-        setLoading(false)
-      }
+    } catch (error) {
+      console.error("Error fetching statistics:", error)
+    } finally {
+      setLoading(false)
     }
-
-    fetchData()
-  }, [])
+  }
 
   // Filter classrooms by division
   const filteredClassroomStats = selectedDivision === "all"
@@ -192,19 +200,54 @@ export function AdminStatisticsTab() {
         </Card>
       </div>
 
-      {/* Division Filter */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Filter className="h-5 w-5" />
-                Filter by Division
-              </CardTitle>
-              <CardDescription>View classrooms by their division</CardDescription>
+      {/* Date and Division Filters */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CalendarIcon className="h-5 w-5" />
+              Date Range
+            </CardTitle>
+            <CardDescription>Filter statistics by evaluation date</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col md:flex-row items-end gap-4">
+              <div className="grid w-full items-center gap-1.5">
+                <Label htmlFor="start-date">Start Date</Label>
+                <Input
+                  type="date"
+                  id="start-date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                />
+              </div>
+              <div className="grid w-full items-center gap-1.5">
+                <Label htmlFor="end-date">End Date</Label>
+                <Input
+                  type="date"
+                  id="end-date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                />
+              </div>
+              <Button onClick={fetchData} disabled={loading}>
+                {loading ? "Loading..." : "Apply Range"}
+              </Button>
             </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Filter className="h-5 w-5" />
+              Division Filter
+            </CardTitle>
+            <CardDescription>View classrooms by their division</CardDescription>
+          </CardHeader>
+          <CardContent>
             <Select value={selectedDivision} onValueChange={setSelectedDivision}>
-              <SelectTrigger className="w-[200px]">
+              <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select division" />
               </SelectTrigger>
               <SelectContent>
@@ -214,9 +257,9 @@ export function AdminStatisticsTab() {
                 ))}
               </SelectContent>
             </Select>
-          </div>
-        </CardHeader>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Classroom Rankings */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

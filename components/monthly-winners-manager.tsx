@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
-import { TrophyIcon, Calendar, Award, Trash2, Edit } from "lucide-react"
+import { TrophyIcon, Calendar, Award, Trash2, Edit, Search } from "lucide-react"
 import {
   declareMonthlyWinner,
   getMonthlyWinners,
@@ -55,6 +55,7 @@ export function MonthlyWinnersManager() {
   const [classrooms, setClassrooms] = useState<Classroom[]>([])
   const [editingWinner, setEditingWinner] = useState<any | null>(null)
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; winnerId: string }>({ open: false, winnerId: "" })
+  const [manualSelection, setManualSelection] = useState<Record<string, string>>({})
 
   useEffect(() => {
     loadWinners()
@@ -115,9 +116,9 @@ export function MonthlyWinnersManager() {
       division,
       selectedYear,
       selectedMonth,
-      classroom.totalScore,
-      classroom.averageScore,
-      classroom.evaluationCount
+      classroom.totalScore || 0,
+      classroom.averageScore || 0,
+      classroom.evaluationCount || 0
     )
     setLoading(false)
 
@@ -166,6 +167,35 @@ export function MonthlyWinnersManager() {
 
   const getTopClassroomsForDivision = (division: string) => {
     return topClassrooms[division] || []
+  }
+
+  const handleManualDeclare = (division: string) => {
+    const classroomId = manualSelection[division]
+    if (!classroomId) return
+
+    // Find classroom in topClassrooms or just use the classroom object if not found
+    const topClassroom = topClassrooms[division]?.find(c => c.classroom.id === classroomId)
+
+    if (topClassroom) {
+      handleDeclareWinner(division, topClassroom)
+    } else {
+      const classroom = classrooms.find(c => c.id === classroomId)
+      if (classroom) {
+        handleDeclareWinner(division, {
+          classroom,
+          totalScore: 0,
+          averageScore: 0,
+          evaluationCount: 0
+        })
+      }
+    }
+
+    // Reset selection
+    setManualSelection(prev => {
+      const next = { ...prev }
+      delete next[division]
+      return next
+    })
   }
 
   const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i)
@@ -275,9 +305,48 @@ export function MonthlyWinnersManager() {
                     </div>
                   ) : (
                     <div className="space-y-3">
-                      {topClassroomsList.length > 0 ? (
+                      <div className="space-y-3">
+                        <p className="text-sm font-medium text-muted-foreground">Manual Selection:</p>
+                        <div className="flex gap-2">
+                          <Select
+                            value={manualSelection[division] || ""}
+                            onValueChange={(v) => setManualSelection(prev => ({ ...prev, [division]: v }))}
+                          >
+                            <SelectTrigger className="flex-1">
+                              <SelectValue placeholder="Select classroom..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {classrooms
+                                .filter(c => c.division === division)
+                                .map(c => (
+                                  <SelectItem key={c.id} value={c.id}>
+                                    {c.name} (Grade {c.grade})
+                                  </SelectItem>
+                                ))
+                              }
+                            </SelectContent>
+                          </Select>
+                          <Button
+                            size="sm"
+                            disabled={!manualSelection[division] || loading}
+                            onClick={() => handleManualDeclare(division)}
+                          >
+                            Set
+                          </Button>
+                        </div>
+                      </div>
+
+                      {topClassroomsList.length > 0 && (
                         <>
-                          <p className="text-sm font-medium text-muted-foreground">Top Classrooms:</p>
+                          <div className="relative my-4">
+                            <div className="absolute inset-0 flex items-center">
+                              <span className="w-full border-t" />
+                            </div>
+                            <div className="relative flex justify-center text-xs uppercase">
+                              <span className="bg-background px-2 text-muted-foreground">Or Pick From Top</span>
+                            </div>
+                          </div>
+
                           <div className="space-y-2 max-h-60 overflow-y-auto">
                             {topClassroomsList.slice(0, 5).map((classroom, index) => (
                               <div
@@ -306,8 +375,10 @@ export function MonthlyWinnersManager() {
                             ))}
                           </div>
                         </>
-                      ) : (
-                        <p className="text-sm text-muted-foreground text-center py-4">
+                      )}
+
+                      {topClassroomsList.length === 0 && (
+                        <p className="text-xs text-muted-foreground text-center py-2">
                           No evaluations found for this division in {MONTHS.find(m => m.value === selectedMonth)?.label} {selectedYear}
                         </p>
                       )}
