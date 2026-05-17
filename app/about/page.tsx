@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion"
 import { Header } from "@/components/header"
-import { LeafIcon, TrophyIcon, StarIcon } from "@/components/icons"
+import { LeafIcon, TrophyIcon, StarIcon, CalculatorIcon, PodiumIcon, AwardBadgeIcon } from "@/components/icons"
 import Image from "next/image"
 import { Mail } from "lucide-react"
 
@@ -126,6 +126,159 @@ export default function AboutPage() {
                                 <p className="text-muted-foreground">{card.description}</p>
                             </motion.div>
                         ))}
+                    </div>
+                </div>
+
+                {/* Point Calculation & Scoring Rules */}
+                <div className="mb-20">
+                    <motion.div
+                        className="text-center mb-12"
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.6 }}
+                    >
+                        <h2 className="text-3xl font-bold mb-4 bg-gradient-to-r from-primary to-green-600 bg-clip-text text-transparent">Point Calculation & Scoring Rules</h2>
+                        <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                            A transparent, fair scoring system designed to reward daily environmental habits and team collaboration.
+                        </p>
+                    </motion.div>
+
+                    <div className="grid md:grid-cols-3 gap-8">
+                        {/* Card 1: Scoring Mechanics */}
+                        <motion.div
+                            className="bg-card border border-border p-6 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between group"
+                            initial={{ opacity: 0, y: 20 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true }}
+                            transition={{ delay: 0.1, duration: 0.5 }}
+                            whileHover={{ y: -4 }}
+                        >
+                            <div>
+                                <div className="h-12 w-12 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-lg flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                                    <CalculatorIcon className="h-6 w-6" />
+                                </div>
+                                <h3 className="text-xl font-bold mb-3 flex items-center gap-2 text-foreground">
+                                    Scoring Mechanics
+                                </h3>
+                                <p className="text-muted-foreground text-sm leading-relaxed mb-4">
+                                    Supervisors check classroom compliance using a weighted checklist. Each item has a specific value based on its environmental impact:
+                                </p>
+                                <ul className="space-y-2 mb-6">
+                                    <li className="flex items-center gap-2 text-xs font-semibold text-muted-foreground bg-muted/50 p-2 rounded-md border border-border/30">
+                                        <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                                        Simple Checks: 5 pts
+                                    </li>
+                                    <li className="flex items-center gap-2 text-xs font-semibold text-muted-foreground bg-muted/50 p-2 rounded-md border border-border/30">
+                                        <span className="w-2 h-2 rounded-full bg-blue-500" />
+                                        Standard Practices: 10 pts
+                                    </li>
+                                    <li className="flex items-center gap-2 text-xs font-semibold text-muted-foreground bg-muted/50 p-2 rounded-md border border-border/30">
+                                        <span className="w-2 h-2 rounded-full bg-purple-500" />
+                                        High Impact (AC, Sorting): 15 pts
+                                    </li>
+                                </ul>
+                            </div>
+                            <div className="bg-gradient-to-r from-emerald-500/5 to-blue-500/5 border border-primary/10 rounded-lg p-3 text-center mt-auto">
+                                <p className="text-xs font-mono text-primary font-semibold">
+                                    Evaluation Score = ∑ Checked Items
+                                </p>
+                            </div>
+                        </motion.div>
+
+                        {/* Card 2: Leaderboard & Rankings */}
+                        <motion.div
+                            className="bg-card border border-border p-6 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between group"
+                            initial={{ opacity: 0, y: 20 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true }}
+                            transition={{ delay: 0.2, duration: 0.5 }}
+                            whileHover={{ y: -4 }}
+                        >
+                            <div>
+                                <div className="h-12 w-12 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-lg flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                                    <PodiumIcon className="h-6 w-6" />
+                                </div>
+                                <h3 className="text-xl font-bold mb-3 flex items-center gap-2 text-foreground">
+                                    Leaderboard Rules
+                                </h3>
+                                <p className="text-muted-foreground text-sm leading-relaxed mb-4">
+                                    Rankings reflect sustained performance. Scores are aggregated to drive friendly school competition:
+                                </p>
+                                <div className="space-y-3 mb-6 text-sm text-muted-foreground">
+                                    <p className="flex items-start gap-2">
+                                        <span className="text-blue-500 font-semibold mt-0.5">•</span>
+                                        <span><strong>Cumulative Sort:</strong> Rooms are ranked by total points across unarchived evaluations.</span>
+                                    </p>
+                                    <p className="flex items-start gap-2">
+                                        <span className="text-blue-500 font-semibold mt-0.5">•</span>
+                                        <span><strong>Aggregation:</strong> Configurable between all-time stats and monthly resets for fresh goals.</span>
+                                    </p>
+                                    <p className="flex items-start gap-2">
+                                        <span className="text-blue-500 font-semibold mt-0.5">•</span>
+                                        <span><strong>Tie-Breaker:</strong> If total scores tie, the classroom with the higher <strong>Average Score</strong> takes the lead!</span>
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="bg-gradient-to-r from-blue-500/5 to-indigo-500/5 border border-primary/10 rounded-lg p-3 text-center mt-auto">
+                                <p className="text-xs font-mono text-primary font-semibold">
+                                    Tie-Breaker = Max Average Score
+                                </p>
+                            </div>
+                        </motion.div>
+
+                        {/* Card 3: Achievement Tiers */}
+                        <motion.div
+                            className="bg-card border border-border p-6 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between group"
+                            initial={{ opacity: 0, y: 20 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true }}
+                            transition={{ delay: 0.3, duration: 0.5 }}
+                            whileHover={{ y: -4 }}
+                        >
+                            <div>
+                                <div className="h-12 w-12 bg-amber-500/10 text-amber-600 dark:text-amber-500 rounded-lg flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                                    <AwardBadgeIcon className="h-6 w-6" />
+                                </div>
+                                <h3 className="text-xl font-bold mb-3 flex items-center gap-2 text-foreground">
+                                    Performance Tiers
+                                </h3>
+                                <p className="text-muted-foreground text-sm leading-relaxed mb-4">
+                                    Individual evaluation percentages earn specific visual status badges inside the app:
+                                </p>
+                                <div className="space-y-3 mb-6">
+                                    <div className="flex items-center justify-between p-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-yellow-600 dark:text-yellow-400">
+                                        <span className="text-xs font-bold flex items-center gap-1.5">
+                                            🏆 Excellent
+                                        </span>
+                                        <span className="text-xs font-bold font-mono">90% - 100%</span>
+                                    </div>
+                                    <div className="flex items-center justify-between p-2 rounded-lg bg-green-500/10 border border-green-500/20 text-green-600 dark:text-green-400">
+                                        <span className="text-xs font-bold flex items-center gap-1.5">
+                                            🌱 Good
+                                        </span>
+                                        <span className="text-xs font-bold font-mono">75% - 89%</span>
+                                    </div>
+                                    <div className="flex items-center justify-between p-2 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400">
+                                        <span className="text-xs font-bold flex items-center gap-1.5">
+                                            ✨ Fair
+                                        </span>
+                                        <span className="text-xs font-bold font-mono">60% - 74%</span>
+                                    </div>
+                                    <div className="flex items-center justify-between p-2 rounded-lg bg-muted border border-border text-muted-foreground">
+                                        <span className="text-xs font-bold flex items-center gap-1.5">
+                                            ⚠️ Needs Improvement
+                                        </span>
+                                        <span className="text-xs font-bold font-mono">&lt; 60%</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="bg-gradient-to-r from-amber-500/5 to-yellow-500/5 border border-primary/10 rounded-lg p-3 text-center mt-auto">
+                                <p className="text-xs font-mono text-primary font-semibold">
+                                    Target Status = Excellent (90%+)
+                                </p>
+                            </div>
+                        </motion.div>
                     </div>
                 </div>
 
