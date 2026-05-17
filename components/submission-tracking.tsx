@@ -654,35 +654,6 @@ export function SubmissionTracking({ currentUser }: SubmissionTrackingProps) {
                 </div>
               ) : viewType === "daily" ? (
                 <div className="space-y-6">
-                  {/* Missing List - High Priority */}
-                  {(submissionStats as any).notSubmitted.length > 0 && (
-                    <div className="space-y-3">
-                      <h3 className="text-sm font-semibold text-destructive flex items-center gap-2">
-                        <XCircle className="h-4 w-4" />
-                        Not Submitted ({(submissionStats as any).notSubmitted.length})
-                      </h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {(submissionStats as any).notSubmitted.map((c: Classroom) => (
-                          <div key={c.id} className="p-3 rounded-lg border border-destructive/20 bg-destructive/5 flex items-center justify-between transition-all hover:bg-destructive/10">
-                            <div>
-                              <p className="font-semibold text-sm">{c.name}</p>
-                              <p className="text-xs text-muted-foreground mt-0.5">Grade {c.grade} • {getDivisionDisplayName(c.division)}</p>
-                              <div className="flex items-center gap-1.5 mt-2">
-                                <Users className="h-3 w-3 text-muted-foreground" />
-                                <p className="text-[10px] text-muted-foreground">
-                                  {c.supervisors?.map(s => s.name).join(", ") || "No supervisor assigned"}
-                                </p>
-                              </div>
-                            </div>
-                            <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-destructive/10 text-destructive border border-destructive/20">
-                              Missing
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
                   {/* Submitted List */}
                   <div className="space-y-3">
                     <h3 className="text-sm font-semibold text-green-600 flex items-center gap-2">
@@ -725,6 +696,35 @@ export function SubmissionTracking({ currentUser }: SubmissionTrackingProps) {
                       }
                     </div>
                   </div>
+
+                  {/* Missing List - High Priority */}
+                  {(submissionStats as any).notSubmitted.length > 0 && (
+                    <div className="space-y-3">
+                      <h3 className="text-sm font-semibold text-destructive flex items-center gap-2">
+                        <XCircle className="h-4 w-4" />
+                        Not Submitted ({(submissionStats as any).notSubmitted.length})
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {(submissionStats as any).notSubmitted.map((c: Classroom) => (
+                          <div key={c.id} className="p-3 rounded-lg border border-destructive/20 bg-destructive/5 flex items-center justify-between transition-all hover:bg-destructive/10">
+                            <div>
+                              <p className="font-semibold text-sm">{c.name}</p>
+                              <p className="text-xs text-muted-foreground mt-0.5">Grade {c.grade} • {getDivisionDisplayName(c.division)}</p>
+                              <div className="flex items-center gap-1.5 mt-2">
+                                <Users className="h-3 w-3 text-muted-foreground" />
+                                <p className="text-[10px] text-muted-foreground">
+                                  {c.supervisors?.map(s => s.name).join(", ") || "No supervisor assigned"}
+                                </p>
+                              </div>
+                            </div>
+                            <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-destructive/10 text-destructive border border-destructive/20">
+                              Missing
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : viewType === "weekly" ? (
                 /* Weekly List */
