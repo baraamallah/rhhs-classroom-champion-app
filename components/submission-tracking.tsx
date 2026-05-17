@@ -66,6 +66,21 @@ export function SubmissionTracking({ currentUser }: SubmissionTrackingProps) {
         startDate = format(startOfMonth(date), "yyyy-MM-dd")
         endDate = format(endOfMonth(date), "yyyy-MM-dd")
       } else {
+        if (!customStartDate || !customEndDate) return
+        
+        let startD = new Date(customStartDate)
+        let endD = new Date(customEndDate)
+        
+        if (isNaN(startD.getTime()) || isNaN(endD.getTime())) return
+        
+        // Prevent reverse dates by swapping them
+        if (startD > endD) {
+          const temp = customStartDate
+          setCustomStartDate(customEndDate)
+          setCustomEndDate(temp)
+          return
+        }
+        
         startDate = customStartDate
         endDate = customEndDate
       }
@@ -141,7 +156,7 @@ export function SubmissionTracking({ currentUser }: SubmissionTrackingProps) {
           ? classroomPerformance.reduce((sum, p) => sum + (p.submittedCount / p.totalDays), 0) / classroomPerformance.length * 100
           : 0
       }
-    } else {
+    } else if (viewType === "monthly") {
       // Monthly stats
       const daysInMonth = eachDayOfInterval({
         start: startOfMonth(date),
@@ -155,7 +170,38 @@ export function SubmissionTracking({ currentUser }: SubmissionTrackingProps) {
           classroom: c,
           submittedCount: submittedDays.size,
           totalDays: daysInMonth.length,
-          rate: (submittedDays.size / daysInMonth.length) * 100
+          rate: daysInMonth.length > 0 ? (submittedDays.size / daysInMonth.length) * 100 : 0
+        }
+      })
+
+      return {
+        classroomPerformance,
+        avgRate: classroomPerformance.length > 0
+          ? classroomPerformance.reduce((sum, p) => sum + p.rate, 0) / classroomPerformance.length
+          : 0
+      }
+    } else {
+      // Custom Date Range stats
+      let startD = new Date(customStartDate)
+      let endD = new Date(customEndDate)
+      if (isNaN(startD.getTime())) startD = startOfMonth(new Date())
+      if (isNaN(endD.getTime())) endD = endOfMonth(new Date())
+
+      const customDays = eachDayOfInterval({
+        start: startD,
+        end: endD
+      }).filter(d => !isWeekend(d))
+
+      const classroomPerformance = filteredClassrooms.map(c => {
+        const classEvals = evaluations.filter(e => e.classroom_id === c.id)
+        const submittedDays = new Set(classEvals.map(e => format(new Date(e.evaluation_date), "yyyy-MM-dd")))
+        const totalDays = customDays.length
+        
+        return {
+          classroom: c,
+          submittedCount: submittedDays.size,
+          totalDays: totalDays,
+          rate: totalDays > 0 ? (submittedDays.size / totalDays) * 100 : 0
         }
       })
 
@@ -166,7 +212,34 @@ export function SubmissionTracking({ currentUser }: SubmissionTrackingProps) {
           : 0
       }
     }
-  }, [filteredClassrooms, evaluations, viewType, date])
+  }, [filteredClassrooms, evaluations, viewType, date, customStartDate, customEndDate])
+
+  // Synchronized sorting across all detailed lists
+  const sortedClassroomPerformance = useMemo(() => {
+    const perf = (submissionStats as any).classroomPerformance || []
+    return [...perf].sort((a: any, b: any) => {
+      if (sortBy === "name") {
+        return a.classroom.name.localeCompare(b.classroom.name)
+      } else if (sortBy === "score") {
+        const rateA = a.rate !== undefined ? a.rate : (a.submittedCount / (a.totalDays || 1))
+        const rateB = b.rate !== undefined ? b.rate : (b.submittedCount / (b.totalDays || 1))
+        return rateB - rateA
+      } else {
+        // Latest evaluation date
+        const classEvalsA = evaluations.filter(e => e.classroom_id === a.classroom.id)
+        const classEvalsB = evaluations.filter(e => e.classroom_id === b.classroom.id)
+        
+        const lastDateA = classEvalsA.length > 0 
+          ? Math.max(...classEvalsA.map(e => new Date(e.evaluation_date).getTime())) 
+          : 0
+        const lastDateB = classEvalsB.length > 0 
+          ? Math.max(...classEvalsB.map(e => new Date(e.evaluation_date).getTime())) 
+          : 0
+          
+        return lastDateB - lastDateA
+      }
+    })
+  }, [submissionStats, sortBy, evaluations])
 
   const handleExportExcel = async () => {
     setExporting(true)
@@ -175,7 +248,7 @@ export function SubmissionTracking({ currentUser }: SubmissionTrackingProps) {
     } catch (error) {
       console.error("Export error:", error)
       toast({
-        title: "Error",
+        title: "Export Error",
         description: "Failed to export Excel file",
         variant: "destructive",
       })
@@ -227,8 +300,10 @@ export function SubmissionTracking({ currentUser }: SubmissionTrackingProps) {
 
         const worksheet = XLSX.utils.aoa_to_sheet(data)
         XLSX.utils.book_append_sheet(workbook, worksheet, "Daily Tracking")
+        const fileName = `Submission_Tracking_${format(date, "yyyy-MM-dd")}.xlsx`
+        XLSX.writeFile(workbook, fileName)
+
       } else if (viewType === "weekly") {
-        // Weekly
         const start = startOfWeek(date, { weekStartsOn: 1 })
         const workDays = Array.from({ length: 5 }, (_, i) => addDays(start, i))
 
@@ -243,7 +318,7 @@ export function SubmissionTracking({ currentUser }: SubmissionTrackingProps) {
           headers
         ]
 
-        ;(submissionStats as any).classroomPerformance.forEach((p: any) => {
+        sortedClassroomPerformance.forEach((p: any) => {
           const row = [
             p.classroom.name,
             p.classroom.grade,
@@ -260,8 +335,10 @@ export function SubmissionTracking({ currentUser }: SubmissionTrackingProps) {
 
         const worksheet = XLSX.utils.aoa_to_sheet(data)
         XLSX.utils.book_append_sheet(workbook, worksheet, "Weekly Tracking")
-      } else {
-        // Monthly
+        const fileName = `Submission_Tracking_${format(date, "yyyy-'W'ww")}.xlsx`
+        XLSX.writeFile(workbook, fileName)
+
+      } else if (viewType === "monthly") {
         const daysInMonth = eachDayOfInterval({
           start: startOfMonth(date),
           end: endOfMonth(date)
@@ -279,7 +356,7 @@ export function SubmissionTracking({ currentUser }: SubmissionTrackingProps) {
           headers
         ]
 
-        ;(submissionStats as any).classroomPerformance.forEach((p: any) => {
+        sortedClassroomPerformance.forEach((p: any) => {
           const row = [
             p.classroom.name,
             p.classroom.grade,
@@ -302,14 +379,63 @@ export function SubmissionTracking({ currentUser }: SubmissionTrackingProps) {
 
         const worksheet = XLSX.utils.aoa_to_sheet(data)
         XLSX.utils.book_append_sheet(workbook, worksheet, "Monthly Tracking")
-      }
+        const fileName = `Submission_Tracking_${format(date, "yyyy-MM")}.xlsx`
+        XLSX.writeFile(workbook, fileName)
 
-      const fileName = `Submission_Tracking_${format(date, viewType === "daily" ? "yyyy-MM-dd" : viewType === "weekly" ? "yyyy-'W'ww" : "yyyy-MM")}.xlsx`
-      XLSX.writeFile(workbook, fileName)
+      } else {
+        // Custom Date Range Export
+        let startD = new Date(customStartDate)
+        let endD = new Date(customEndDate)
+        if (isNaN(startD.getTime())) startD = startOfMonth(new Date())
+        if (isNaN(endD.getTime())) endD = endOfMonth(new Date())
+
+        const customDays = eachDayOfInterval({
+          start: startD,
+          end: endD
+        })
+
+        const workdays = customDays.filter(d => !isWeekend(d))
+        const headers = ["Classroom", "Grade", "Division", "Supervisor(s)", "Total Submitted", "Total Workdays", "Submission Rate %"]
+        workdays.forEach(d => {
+          headers.push(format(d, "MMM d"))
+        })
+
+        const data = [
+          ["Period", `${format(startD, "PPP")} to ${format(endD, "PPP")}`],
+          [],
+          headers
+        ]
+
+        sortedClassroomPerformance.forEach((p: any) => {
+          const row = [
+            p.classroom.name,
+            p.classroom.grade,
+            getDivisionDisplayName(p.classroom.division),
+            p.classroom.supervisors?.map((s: any) => s.name).join(", ") || "None",
+            p.submittedCount,
+            p.totalDays,
+            `${p.rate.toFixed(1)}%`
+          ]
+
+          workdays.forEach(d => {
+            const hasEval = evaluations.some(e =>
+              e.classroom_id === p.classroom.id &&
+              isSameDay(new Date(e.evaluation_date), d)
+            )
+            row.push(hasEval ? "YES" : "NO")
+          })
+          data.push(row)
+        })
+
+        const worksheet = XLSX.utils.aoa_to_sheet(data)
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Custom Tracking")
+        const fileName = `Submission_Tracking_Custom_${format(startD, "yyyy-MM-dd")}_to_${format(endD, "yyyy-MM-dd")}.xlsx`
+        XLSX.writeFile(workbook, fileName)
+      }
 
       toast({
         title: "Export Successful",
-        description: `Exported to ${fileName}`,
+        description: "Exported submission tracking data successfully.",
       })
     } catch (error) {
       console.error("Excel generation error:", error)
@@ -318,8 +444,6 @@ export function SubmissionTracking({ currentUser }: SubmissionTrackingProps) {
         description: "Failed to generate Excel file",
         variant: "destructive",
       })
-    } finally {
-      setExporting(false)
     }
   }
 
@@ -360,7 +484,7 @@ export function SubmissionTracking({ currentUser }: SubmissionTrackingProps) {
                   <TabsTrigger value="daily">Daily</TabsTrigger>
                   <TabsTrigger value="weekly">Week</TabsTrigger>
                   <TabsTrigger value="monthly">Month</TabsTrigger>
-                  <TabsTrigger value="custom">Date Range</TabsTrigger>
+                  <TabsTrigger value="custom">Range</TabsTrigger>
                 </TabsList>
               </Tabs>
             </div>
@@ -412,14 +536,14 @@ export function SubmissionTracking({ currentUser }: SubmissionTrackingProps) {
             )}
 
             <div className="space-y-2">
-              <label className="text-xs font-medium text-muted-foreground">Sort By (Submitted)</label>
+              <label className="text-xs font-medium text-muted-foreground">Sort By</label>
               <Select value={sortBy} onValueChange={(v) => setSortBy(v as any)}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="time">Latest First</SelectItem>
-                  <SelectItem value="score">Higher Score First</SelectItem>
+                  <SelectItem value="score">Higher Rate First</SelectItem>
                   <SelectItem value="name">Classroom Name</SelectItem>
                 </SelectContent>
               </Select>
@@ -462,22 +586,22 @@ export function SubmissionTracking({ currentUser }: SubmissionTrackingProps) {
         <div className="lg:col-span-3 space-y-6">
           {/* Summary Stats */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card>
+            <Card className="border-border/85 shadow-sm transition-all hover:shadow-md">
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">Total Classrooms</p>
+                    <p className="text-xs font-semibold text-muted-foreground">Total Classrooms</p>
                     <p className="text-2xl font-bold">{filteredClassrooms.length}</p>
                   </div>
                   <School className="h-8 w-8 text-primary opacity-20" />
                 </div>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="border-border/85 shadow-sm transition-all hover:shadow-md">
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">
+                    <p className="text-xs font-semibold text-muted-foreground">
                       {viewType === "daily" ? "Submitted Today" : "Avg. Submission Rate"}
                     </p>
                     <p className="text-2xl font-bold">
@@ -490,11 +614,11 @@ export function SubmissionTracking({ currentUser }: SubmissionTrackingProps) {
                 </div>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="border-border/85 shadow-sm transition-all hover:shadow-md">
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">
+                    <p className="text-xs font-semibold text-muted-foreground">
                       {viewType === "daily" ? "Not Submitted" : "Target Workdays"}
                     </p>
                     <p className="text-2xl font-bold">
@@ -510,9 +634,9 @@ export function SubmissionTracking({ currentUser }: SubmissionTrackingProps) {
           </div>
 
           {/* Detailed Lists */}
-          <Card>
+          <Card className="border-border/80 shadow-sm">
             <CardHeader>
-              <CardTitle>
+              <CardTitle className="text-lg">
                 {viewType === "daily"
                   ? `Submission Status for ${format(date, "PPP")}`
                   : viewType === "weekly"
@@ -539,18 +663,18 @@ export function SubmissionTracking({ currentUser }: SubmissionTrackingProps) {
                       </h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         {(submissionStats as any).notSubmitted.map((c: Classroom) => (
-                          <div key={c.id} className="p-3 rounded-lg border border-destructive/20 bg-destructive/5 flex items-center justify-between">
+                          <div key={c.id} className="p-3 rounded-lg border border-destructive/20 bg-destructive/5 flex items-center justify-between transition-all hover:bg-destructive/10">
                             <div>
-                              <p className="font-medium text-sm">{c.name}</p>
-                              <p className="text-xs text-muted-foreground">Grade {c.grade} • {getDivisionDisplayName(c.division)}</p>
-                              <div className="flex items-center gap-1 mt-1">
+                              <p className="font-semibold text-sm">{c.name}</p>
+                              <p className="text-xs text-muted-foreground mt-0.5">Grade {c.grade} • {getDivisionDisplayName(c.division)}</p>
+                              <div className="flex items-center gap-1.5 mt-2">
                                 <Users className="h-3 w-3 text-muted-foreground" />
                                 <p className="text-[10px] text-muted-foreground">
                                   {c.supervisors?.map(s => s.name).join(", ") || "No supervisor assigned"}
                                 </p>
                               </div>
                             </div>
-                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-destructive/10 text-destructive border border-destructive/30">
+                            <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-destructive/10 text-destructive border border-destructive/20">
                               Missing
                             </span>
                           </div>
@@ -577,16 +701,15 @@ export function SubmissionTracking({ currentUser }: SubmissionTrackingProps) {
                           } else if (sortBy === "name") {
                             return a.classroom.name.localeCompare(b.classroom.name)
                           } else {
-                            // time
                             return new Date(b.evaluation?.created_at || 0).getTime() - new Date(a.evaluation?.created_at || 0).getTime()
                           }
                         })
                         .map(({ classroom: c, evaluation: eval_ }: any) => (
-                          <div key={c.id} className="p-3 rounded-lg border bg-card flex items-center justify-between">
+                          <div key={c.id} className="p-3 rounded-lg border bg-card flex items-center justify-between transition-all hover:bg-muted/30">
                             <div>
-                              <p className="font-medium text-sm">{c.name}</p>
-                              <p className="text-xs text-muted-foreground">Grade {c.grade} • {getDivisionDisplayName(c.division)}</p>
-                              <div className="flex items-center gap-1 mt-1">
+                              <p className="font-semibold text-sm">{c.name}</p>
+                              <p className="text-xs text-muted-foreground mt-0.5">Grade {c.grade} • {getDivisionDisplayName(c.division)}</p>
+                              <div className="flex items-center gap-1.5 mt-2">
                                 <Users className="h-3 w-3 text-muted-foreground" />
                                 <p className="text-[10px] text-muted-foreground">
                                   {eval_?.supervisor?.name || c.supervisors?.[0]?.name || "Unknown"}
@@ -595,7 +718,7 @@ export function SubmissionTracking({ currentUser }: SubmissionTrackingProps) {
                             </div>
                             <div className="text-right">
                               <p className="text-sm font-bold text-primary">{eval_?.total_score} pts</p>
-                              <p className="text-[10px] text-muted-foreground">{eval_ ? format(new Date(eval_.created_at || ""), "p") : ""}</p>
+                              <p className="text-[10px] text-muted-foreground mt-0.5">{eval_ ? format(new Date(eval_.created_at || ""), "p") : ""}</p>
                             </div>
                           </div>
                         ))
@@ -606,14 +729,14 @@ export function SubmissionTracking({ currentUser }: SubmissionTrackingProps) {
               ) : viewType === "weekly" ? (
                 /* Weekly List */
                 <div className="space-y-4">
-                  {(submissionStats as any).classroomPerformance.map((p: any) => (
-                    <div key={p.classroom.id} className="p-4 rounded-lg border bg-card flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  {sortedClassroomPerformance.map((p: any) => (
+                    <div key={p.classroom.id} className="p-4 rounded-lg border bg-card flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all hover:bg-muted/20">
                       <div className="flex-1">
-                        <p className="font-bold">{p.classroom.name}</p>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="font-bold text-foreground">{p.classroom.name}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
                           Grade {p.classroom.grade} • {getDivisionDisplayName(p.classroom.division)}
                         </p>
-                        <div className="flex items-center gap-1 mt-1">
+                        <div className="flex items-center gap-1.5 mt-2">
                           <Users className="h-3 w-3 text-muted-foreground" />
                           <p className="text-[10px] text-muted-foreground">
                             {p.classroom.supervisors?.map((s: any) => s.name).join(", ") || "No supervisor"}
@@ -624,15 +747,15 @@ export function SubmissionTracking({ currentUser }: SubmissionTrackingProps) {
                       <div className="flex items-center gap-2">
                         {p.workDays.map((day: any, idx: number) => (
                           <div key={idx} className="flex flex-col items-center gap-1">
-                            <span className="text-[10px] text-muted-foreground uppercase font-medium">
+                            <span className="text-[10px] text-muted-foreground uppercase font-semibold">
                               {format(day.date, "eee").charAt(0)}
                             </span>
                             <div
                               className={cn(
-                                "h-8 w-8 rounded-md flex items-center justify-center border transition-colors",
+                                "h-8 w-8 rounded-md flex items-center justify-center border transition-all duration-200",
                                 day.isSubmitted
-                                  ? "bg-green-500/10 border-green-500/50 text-green-600"
-                                  : "bg-destructive/10 border-destructive/50 text-destructive"
+                                  ? "bg-green-500/10 border-green-500/30 text-green-600 hover:bg-green-500/20"
+                                  : "bg-destructive/10 border-destructive/30 text-destructive hover:bg-destructive/20"
                               )}
                               title={`${format(day.date, "EEEE, MMM d")}: ${day.isSubmitted ? "Submitted" : "Missing"}`}
                             >
@@ -646,40 +769,42 @@ export function SubmissionTracking({ currentUser }: SubmissionTrackingProps) {
                         ))}
                       </div>
 
-                      <div className="text-right min-w-[80px]">
+                      <div className="text-right min-w-[90px] border-l pl-4">
                         <p className="text-lg font-bold text-primary">{p.submittedCount}/{p.totalDays}</p>
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Submitted</p>
+                        <p className="text-[10px] text-muted-foreground uppercase font-medium tracking-wider">Submitted</p>
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                /* Monthly List */
+                /* Monthly & Custom Period List */
                 <div className="space-y-4">
-                  {(submissionStats as any).classroomPerformance.map((p: any) => (
-                    <div key={p.classroom.id} className="p-4 rounded-lg border bg-card space-y-3">
+                  {sortedClassroomPerformance.map((p: any) => (
+                    <div key={p.classroom.id} className="p-4 rounded-lg border bg-card space-y-3 transition-all hover:bg-muted/20">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="font-bold">{p.classroom.name}</p>
-                          <p className="text-xs text-muted-foreground">
+                          <p className="font-bold text-foreground">{p.classroom.name}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">
                             Grade {p.classroom.grade} • {getDivisionDisplayName(p.classroom.division)}
                           </p>
                         </div>
                         <div className="text-right">
                           <p className="text-lg font-bold text-primary">{p.submittedCount}/{p.totalDays}</p>
-                          <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Days Submitted</p>
+                          <p className="text-[10px] text-muted-foreground uppercase font-medium tracking-wider">Days Submitted</p>
                         </div>
                       </div>
 
-                      <div className="space-y-1">
+                      <div className="space-y-1.5">
                         <div className="flex items-center justify-between text-xs">
-                          <span className="text-muted-foreground">Monthly Progress</span>
-                          <span className="font-medium">{p.rate.toFixed(1)}%</span>
+                          <span className="text-muted-foreground">
+                            {viewType === "custom" ? "Custom Period Progress" : "Monthly Progress"}
+                          </span>
+                          <span className="font-semibold text-foreground">{p.rate.toFixed(1)}%</span>
                         </div>
-                        <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+                        <div className="w-full h-2.5 bg-muted rounded-full overflow-hidden">
                           <div
                             className={cn(
-                              "h-full transition-all duration-500",
+                              "h-full transition-all duration-500 ease-out",
                               p.rate >= 90 ? "bg-green-500" : p.rate >= 75 ? "bg-blue-500" : p.rate >= 50 ? "bg-yellow-500" : "bg-destructive"
                             )}
                             style={{ width: `${p.rate}%` }}
@@ -687,8 +812,8 @@ export function SubmissionTracking({ currentUser }: SubmissionTrackingProps) {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2">
-                        <Users className="h-3 w-3 text-muted-foreground" />
+                      <div className="flex items-center gap-2 pt-1">
+                        <Users className="h-3.5 w-3.5 text-muted-foreground" />
                         <p className="text-xs text-muted-foreground">
                           {p.classroom.supervisors?.map((s: any) => s.name).join(", ") || "No supervisor assigned"}
                         </p>

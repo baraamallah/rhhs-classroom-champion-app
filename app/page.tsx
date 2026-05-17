@@ -5,7 +5,8 @@ import { motion } from "framer-motion"
 import { Header } from "@/components/header"
 import { SimpleClassroomCard } from "@/components/simple-classroom-card"
 import { calculateLeaderboard } from "@/lib/utils-leaderboard"
-import { getClassrooms, getEvaluationsByDateRange } from "@/lib/supabase-data"
+import { getClassrooms, getEvaluationsByDateRange, getEvaluations } from "@/lib/supabase-data"
+import { getLeaderboardPointsSetting } from "@/app/actions/winners-page-actions"
 
 import { LeafIcon } from "@/components/icons"
 import type { ClassroomScore } from "@/lib/types"
@@ -36,20 +37,36 @@ const FloatingLeaf = ({ delay = 0, x = 0 }: { delay?: number, x?: number }) => (
 export default function HomePage() {
   const [leaderboard, setLeaderboard] = useState<ClassroomScore[]>([])
   const [loading, setLoading] = useState(true)
+  const [showMonthly, setShowMonthly] = useState(true)
 
   useEffect(() => {
     const loadData = async () => {
-      const now = new Date()
-      const startDate = format(startOfMonth(now), "yyyy-MM-dd")
-      const endDate = format(endOfMonth(now), "yyyy-MM-dd")
+      try {
+        const [settingResult, classrooms] = await Promise.all([
+          getLeaderboardPointsSetting(),
+          getClassrooms()
+        ])
 
-      const [evaluations, classrooms] = await Promise.all([
-        getEvaluationsByDateRange(startDate, endDate),
-        getClassrooms()
-      ])
-      const board = calculateLeaderboard(evaluations, classrooms)
-      setLeaderboard(board)
-      setLoading(false)
+        const isMonthly = settingResult.success ? (settingResult.showMonthly ?? true) : true
+        setShowMonthly(isMonthly)
+
+        let evaluations
+        if (isMonthly) {
+          const now = new Date()
+          const startDate = format(startOfMonth(now), "yyyy-MM-dd")
+          const endDate = format(endOfMonth(now), "yyyy-MM-dd")
+          evaluations = await getEvaluationsByDateRange(startDate, endDate)
+        } else {
+          evaluations = await getEvaluations()
+        }
+
+        const board = calculateLeaderboard(evaluations, classrooms)
+        setLeaderboard(board)
+      } catch (error) {
+        console.error("Error loading leaderboard data:", error)
+      } finally {
+        setLoading(false)
+      }
     }
     loadData()
   }, [])
@@ -91,6 +108,7 @@ export default function HomePage() {
               Green Classrooms
             </h1>
           </motion.div>
+
           <motion.p
             className="text-xl text-muted-foreground max-w-2xl mx-auto"
             initial={{ opacity: 0 }}
