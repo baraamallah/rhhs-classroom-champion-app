@@ -450,6 +450,19 @@ export async function submitEvaluation(
   try {
     const supabase = createClient()
 
+    // Check if evaluations are enabled
+    const { data: statusData } = await supabase
+      .from("system_settings")
+      .select("value")
+      .eq("key", "evaluations_enabled")
+      .maybeSingle()
+
+    const enabled = statusData?.value === null || statusData?.value === undefined ? true : (statusData?.value === true || statusData?.value === "true")
+
+    if (!enabled) {
+      return { success: false, error: "System is closed and not accepting evaluations anymore." }
+    }
+
     const itemsMap = checkedItemIds.reduce((acc, id) => {
       acc[id] = true
       return acc

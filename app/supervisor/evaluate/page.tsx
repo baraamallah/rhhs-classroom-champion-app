@@ -11,8 +11,10 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { getClassrooms } from "@/lib/supabase-data"
 import type { Classroom, User } from "@/lib/types"
+import { getEvaluationsStatus } from "@/app/actions/evaluation-settings-actions"
+import { AlertCircle } from "lucide-react"
 
-type ViewState = "select" | "evaluate" | "success"
+type ViewState = "select" | "evaluate" | "success" | "closed"
 
 interface SupervisorEvaluateContentProps {
   currentUser: User
@@ -24,22 +26,34 @@ function SupervisorEvaluateContent({ currentUser }: SupervisorEvaluateContentPro
   const [viewState, setViewState] = useState<ViewState>("select")
   const [selectedClassroom, setSelectedClassroom] = useState<Classroom | null>(null)
   const [classrooms, setClassrooms] = useState<Classroom[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const fetchClassrooms = async () => {
+    const checkStatusAndFetchClassrooms = async () => {
       try {
+        const statusResult = await getEvaluationsStatus()
+        if (statusResult.success && statusResult.enabled === false) {
+          setViewState("closed")
+          setLoading(false)
+          return
+        }
+
         const data = await getClassrooms()
         setClassrooms(data)
       } catch (error) {
         console.error("Error fetching classrooms:", error)
+      } finally {
+        setLoading(false)
       }
     }
 
-    fetchClassrooms()
+    checkStatusAndFetchClassrooms()
   }, [])
 
   useEffect(() => {
     // Check if a specific classroom is selected via URL parameter
+    if (viewState === "closed") return
+
     const classroomId = searchParams.get("classroom")
     if (classroomId && classrooms.length > 0) {
       const classroom = classrooms.find(c => c.id === classroomId)
@@ -48,7 +62,7 @@ function SupervisorEvaluateContent({ currentUser }: SupervisorEvaluateContentPro
         setViewState("evaluate")
       }
     }
-  }, [searchParams, classrooms])
+  }, [searchParams, classrooms, viewState])
 
   const handleClassroomSelect = (classroom: Classroom) => {
     setSelectedClassroom(classroom)
@@ -91,41 +105,71 @@ function SupervisorEvaluateContent({ currentUser }: SupervisorEvaluateContentPro
           <p className="text-sm sm:text-base text-muted-foreground">Evaluate classroom eco-friendly practices</p>
         </div>
 
-        {viewState === "select" && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Select a Classroom to Evaluate</CardTitle>
-              <CardDescription>Choose the classroom you want to evaluate today</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ClassroomSelector onSelect={handleClassroomSelect} />
-            </CardContent>
-          </Card>
-        )}
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <p className="text-muted-foreground">Loading...</p>
+          </div>
+        ) : (
+          <>
+            {viewState === "closed" && (
+              <Card className="border-destructive/50 bg-destructive/5">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-destructive">
+                    <AlertCircle className="h-5 w-5" />
+                    System Closed
+                  </CardTitle>
+                  <CardDescription>
+                    The evaluation system is currently closed and not accepting new submissions.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">
+                    Please check back later or contact an administrator if you believe this is an error.
+                  </p>
+                  <Button onClick={handleBackToDashboard} className="mt-6">
+                    Return to Dashboard
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
 
-        {viewState === "evaluate" && selectedClassroom && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Evaluating Classroom</CardTitle>
-              <CardDescription>{selectedClassroom.name} - Grade {selectedClassroom.grade}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <EvaluationForm
-                classroom={selectedClassroom}
-                user={currentUser}
-                onComplete={handleEvaluationComplete}
-                onCancel={handleCancel}
-              />
-            </CardContent>
-          </Card>
-        )}
+            {viewState === "select" && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Select a Classroom to Evaluate</CardTitle>
+                  <CardDescription>Choose the classroom you want to evaluate today</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ClassroomSelector onSelect={handleClassroomSelect} />
+                </CardContent>
+              </Card>
+            )}
 
-        {viewState === "success" && (
-          <Card>
-            <CardContent className="py-8">
-              <EvaluationSuccess onNewEvaluation={handleNewEvaluation} />
-            </CardContent>
-          </Card>
+            {viewState === "evaluate" && selectedClassroom && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Evaluating Classroom</CardTitle>
+                  <CardDescription>{selectedClassroom.name} - Grade {selectedClassroom.grade}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <EvaluationForm
+                    classroom={selectedClassroom}
+                    user={currentUser}
+                    onComplete={handleEvaluationComplete}
+                    onCancel={handleCancel}
+                  />
+                </CardContent>
+              </Card>
+            )}
+
+            {viewState === "success" && (
+              <Card>
+                <CardContent className="py-8">
+                  <EvaluationSuccess onNewEvaluation={handleNewEvaluation} />
+                </CardContent>
+              </Card>
+            )}
+          </>
         )}
       </main>
     </div>

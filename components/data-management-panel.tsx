@@ -28,6 +28,7 @@ import { Loader2, Trash2, Archive, Search, History, RotateCcw, Download, FileSpr
 import { MonthlyWinnersManager } from "@/components/monthly-winners-manager"
 import { WinnersPageToggle } from "@/components/winners-page-toggle"
 import { LeaderboardSettingsToggle } from "@/components/leaderboard-settings-toggle"
+import { EvaluationsToggle } from "@/components/evaluations-toggle"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { exportAllDataAsZip, exportDataAsExcel } from "@/app/actions/export-data-actions"
 
@@ -549,9 +550,10 @@ export function DataManagementPanel() {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <WinnersPageToggle />
         <LeaderboardSettingsToggle />
+        <EvaluationsToggle />
       </div>
       <Tabs defaultValue="archive">
         <TabsList>
