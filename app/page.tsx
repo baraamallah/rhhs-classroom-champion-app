@@ -6,7 +6,8 @@ import { Header } from "@/components/header"
 import { SimpleClassroomCard } from "@/components/simple-classroom-card"
 import { calculateLeaderboard } from "@/lib/utils-leaderboard"
 import { getClassrooms, getEvaluationsByDateRange, getEvaluations } from "@/lib/supabase-data"
-import { getLeaderboardPointsSetting } from "@/app/actions/winners-page-actions"
+import { getLeaderboardPointsSetting, getCalculationMode } from "@/app/actions/winners-page-actions"
+import { CalculationAnimation } from "@/components/calculation-animation"
 
 import { LeafIcon } from "@/components/icons"
 import type { ClassroomScore } from "@/lib/types"
@@ -38,17 +39,20 @@ export default function HomePage() {
   const [leaderboard, setLeaderboard] = useState<ClassroomScore[]>([])
   const [loading, setLoading] = useState(true)
   const [showMonthly, setShowMonthly] = useState(true)
+  const [calculationMode, setCalculationMode] = useState(false)
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [settingResult, classrooms] = await Promise.all([
+        const [settingResult, classrooms, calcModeResult] = await Promise.all([
           getLeaderboardPointsSetting(),
-          getClassrooms()
+          getClassrooms(),
+          getCalculationMode()
         ])
 
         const isMonthly = settingResult.success ? (settingResult.showMonthly ?? true) : true
         setShowMonthly(isMonthly)
+        setCalculationMode(calcModeResult.success ? (calcModeResult.enabled ?? false) : false)
 
         let evaluations
         if (isMonthly) {
@@ -129,6 +133,8 @@ export default function HomePage() {
               <LeafIcon className="h-12 w-12 text-primary mx-auto" />
             </motion.div>
           </div>
+        ) : calculationMode ? (
+          <CalculationAnimation />
         ) : leaderboard.length === 0 ? (
           <motion.div
             className="text-center py-12"
