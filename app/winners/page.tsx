@@ -7,8 +7,7 @@ import { Confetti } from "@/components/confetti"
 import { CelebrationAnimation } from "@/components/celebration-animation"
 import { TrophyIcon, StarIcon, MedalIcon, CrownIcon } from "@/components/icons"
 import { getPublicMonthlyWinners, getPublicTopClassroomsByDivision } from "@/app/actions/public-winners-actions"
-// import { getWinnersPageVisibility } from "@/app/actions/winners-page-actions"
-// Winners page is now fully static and public.
+import { getWinnersPageVisibility } from "@/app/actions/winners-page-actions"
 import { getClassroomWinCounts } from "@/app/actions/win-count-actions"
 import { useRouter } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
@@ -314,9 +313,6 @@ export default function WinnersPage() {
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-12">
           {DIVISIONS.map((division, divIndex) => {
             const winner = winners.find(w => w.division === division)
-            const leaderboard = leaderboards[division] || []
-            // Only show top 3 when winner is declared
-            const topThree = winner ? leaderboard.slice(0, 3) : []
 
             return (
               <motion.div
@@ -345,98 +341,77 @@ export default function WinnersPage() {
                     </div>
 
                     {/* Winner Display */}
-                    {winner ? (
+                    {winner && winner.classrooms ? (
                       <div className="space-y-4">
-                        {/* Top 3 Winners - All Visible Directly */}
+                        {/* Champion (1st Place) - All Visible Directly */}
                         <div className="space-y-3">
-                          {topThree.map((entry, index) => {
-                            const rank = index + 1
-                            const isChampion = rank === 1
-                            
-                            return (
-                              <motion.div
-                                key={entry.classroom.id}
-                                className={`relative p-4 rounded-lg border-2 cursor-pointer transition-all hover:scale-[1.02] ${
-                                  rank === 1 
-                                    ? "bg-gradient-to-br from-yellow-500/20 to-amber-500/10 border-yellow-500/50 shadow-lg shadow-yellow-500/10" 
-                                    : rank === 2 
-                                    ? "bg-gradient-to-br from-gray-400/20 to-gray-300/10 border-gray-400/50" 
-                                    : "bg-gradient-to-br from-amber-600/20 to-orange-500/10 border-amber-600/50"
-                                }`}
-                                initial={{ opacity: 0, x: -20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: rank * 0.2 }}
-                                onClick={() => handleWinnerClick(
-                                  entry.classroom.name,
-                                  entry.classroom.grade,
-                                  division,
-                                  rank,
-                                  entry.totalScore,
-                                  entry.averageScore,
-                                  entry.evaluationCount,
-                                  entry.classroom.id
+                          <motion.div
+                            key={winner.classrooms.id}
+                            className="relative p-4 rounded-lg border-2 cursor-pointer transition-all hover:scale-[1.02] bg-gradient-to-br from-yellow-500/20 to-amber-500/10 border-yellow-500/50 shadow-lg shadow-yellow-500/10"
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: 0.2 }}
+                            onClick={() => handleWinnerClick(
+                              winner.classrooms!.name,
+                              winner.classrooms!.grade,
+                              division,
+                              1,
+                              winner.total_score,
+                              winner.average_score,
+                              winner.evaluation_count,
+                              winner.classrooms!.id
+                            )}
+                          >
+                            {/* Rank Badge */}
+                            <div className="flex items-start justify-between">
+                              <div className="flex items-center gap-3">
+                                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-yellow-500/30">
+                                  <TrophyIcon className="h-5 w-5 text-yellow-500" />
+                                </div>
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs font-bold uppercase tracking-wider text-yellow-600 dark:text-yellow-400">
+                                      Champion
+                                    </span>
+                                  </div>
+                                  <p className="font-bold text-lg text-foreground">{winner.classrooms.name}</p>
+                                  <p className="text-sm text-muted-foreground">Grade {winner.classrooms.grade}</p>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-2xl font-bold text-foreground">{winner.total_score}</p>
+                                <p className="text-xs text-muted-foreground">points</p>
+                              </div>
+                            </div>
+
+                            {/* Stats Row */}
+                            <div className="mt-3 pt-3 border-t border-border/50 grid grid-cols-3 gap-2 text-xs">
+                              <div className="text-center">
+                                <span className="text-muted-foreground">Avg Score</span>
+                                <p className="font-semibold">{Number(winner.average_score).toFixed(1)}</p>
+                              </div>
+                              <div className="text-center">
+                                <span className="text-muted-foreground">Evaluations</span>
+                                <p className="font-semibold">{winner.evaluation_count}</p>
+                              </div>
+                              <div className="text-center">
+                                {winCounts[winner.classrooms.id] > 0 && (
+                                  <>
+                                    <span className="text-muted-foreground">Total Wins</span>
+                                    <p className="font-semibold text-yellow-600 dark:text-yellow-400 flex items-center justify-center gap-1">
+                                      <TrophyIcon className="h-3 w-3" />
+                                      {winCounts[winner.classrooms.id]}
+                                    </p>
+                                  </>
                                 )}
-                              >
-                                {/* Rank Badge */}
-                                <div className="flex items-start justify-between">
-                                  <div className="flex items-center gap-3">
-                                    <div className={`flex items-center justify-center w-10 h-10 rounded-full ${
-                                      rank === 1 ? "bg-yellow-500/30" : rank === 2 ? "bg-gray-400/30" : "bg-amber-600/30"
-                                    }`}>
-                                      {rank === 1 && <TrophyIcon className="h-5 w-5 text-yellow-500" />}
-                                      {rank === 2 && <MedalIcon className="h-5 w-5 text-gray-400" />}
-                                      {rank === 3 && <MedalIcon className="h-5 w-5 text-amber-600" />}
-                                    </div>
-                                    <div>
-                                      <div className="flex items-center gap-2">
-                                        <span className={`text-xs font-bold uppercase tracking-wider ${
-                                          rank === 1 ? "text-yellow-600 dark:text-yellow-400" 
-                                          : rank === 2 ? "text-gray-500 dark:text-gray-400" 
-                                          : "text-amber-700 dark:text-amber-500"
-                                        }`}>
-                                          {rank === 1 ? "Champion" : rank === 2 ? "2nd Place" : "3rd Place"}
-                                        </span>
-                                      </div>
-                                      <p className="font-bold text-lg text-foreground">{entry.classroom.name}</p>
-                                      <p className="text-sm text-muted-foreground">Grade {entry.classroom.grade}</p>
-                                    </div>
-                                  </div>
-                                  <div className="text-right">
-                                    <p className="text-2xl font-bold text-foreground">{entry.totalScore}</p>
-                                    <p className="text-xs text-muted-foreground">points</p>
-                                  </div>
-                                </div>
+                              </div>
+                            </div>
 
-                                {/* Stats Row */}
-                                <div className="mt-3 pt-3 border-t border-border/50 grid grid-cols-3 gap-2 text-xs">
-                                  <div className="text-center">
-                                    <span className="text-muted-foreground">Avg Score</span>
-                                    <p className="font-semibold">{entry.averageScore.toFixed(1)}</p>
-                                  </div>
-                                  <div className="text-center">
-                                    <span className="text-muted-foreground">Evaluations</span>
-                                    <p className="font-semibold">{entry.evaluationCount}</p>
-                                  </div>
-                                  <div className="text-center">
-                                    {winCounts[entry.classroom.id] > 0 && (
-                                      <>
-                                        <span className="text-muted-foreground">Total Wins</span>
-                                        <p className="font-semibold text-yellow-600 dark:text-yellow-400 flex items-center justify-center gap-1">
-                                          <TrophyIcon className="h-3 w-3" />
-                                          {winCounts[entry.classroom.id]}
-                                        </p>
-                                      </>
-                                    )}
-                                  </div>
-                                </div>
-
-                                {/* Click indicator */}
-                                <div className="absolute top-2 right-2 opacity-50 hover:opacity-100 transition-opacity">
-                                  <Eye className="h-4 w-4 text-muted-foreground" />
-                                </div>
-                              </motion.div>
-                            )
-                          })}
+                            {/* Click indicator */}
+                            <div className="absolute top-2 right-2 opacity-50 hover:opacity-100 transition-opacity">
+                              <Eye className="h-4 w-4 text-muted-foreground" />
+                            </div>
+                          </motion.div>
                         </div>
                       </div>
                     ) : (
@@ -447,7 +422,7 @@ export default function WinnersPage() {
                         >
                           <TrophyIcon className="h-12 w-12 mx-auto mb-4 opacity-30" />
                         </motion.div>
-                        <p className="text-sm font-medium">Winners Not Yet Declared</p>
+                        <p className="text-sm font-medium">Be here later</p>
                         <p className="text-xs mt-1">Check back soon for {MONTHS[selectedMonth - 1]} winners</p>
                       </div>
                     )}

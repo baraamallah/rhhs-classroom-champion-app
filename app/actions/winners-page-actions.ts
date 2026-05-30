@@ -154,3 +154,66 @@ export async function setLeaderboardPointsSetting(showMonthly: boolean): Promise
     return { success: false, error: error.message || "Failed to update leaderboard setting" }
   }
 }
+
+export async function getCalculationMode(): Promise<{ success: boolean; enabled?: boolean; error?: string }> {
+  try {
+    const supabase = await createAdminClient()
+    const { data, error } = await supabase
+      .from("system_settings")
+      .select("value")
+      .eq("key", "calculation_mode")
+      .maybeSingle()
+
+    if (error) {
+      console.error("[getCalculationMode] Error:", error)
+      return { success: false, error: error.message }
+    }
+
+    // Default to false if setting doesn't exist
+    const rawValue = data?.value
+    const enabled = rawValue === true || rawValue === "true"
+
+    console.log(`[getCalculationMode] Returning enabled: ${enabled} (raw: ${rawValue})`)
+    return { success: true, enabled }
+  } catch (error: any) {
+    console.error("[getCalculationMode] Unexpected error:", error)
+    return { success: false, error: error.message || "Failed to get calculation mode setting" }
+  }
+}
+
+export async function setCalculationMode(enabled: boolean): Promise<{ success: boolean; error?: string }> {
+  const { currentUser, error } = await requireAdmin()
+  if (error || !currentUser) {
+    return { success: false, error }
+  }
+
+  try {
+    const supabase = await createAdminClient()
+
+    const settingData = {
+      key: "calculation_mode",
+      value: enabled,
+      description: "Hides the leaderboard and shows a calculation animation on the homepage",
+      updated_by: currentUser.id,
+      updated_at: new Date().toISOString(),
+    }
+
+    const { error: upsertError } = await supabase
+      .from("system_settings")
+      .upsert(settingData, { onConflict: "key" })
+
+    if (upsertError) {
+      console.error("[setCalculationMode] Upsert error:", upsertError)
+      return { success: false, error: upsertError.message }
+    }
+
+    console.log(`[setCalculationMode] Setting calculation_mode to: ${enabled}`)
+    revalidatePath("/")
+    revalidatePath("/admin")
+    revalidatePath("/winners")
+    return { success: true }
+  } catch (error: any) {
+    console.error("[setCalculationMode] Unexpected error:", error)
+    return { success: false, error: error.message || "Failed to update calculation mode setting" }
+  }
+}
