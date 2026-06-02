@@ -7,6 +7,11 @@ import type { Evaluation } from "@/lib/types"
 import { FileText, Calendar, User, Search, Filter, ArrowUpRight } from "lucide-react"
 import { Input } from "@/components/ui/input"
 
+const formatDate = (dateString: string) => {
+  const date = new Date(dateString)
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+}
+
 export function EvaluationsList() {
   const [evaluations, setEvaluations] = useState<Evaluation[]>([])
   const [loading, setLoading] = useState(true)
@@ -26,10 +31,7 @@ export function EvaluationsList() {
     fetchEvaluations()
   }, [])
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
-  }
+  const [searchTerm, setSearchTerm] = useState("")
 
   if (loading) {
     return (
@@ -40,8 +42,6 @@ export function EvaluationsList() {
       </Card>
     )
   }
-
-  const [searchTerm, setSearchTerm] = useState("")
 
   const filteredEvaluations = evaluations.filter(e =>
     e.classroom?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -125,7 +125,7 @@ export function EvaluationsList() {
                       ></div>
                     </div>
                   </div>
-                  <button className="h-8 w-8 rounded-full border border-border/60 flex items-center justify-center text-muted-foreground hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all duration-300 shadow-sm opacity-0 group-hover:opacity-100 hidden sm:flex">
+                  <button type="button" className="h-8 w-8 rounded-full border border-border/60 flex items-center justify-center text-muted-foreground hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all duration-300 shadow-sm opacity-0 group-hover:opacity-100 hidden sm:flex">
                     <ArrowUpRight className="h-4 w-4" />
                   </button>
                 </div>
@@ -139,7 +139,7 @@ export function EvaluationsList() {
           <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">
             Total Submissions: <span className="text-foreground">{filteredEvaluations.length}</span>
           </p>
-          <button className="text-[10px] font-black uppercase text-primary tracking-widest hover:underline">
+          <button type="button" className="text-[10px] font-black uppercase text-primary tracking-widest hover:underline">
             View All History
           </button>
         </div>

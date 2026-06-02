@@ -1,13 +1,13 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
 import { Calendar, RefreshCw, Trophy, BarChart3 } from "lucide-react"
-import { getDefaultMonthSettings, setDefaultMonthSetting, MonthSetting } from "@/app/actions/winners-page-actions"
+import { getDefaultMonthSettings, setDefaultMonthSetting, type MonthSetting } from "@/app/actions/winners-page-actions"
 
 const MONTHS = [
   { value: 1, label: 'January' },
@@ -24,25 +24,32 @@ const MONTHS = [
   { value: 12, label: 'December' },
 ]
 
-export function DefaultMonthSettings() {
+interface DefaultMonthSettingsProps {
+  initialWinnersMonth?: MonthSetting | null
+  initialLeaderboardMonth?: MonthSetting | null
+}
+
+export function DefaultMonthSettings({ initialWinnersMonth, initialLeaderboardMonth }: DefaultMonthSettingsProps) {
   const { toast } = useToast()
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(initialWinnersMonth === undefined)
   const [saving, setSaving] = useState<string | null>(null)
 
-  const [winnersSetting, setWinnersSetting] = useState<MonthSetting | null>(null)
-  const [leaderboardSetting, setLeaderboardSetting] = useState<MonthSetting | null>(null)
+  const [winnersSetting, setWinnersSetting] = useState<MonthSetting | null>(initialWinnersMonth ?? null)
+  const [leaderboardSetting, setLeaderboardSetting] = useState<MonthSetting | null>(initialLeaderboardMonth ?? null)
 
-  const [tempWinners, setTempWinners] = useState<MonthSetting>({
-    year: new Date().getFullYear(),
-    month: new Date().getMonth() + 1
-  })
+  const [tempWinners, setTempWinners] = useState<MonthSetting>(
+    initialWinnersMonth || { year: new Date().getFullYear(), month: new Date().getMonth() + 1 }
+  )
 
-  const [tempLeaderboard, setTempLeaderboard] = useState<MonthSetting>({
-    year: new Date().getFullYear(),
-    month: new Date().getMonth() + 1
-  })
+  const [tempLeaderboard, setTempLeaderboard] = useState<MonthSetting>(
+    initialLeaderboardMonth || { year: new Date().getFullYear(), month: new Date().getMonth() + 1 }
+  )
+
+  const hasLoaded = useRef(false)
 
   useEffect(() => {
+    if (initialWinnersMonth !== undefined || hasLoaded.current) return
+    hasLoaded.current = true
     loadSettings()
   }, [])
 

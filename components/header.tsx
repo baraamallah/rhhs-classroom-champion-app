@@ -1,6 +1,5 @@
 "use client"
 
-import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
@@ -10,36 +9,13 @@ import { LayoutDashboard, LogOut, Sun, Moon, User } from "lucide-react"
 import { useTheme } from "next-themes"
 import { motion } from "framer-motion"
 import { WinnersLink } from "@/components/winners-link"
+import { useAuth } from "@/components/auth-provider"
 
 export function Header() {
   const router = useRouter()
   const { setTheme, theme } = useTheme()
-  const [user, setUser] = useState<{ id: string; role: string; name?: string } | null>(null)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const response = await fetch("/api/auth/me", { credentials: "include" })
-        if (response.ok) {
-          const data = await response.json()
-          if (data.user) {
-            setUser({ id: data.user.id, role: data.user.role, name: data.user.name })
-          } else {
-            setUser(null)
-          }
-        } else {
-          setUser(null)
-        }
-      } catch (error) {
-        console.error("[auth] Failed to load session", error)
-        setUser(null)
-      }
-      setLoading(false)
-    }
-
-    checkAuth()
-  }, [])
+  const { user: authUser, loading } = useAuth()
+  const user = authUser ? { id: authUser.id, role: authUser.role, name: authUser.name } : null
 
   const handleLogout = async () => {
     try {

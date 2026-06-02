@@ -118,38 +118,38 @@ export async function getAllUsers() {
       return { success: false, error: "Failed to fetch users", data: [] }
     }
 
-    // Fetch classroom assignments for supervisors
-    const formattedData = await Promise.all(
-      data?.map(async (row) => {
-        let classrooms: { id: string; name: string; grade: string }[] = []
+    // Batch fetch all supervisor-classroom relations in a single query (N+1 fix)
+    const supervisorIds = data?.filter(r => r.role === 'supervisor').map(r => r.id) || []
+    const classroomsBySupervisor = new Map<string, { id: string; name: string; grade: string }[]>()
 
-        // If user is a supervisor, fetch their classroom assignments using the junction table
-        if (row.role === 'supervisor') {
-          const { data: classroomData, error: classroomError } = await supabase
-            .from('classroom_supervisors')
-            .select('classroom_id, classrooms!inner(id, name, grade)')
-            .eq('supervisor_id', row.id)
-            .eq('classrooms.is_active', true)
+    if (supervisorIds.length > 0) {
+      const { data: supervisorClassrooms, error: relError } = await supabase
+        .from('classroom_supervisors')
+        .select('supervisor_id, classroom_id, classrooms!inner(id, name, grade)')
+        .in('supervisor_id', supervisorIds)
+        .eq('classrooms.is_active', true)
 
-          if (!classroomError && classroomData) {
-            classrooms = classroomData.map((item: any) => item.classrooms)
-          }
+      if (!relError && supervisorClassrooms) {
+        for (const item of supervisorClassrooms) {
+          const existing = classroomsBySupervisor.get(item.supervisor_id) || []
+          existing.push(item.classrooms as { id: string; name: string; grade: string })
+          classroomsBySupervisor.set(item.supervisor_id, existing)
         }
+      }
+    }
 
-        return {
-          id: row.id,
-          email: row.email,
-          name: row.name,
-          role: row.role,
-          password_hash: row.password_hash,
-          created_by: undefined, // TODO: Add created_by column to users table
-          is_active: row.is_active,
-          created_at: row.created_at,
-          updated_at: undefined, // TODO: Add updated_at column to users table
-          classrooms: classrooms,
-        }
-      }) || []
-    )
+    const formattedData = (data || []).map((row) => ({
+      id: row.id,
+      email: row.email,
+      name: row.name,
+      role: row.role,
+      password_hash: row.password_hash,
+      created_by: undefined,
+      is_active: row.is_active,
+      created_at: row.created_at,
+      updated_at: undefined,
+      classrooms: classroomsBySupervisor.get(row.id) || [],
+    }))
 
     return { success: true, data: formattedData }
   } catch (dbError) {

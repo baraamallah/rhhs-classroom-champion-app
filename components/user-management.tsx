@@ -7,11 +7,71 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { UserPlus, Trash2, Mail, Shield, Eye, KeyRound, MoreVertical, RefreshCw, Filter } from "lucide-react"
+import { Users, UserPlus, Trash2, Mail, Shield, Eye, KeyRound, MoreVertical, RefreshCw, Filter } from "lucide-react"
 import { createUserAccount, getAllUsers, deleteUser, sendUserPasswordReset, updateUser, updateUserPassword, getSupervisorClassrooms, getAvailableClassrooms, assignSupervisorToClassrooms } from "@/app/actions/user-actions"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import type { User } from "@/lib/types"
 import { DIVISION_OPTIONS, getDivisionDisplayName } from "@/lib/division-display"
+
+const getRoleIcon = (role: string) => {
+  switch (role) {
+    case "super_admin":
+      return <Shield className="h-4 w-4" />
+    case "admin":
+      return <Shield className="h-4 w-4" />
+    case "stats":
+      return <RefreshCw className="h-4 w-4" />
+    case "supervisor":
+      return <Eye className="h-4 w-4" />
+    default:
+      return <Mail className="h-4 w-4" />
+  }
+}
+
+const getRoleStyles = (role: string) => {
+  switch (role) {
+    case "super_admin":
+      return {
+        bg: "bg-red-500/10",
+        text: "text-red-600 dark:text-red-400",
+        border: "border-red-200 dark:border-red-900/50",
+        label: "Super Admin",
+        description: "Full system access & control"
+      }
+    case "admin":
+      return {
+        bg: "bg-primary/10",
+        text: "text-primary",
+        border: "border-primary/20",
+        label: "Administrator",
+        description: "Manage users and settings"
+      }
+    case "stats":
+      return {
+        bg: "bg-purple-500/10",
+        text: "text-purple-600 dark:text-purple-400",
+        border: "border-purple-200 dark:border-purple-900/50",
+        label: "Stats Analyst",
+        description: "View submission tracking"
+      }
+    case "supervisor":
+      return {
+        bg: "bg-blue-500/10",
+        text: "text-blue-600 dark:text-blue-400",
+        border: "border-blue-200 dark:border-blue-900/50",
+        label: "Supervisor",
+        description: "Conduct classroom evaluations"
+      }
+    default:
+      return {
+        bg: "bg-muted/50",
+        text: "text-muted-foreground",
+        border: "border-border",
+        label: "Unknown Role",
+        description: "No specific permissions"
+      }
+  }
+}
 
 type ManagedRole = "admin" | "supervisor" | "stats"
 
@@ -246,66 +306,6 @@ export function UserManagement({ currentUser }: UserManagementProps) {
     setShowClassroomAssignment(false)
     setSelectedSupervisor(null)
     setSelectedClassrooms([])
-  }
-
-  const getRoleIcon = (role: string) => {
-    switch (role) {
-      case "super_admin":
-        return <Shield className="h-4 w-4" />
-      case "admin":
-        return <Shield className="h-4 w-4" />
-      case "stats":
-        return <RefreshCw className="h-4 w-4" />
-      case "supervisor":
-        return <Eye className="h-4 w-4" />
-      default:
-        return <Mail className="h-4 w-4" />
-    }
-  }
-
-  const getRoleStyles = (role: string) => {
-    switch (role) {
-      case "super_admin":
-        return {
-          bg: "bg-red-500/10",
-          text: "text-red-600 dark:text-red-400",
-          border: "border-red-200 dark:border-red-900/50",
-          label: "Super Admin",
-          description: "Full system access & control"
-        }
-      case "admin":
-        return {
-          bg: "bg-primary/10",
-          text: "text-primary",
-          border: "border-primary/20",
-          label: "Administrator",
-          description: "Manage users and settings"
-        }
-      case "stats":
-        return {
-          bg: "bg-purple-500/10",
-          text: "text-purple-600 dark:text-purple-400",
-          border: "border-purple-200 dark:border-purple-900/50",
-          label: "Stats Analyst",
-          description: "View submission tracking"
-        }
-      case "supervisor":
-        return {
-          bg: "bg-blue-500/10",
-          text: "text-blue-600 dark:text-blue-400",
-          border: "border-blue-200 dark:border-blue-900/50",
-          label: "Supervisor",
-          description: "Conduct classroom evaluations"
-        }
-      default:
-        return {
-          bg: "bg-muted/50",
-          text: "text-muted-foreground",
-          border: "border-border",
-          label: "Unknown Role",
-          description: "No specific permissions"
-        }
-    }
   }
 
   return (

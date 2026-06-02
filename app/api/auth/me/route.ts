@@ -17,21 +17,29 @@ export async function GET() {
     .eq('id', session.userId)
     .single()
 
-  console.log("🔍 Auth me check:", { userData, userError, sessionUserId: session.userId })
+  if (process.env.NODE_ENV === "development") {
+    console.log("🔍 Auth me check:", { userData, userError, sessionUserId: session.userId })
+  }
 
   if (userError || !userData) {
-    console.log("❌ User not found in auth check:", userError)
+    if (process.env.NODE_ENV === "development") {
+      console.log("❌ User not found in auth check:", userError)
+    }
     await clearSessionCookie()
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
   }
 
   if (!userData.is_active) {
-    console.log("❌ User is inactive in auth check")
+    if (process.env.NODE_ENV === "development") {
+      console.log("❌ User is inactive in auth check")
+    }
     await clearSessionCookie()
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
   }
 
-  console.log("✅ Auth check successful:", { userId: userData.id, role: userData.role })
+  if (process.env.NODE_ENV === "development") {
+    console.log("✅ Auth check successful:", { userId: userData.id, role: userData.role })
+  }
 
   return NextResponse.json({
     user: {

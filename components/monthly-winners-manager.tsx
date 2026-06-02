@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -57,17 +57,9 @@ export function MonthlyWinnersManager() {
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; winnerId: string }>({ open: false, winnerId: "" })
   const [manualSelection, setManualSelection] = useState<Record<string, string>>({})
 
-  useEffect(() => {
-    loadWinners()
-    loadClassrooms()
-  }, [])
+  const hasMounted = useRef(false)
 
-  useEffect(() => {
-    loadWinners()
-    loadTopClassrooms()
-  }, [selectedYear, selectedMonth])
-
-  const loadWinners = async () => {
+  const loadWinners = useCallback(async () => {
     setLoading(true)
     const result = await getMonthlyWinners(selectedYear, selectedMonth)
     setLoading(false)
@@ -81,18 +73,18 @@ export function MonthlyWinnersManager() {
         variant: "destructive",
       })
     }
-  }
+  }, [selectedYear, selectedMonth, toast])
 
-  const loadClassrooms = async () => {
+  const loadClassrooms = useCallback(async () => {
     try {
       const data = await getClassrooms()
       setClassrooms(data)
     } catch (error) {
       console.error("Error loading classrooms:", error)
     }
-  }
+  }, [])
 
-  const loadTopClassrooms = async () => {
+  const loadTopClassrooms = useCallback(async () => {
     setLoading(true)
     const topClassroomsMap: Record<string, any[]> = {}
 
@@ -105,7 +97,19 @@ export function MonthlyWinnersManager() {
 
     setTopClassrooms(topClassroomsMap)
     setLoading(false)
-  }
+  }, [selectedYear, selectedMonth, toast])
+
+  useEffect(() => {
+    if (hasMounted.current) return
+    hasMounted.current = true
+    loadWinners()
+    loadClassrooms()
+  }, [])
+
+  useEffect(() => {
+    loadWinners()
+    loadTopClassrooms()
+  }, [loadWinners, loadTopClassrooms])
 
   const handleDeclareWinner = async (division: string, classroom: any) => {
     if (!classroom) return

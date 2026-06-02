@@ -357,7 +357,7 @@ export async function archiveEvaluations(evaluationIds: string[]) {
   }
 }
 
-export async function getArchivedEvaluations() {
+export async function getArchivedEvaluations(limit = 50, offset = 0) {
   const { currentUser, error } = await requireSuperAdmin()
   if (error || !currentUser) {
     return { success: false, error, data: [] }
@@ -370,6 +370,7 @@ export async function getArchivedEvaluations() {
       .from("archive_evaluations")
       .select("*")
       .order("archived_at", { ascending: false })
+      .range(offset, offset + limit - 1)
 
     if (fetchError) {
       console.error("[data-management-actions] getArchivedEvaluations error", fetchError)

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
@@ -8,13 +8,21 @@ import { useToast } from "@/hooks/use-toast"
 import { Calculator, HelpCircle } from "lucide-react"
 import { getCalculationMode, setCalculationMode } from "@/app/actions/winners-page-actions"
 
-export function CalculationModeToggle() {
+interface CalculationModeToggleProps {
+  initialEnabled?: boolean
+}
+
+export function CalculationModeToggle({ initialEnabled }: CalculationModeToggleProps) {
   const { toast } = useToast()
-  const [enabled, setEnabled] = useState<boolean>(false)
-  const [loading, setLoading] = useState(true)
+  const [enabled, setEnabled] = useState<boolean>(initialEnabled ?? false)
+  const [loading, setLoading] = useState(initialEnabled === undefined)
   const [saving, setSaving] = useState(false)
 
+  const hasLoaded = useRef(false)
+
   useEffect(() => {
+    if (initialEnabled !== undefined || hasLoaded.current) return
+    hasLoaded.current = true
     loadSetting()
   }, [])
 

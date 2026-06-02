@@ -1,6 +1,7 @@
 "use server"
 
 import { createAdminClient } from "@/lib/supabase/server"
+import { getSessionFromCookies } from "@/lib/auth/session"
 
 /**
  * Checks if we're in a new month and automatically archives evaluations if needed.
@@ -8,6 +9,9 @@ import { createAdminClient } from "@/lib/supabase/server"
  */
 export async function checkAndAutoArchive() {
   try {
+    const session = await getSessionFromCookies()
+    if (!session) return { success: false, archived: false, reason: "not_authenticated" }
+
     const supabase = await createAdminClient()
     
     // Get current date

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
@@ -8,13 +8,21 @@ import { useToast } from "@/hooks/use-toast"
 import { BarChart3, HelpCircle } from "lucide-react"
 import { getLeaderboardPointsSetting, setLeaderboardPointsSetting } from "@/app/actions/winners-page-actions"
 
-export function LeaderboardSettingsToggle() {
+interface LeaderboardSettingsToggleProps {
+  initialShowMonthly?: boolean
+}
+
+export function LeaderboardSettingsToggle({ initialShowMonthly }: LeaderboardSettingsToggleProps) {
   const { toast } = useToast()
-  const [showMonthly, setShowMonthly] = useState<boolean>(true)
-  const [loading, setLoading] = useState(true)
+  const [showMonthly, setShowMonthly] = useState<boolean>(initialShowMonthly ?? true)
+  const [loading, setLoading] = useState(initialShowMonthly === undefined)
   const [saving, setSaving] = useState(false)
 
+  const hasLoaded = useRef(false)
+
   useEffect(() => {
+    if (initialShowMonthly !== undefined || hasLoaded.current) return
+    hasLoaded.current = true
     loadSetting()
   }, [])
 

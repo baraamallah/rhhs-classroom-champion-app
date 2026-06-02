@@ -31,6 +31,8 @@ import { LeaderboardSettingsToggle } from "@/components/leaderboard-settings-tog
 import { CalculationModeToggle } from "@/components/calculation-mode-toggle"
 import { EvaluationsToggle } from "@/components/evaluations-toggle"
 import { DefaultMonthSettings } from "@/components/default-month-settings"
+import { getAdminSettings } from "@/app/actions/winners-page-actions"
+import type { AdminSettings } from "@/app/actions/winners-page-actions"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { exportAllDataAsZip, exportDataAsExcel } from "@/app/actions/export-data-actions"
 
@@ -75,11 +77,20 @@ export function DataManagementPanel() {
   const [selectedArchivedEvaluations, setSelectedArchivedEvaluations] = useState<string[]>([])
   const [exporting, setExporting] = useState(false)
   const [exportingExcel, setExportingExcel] = useState(false)
+  const [adminSettings, setAdminSettings] = useState<AdminSettings | undefined>(undefined)
 
   useEffect(() => {
     loadEvaluations()
     loadArchivedEvaluations()
+    loadAdminSettings()
   }, [])
+
+  const loadAdminSettings = async () => {
+    const result = await getAdminSettings()
+    if (result.success && result.settings) {
+      setAdminSettings(result.settings)
+    }
+  }
 
   const loadEvaluations = async () => {
     setLoading(true)
@@ -558,14 +569,17 @@ export function DataManagementPanel() {
           Global System Controls
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <WinnersPageToggle />
-          <LeaderboardSettingsToggle />
-          <CalculationModeToggle />
-          <EvaluationsToggle />
+          <WinnersPageToggle initialVisible={adminSettings?.winners_page_visible} />
+          <LeaderboardSettingsToggle initialShowMonthly={adminSettings?.leaderboard_show_monthly} />
+          <CalculationModeToggle initialEnabled={adminSettings?.calculation_mode} />
+          <EvaluationsToggle initialEnabled={adminSettings?.evaluations_enabled} />
         </div>
       </div>
 
-      <DefaultMonthSettings />
+      <DefaultMonthSettings
+        initialWinnersMonth={adminSettings?.winners_display_month}
+        initialLeaderboardMonth={adminSettings?.leaderboard_display_month}
+      />
 
       <Tabs defaultValue="archive" className="space-y-6">
         <TabsList className="bg-muted p-1 rounded-xl h-auto w-full sm:w-auto">

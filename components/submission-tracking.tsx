@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -45,10 +45,6 @@ export function SubmissionTracking({ currentUser }: SubmissionTrackingProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedDivision, setSelectedDivision] = useState<string>("all")
   const [exporting, setExporting] = useState(false)
-
-  useEffect(() => {
-    fetchData()
-  }, [date, viewType, customStartDate, customEndDate])
 
   const fetchData = async () => {
     setLoading(true)
@@ -103,6 +99,13 @@ export function SubmissionTracking({ currentUser }: SubmissionTrackingProps) {
       setLoading(false)
     }
   }
+
+  const fetchDataRef = useRef(fetchData)
+  fetchDataRef.current = fetchData
+
+  useEffect(() => {
+    fetchDataRef.current()
+  }, [date, viewType, customStartDate, customEndDate])
 
   const filteredClassrooms = useMemo(() => {
     let filtered = classrooms

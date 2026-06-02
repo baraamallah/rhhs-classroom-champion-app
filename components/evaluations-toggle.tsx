@@ -1,19 +1,27 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
 import { Play, Square, Settings2 } from "lucide-react"
 import { getEvaluationsStatus, setEvaluationsStatus } from "@/app/actions/evaluation-settings-actions"
 
-export function EvaluationsToggle() {
+interface EvaluationsToggleProps {
+  initialEnabled?: boolean
+}
+
+export function EvaluationsToggle({ initialEnabled }: EvaluationsToggleProps) {
   const { toast } = useToast()
-  const [enabled, setEnabled] = useState<boolean>(true)
-  const [loading, setLoading] = useState(true)
+  const [enabled, setEnabled] = useState<boolean>(initialEnabled ?? true)
+  const [loading, setLoading] = useState(initialEnabled === undefined)
   const [saving, setSaving] = useState(false)
 
+  const hasLoaded = useRef(false)
+
   useEffect(() => {
+    if (initialEnabled !== undefined || hasLoaded.current) return
+    hasLoaded.current = true
     loadStatus()
   }, [])
 

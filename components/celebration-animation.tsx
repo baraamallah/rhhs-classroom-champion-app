@@ -16,14 +16,14 @@ export function CelebrationAnimation({ show, title, subtitle }: CelebrationAnima
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
       <motion.div
         className="bg-card border-2 border-primary rounded-2xl p-8 max-w-md mx-4 text-center shadow-2xl"
-        initial={{ scale: 0, opacity: 0 }}
+        initial={{ scale: 0.01, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0, opacity: 0 }}
+        exit={{ scale: 0.01, opacity: 0 }}
         transition={{ type: "spring", stiffness: 200, damping: 20 }}
       >
         {/* Trophy Icon */}
         <motion.div
-          initial={{ scale: 0, rotate: -180 }}
+          initial={{ scale: 0.01, rotate: -180 }}
           animate={{ scale: 1, rotate: 0 }}
           transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
           className="mb-4"
@@ -41,9 +41,9 @@ export function CelebrationAnimation({ show, title, subtitle }: CelebrationAnima
                 top: `${20 + Math.random() * 60}%`,
                 left: `${20 + Math.random() * 60}%`,
               }}
-              initial={{ scale: 0, rotate: 0 }}
+              initial={{ scale: 0.01, rotate: 0 }}
               animate={{
-                scale: [0, 1.5, 0],
+                scale: [0.01, 1.5, 0],
                 rotate: 360,
               }}
               transition={{

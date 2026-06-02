@@ -5,8 +5,10 @@ import { SpeedInsights } from "@vercel/speed-insights/next"
 import { Analytics } from "@vercel/analytics/next"
 
 import { ThemeProvider } from "@/components/theme-provider"
+import { AuthProvider } from "@/components/auth-provider"
 import { Footer } from "@/components/footer"
 import { AutoArchiveChecker } from "@/components/auto-archive-checker"
+import { MotionProvider } from "@/components/motion-provider"
 import "./globals.css"
 
 const poppins = Poppins({
@@ -35,11 +37,15 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <AutoArchiveChecker />
-          <div className="min-h-screen flex flex-col">
-            {children}
-            <Footer />
-          </div>
+          <AuthProvider>
+            <AutoArchiveChecker />
+            <div className="min-h-screen flex flex-col">
+              <MotionProvider>
+                {children}
+              </MotionProvider>
+              <Footer />
+            </div>
+          </AuthProvider>
         </ThemeProvider>
         <SpeedInsights />
         <Analytics />

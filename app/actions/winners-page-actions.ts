@@ -4,6 +4,50 @@ import { revalidatePath } from "next/cache"
 import { createClient, createAdminClient } from "@/lib/supabase/server"
 import { getSessionFromCookies } from "@/lib/auth/session"
 
+export type AdminSettings = {
+  winners_page_visible: boolean
+  leaderboard_show_monthly: boolean
+  calculation_mode: boolean
+  evaluations_enabled: boolean
+  winners_display_month: { year: number; month: number } | null
+  leaderboard_display_month: { year: number; month: number } | null
+}
+
+export async function getAdminSettings(): Promise<{ success: boolean; settings?: AdminSettings; error?: string }> {
+  try {
+    const supabase = await createAdminClient()
+    const { data, error } = await supabase
+      .from("system_settings")
+      .select("key, value")
+
+    if (error) {
+      console.error("[getAdminSettings] Error:", error)
+      return { success: false, error: error.message }
+    }
+
+    const map = new Map(data?.map(s => [s.key, s.value]) || [])
+
+    const parseBool = (key: string, defaultVal: boolean): boolean => {
+      const raw = map.get(key)
+      return raw === null || raw === undefined ? defaultVal : (raw === true || raw === "true")
+    }
+
+    const settings: AdminSettings = {
+      winners_page_visible: parseBool("winners_page_visible", true),
+      leaderboard_show_monthly: parseBool("leaderboard_show_monthly", true),
+      calculation_mode: parseBool("calculation_mode", false),
+      evaluations_enabled: parseBool("evaluations_enabled", true),
+      winners_display_month: (map.get("winners_display_month") as AdminSettings["winners_display_month"]) || null,
+      leaderboard_display_month: (map.get("leaderboard_display_month") as AdminSettings["leaderboard_display_month"]) || null,
+    }
+
+    return { success: true, settings }
+  } catch (error: any) {
+    console.error("[getAdminSettings] Unexpected error:", error)
+    return { success: false, error: error.message || "Failed to fetch admin settings" }
+  }
+}
+
 // TODO: Refactor this file to avoid using cookies for static rendering or switch to dynamic rendering for /winners.
 export async function requireAdmin(): Promise<{ currentUser?: { id: string; role: string }; error?: string }> {
   const session = await getSessionFromCookies()

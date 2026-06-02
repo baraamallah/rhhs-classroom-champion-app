@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { getClassrooms, getClassroomsBySupervisor } from "@/lib/supabase-data"
 import type { Classroom } from "@/lib/types"
+import { useAuth } from "@/components/auth-provider"
 
 interface ClassroomSelectorProps {
   onSelect: (classroom: Classroom) => void
@@ -20,26 +21,15 @@ export function ClassroomSelector({ onSelect }: ClassroomSelectorProps) {
   const [filteredClassrooms, setFilteredClassrooms] = useState<Classroom[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
-  const [currentUser, setCurrentUser] = useState<any>(null)
+  const { user } = useAuth()
 
   useEffect(() => {
     const fetchClassrooms = async () => {
       try {
-        const response = await fetch("/api/auth/me", { credentials: "include" })
         let data: Classroom[] = []
 
-        if (response.ok) {
-          const { user } = (await response.json()) as { user?: { id: string; role: string } }
-          if (user) {
-            setCurrentUser(user)
-            if (user.role === "supervisor") {
-              data = await getClassroomsBySupervisor(user.id)
-            } else {
-              data = await getClassrooms()
-            }
-          } else {
-            data = await getClassrooms()
-          }
+        if (user?.role === "supervisor") {
+          data = await getClassroomsBySupervisor(user.id)
         } else {
           data = await getClassrooms()
         }
@@ -54,7 +44,7 @@ export function ClassroomSelector({ onSelect }: ClassroomSelectorProps) {
     }
 
     fetchClassrooms()
-  }, [])
+  }, [user])
 
   useEffect(() => {
     const filtered = classrooms.filter(c =>

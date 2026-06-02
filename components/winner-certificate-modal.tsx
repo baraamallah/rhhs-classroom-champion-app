@@ -6,6 +6,55 @@ import { X, Award, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { getDivisionDisplayName } from "@/lib/division-display"
 
+const getRankInfo = (rank: number) => {
+  switch (rank) {
+    case 1:
+      return {
+        title: "CHAMPION",
+        subtitle: "1st Place",
+        color: "from-yellow-400 via-yellow-500 to-amber-600",
+        bgColor: "bg-gradient-to-br from-yellow-500/20 via-amber-500/10 to-yellow-600/20",
+        borderColor: "border-yellow-500",
+        textColor: "text-yellow-500",
+        icon: <CrownIcon className="h-20 w-20 text-yellow-500" />,
+        medalColor: "text-yellow-500"
+      }
+    case 2:
+      return {
+        title: "RUNNER UP",
+        subtitle: "2nd Place",
+        color: "from-gray-300 via-gray-400 to-gray-500",
+        bgColor: "bg-gradient-to-br from-gray-400/20 via-gray-300/10 to-gray-500/20",
+        borderColor: "border-gray-400",
+        textColor: "text-gray-400",
+        icon: <MedalIcon className="h-20 w-20 text-gray-400" />,
+        medalColor: "text-gray-400"
+      }
+    case 3:
+      return {
+        title: "HONORABLE",
+        subtitle: "3rd Place",
+        color: "from-amber-600 via-amber-700 to-orange-700",
+        bgColor: "bg-gradient-to-br from-amber-600/20 via-orange-500/10 to-amber-700/20",
+        borderColor: "border-amber-600",
+        textColor: "text-amber-600",
+        icon: <MedalIcon className="h-20 w-20 text-amber-600" />,
+        medalColor: "text-amber-600"
+      }
+    default:
+      return {
+        title: "PARTICIPANT",
+        subtitle: `${rank}th Place`,
+        color: "from-blue-400 via-blue-500 to-blue-600",
+        bgColor: "bg-gradient-to-br from-blue-500/20 via-blue-400/10 to-blue-600/20",
+        borderColor: "border-blue-500",
+        textColor: "text-blue-500",
+        icon: <Award className="h-20 w-20 text-blue-500" />,
+        medalColor: "text-blue-500"
+      }
+  }
+}
+
 interface WinnerCertificateModalProps {
   isOpen: boolean
   onClose: () => void
@@ -25,55 +74,6 @@ interface WinnerCertificateModalProps {
 
 export function WinnerCertificateModal({ isOpen, onClose, winner }: WinnerCertificateModalProps) {
   if (!winner) return null
-
-  const getRankInfo = (rank: number) => {
-    switch (rank) {
-      case 1:
-        return {
-          title: "CHAMPION",
-          subtitle: "1st Place",
-          color: "from-yellow-400 via-yellow-500 to-amber-600",
-          bgColor: "bg-gradient-to-br from-yellow-500/20 via-amber-500/10 to-yellow-600/20",
-          borderColor: "border-yellow-500",
-          textColor: "text-yellow-500",
-          icon: <CrownIcon className="h-20 w-20 text-yellow-500" />,
-          medalColor: "text-yellow-500"
-        }
-      case 2:
-        return {
-          title: "RUNNER UP",
-          subtitle: "2nd Place",
-          color: "from-gray-300 via-gray-400 to-gray-500",
-          bgColor: "bg-gradient-to-br from-gray-400/20 via-gray-300/10 to-gray-500/20",
-          borderColor: "border-gray-400",
-          textColor: "text-gray-400",
-          icon: <MedalIcon className="h-20 w-20 text-gray-400" />,
-          medalColor: "text-gray-400"
-        }
-      case 3:
-        return {
-          title: "HONORABLE",
-          subtitle: "3rd Place",
-          color: "from-amber-600 via-amber-700 to-orange-700",
-          bgColor: "bg-gradient-to-br from-amber-600/20 via-orange-500/10 to-amber-700/20",
-          borderColor: "border-amber-600",
-          textColor: "text-amber-600",
-          icon: <MedalIcon className="h-20 w-20 text-amber-600" />,
-          medalColor: "text-amber-600"
-        }
-      default:
-        return {
-          title: "PARTICIPANT",
-          subtitle: `${rank}th Place`,
-          color: "from-blue-400 via-blue-500 to-blue-600",
-          bgColor: "bg-gradient-to-br from-blue-500/20 via-blue-400/10 to-blue-600/20",
-          borderColor: "border-blue-500",
-          textColor: "text-blue-500",
-          icon: <Award className="h-20 w-20 text-blue-500" />,
-          medalColor: "text-blue-500"
-        }
-    }
-  }
 
   const rankInfo = getRankInfo(winner.rank)
 
@@ -123,9 +123,9 @@ export function WinnerCertificateModal({ isOpen, onClose, winner }: WinnerCertif
                     top: `${Math.random() * 100}%`,
                     left: `${Math.random() * 100}%`,
                   }}
-                  initial={{ scale: 0, opacity: 0 }}
+                  initial={{ scale: 0.01, opacity: 0 }}
                   animate={{
-                    scale: [0, 1, 0],
+                    scale: [0.01, 1, 0],
                     opacity: [0, 1, 0],
                     rotate: [0, 180, 360],
                   }}
@@ -145,7 +145,7 @@ export function WinnerCertificateModal({ isOpen, onClose, winner }: WinnerCertif
             <div className="relative text-center space-y-6">
               {/* Trophy/Medal Icon */}
               <motion.div
-                initial={{ scale: 0, rotate: -180 }}
+                initial={{ scale: 0.01, rotate: -180 }}
                 animate={{ scale: 1, rotate: 0 }}
                 transition={{ delay: 0.3, type: "spring", stiffness: 200 }}
                 className="flex justify-center"
@@ -230,7 +230,7 @@ export function WinnerCertificateModal({ isOpen, onClose, winner }: WinnerCertif
               {/* Win Count Badge */}
               {winner.winCount && winner.winCount > 0 && (
                 <motion.div
-                  initial={{ scale: 0 }}
+                  initial={{ scale: 0.01 }}
                   animate={{ scale: 1 }}
                   transition={{ delay: 0.8, type: "spring" }}
                   className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-yellow-500/20 border border-yellow-500/50"
@@ -247,7 +247,7 @@ export function WinnerCertificateModal({ isOpen, onClose, winner }: WinnerCertif
                 {[...Array(5)].map((_, i) => (
                   <motion.div
                     key={i}
-                    initial={{ scale: 0, rotate: -180 }}
+                    initial={{ scale: 0.01, rotate: -180 }}
                     animate={{ scale: 1, rotate: 0 }}
                     transition={{ delay: 0.9 + i * 0.1 }}
                   >

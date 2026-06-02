@@ -21,7 +21,7 @@ export default function AboutPage() {
                 >
                     <motion.div
                         className="inline-flex items-center justify-center p-4 bg-primary/10 rounded-full mb-6"
-                        initial={{ scale: 0 }}
+                        initial={{ scale: 0.01 }}
                         animate={{ scale: 1 }}
                         transition={{ type: "spring", duration: 0.8, delay: 0.2 }}
                     >

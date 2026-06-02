@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { getClassrooms, getEvaluationsByDateRange, getEvaluations } from "@/lib/supabase-data"
@@ -12,6 +12,11 @@ import { format, startOfMonth, endOfMonth, subMonths, startOfYear, endOfYear } f
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
+
+const formatDate = (dateString: string) => {
+  const date = new Date(dateString)
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+}
 
 interface ClassroomStats {
   classroom: Classroom
@@ -41,8 +46,11 @@ export function AdminStatisticsTab() {
   const [startDate, setStartDate] = useState<string>(format(startOfMonth(new Date()), "yyyy-MM-dd"))
   const [endDate, setEndDate] = useState<string>(format(endOfMonth(new Date()), "yyyy-MM-dd"))
 
+  const initialMounted = useRef(false)
+
   useEffect(() => {
-    // Initial fetch using default preset dates
+    if (initialMounted.current) return
+    initialMounted.current = true
     fetchData(startDate, endDate, false)
   }, [])
 
@@ -190,11 +198,6 @@ export function AdminStatisticsTab() {
       ? Math.round(stats.scores.reduce((sum, score) => sum + score, 0) / stats.scores.length)
       : 0
   })).sort((a, b) => b.evaluationCount - a.evaluationCount)
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
-  }
 
   if (loading) {
     return (

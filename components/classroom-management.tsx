@@ -520,6 +520,7 @@ export function ClassroomManagement({ currentUser }: ClassroomManagementProps) {
               {/* Select All Header */}
               <div className="flex items-center px-4 sm:px-0 py-2 border-b sm:border-0">
                 <button
+                  type="button"
                   onClick={handleSelectAll}
                   className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors px-2 py-1 rounded"
                 >
@@ -642,6 +643,7 @@ export function ClassroomManagement({ currentUser }: ClassroomManagementProps) {
                       <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 sm:p-5">
                         <div className="flex items-center gap-4 flex-1">
                           <button
+                            type="button"
                             onClick={() => handleToggleSelect(classroom.id)}
                             className="flex-shrink-0 transition-transform hover:scale-110 active:scale-95"
                           >

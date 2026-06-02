@@ -1,19 +1,28 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
 import { Eye, EyeOff, Trophy } from "lucide-react"
 import { getWinnersPageVisibility, setWinnersPageVisibility } from "@/app/actions/winners-page-actions"
 // TODO: Refactor to avoid using cookies for static rendering or switch to dynamic rendering.
-export function WinnersPageToggle() {
+
+interface WinnersPageToggleProps {
+  initialVisible?: boolean
+}
+
+export function WinnersPageToggle({ initialVisible }: WinnersPageToggleProps) {
   const { toast } = useToast()
-  const [visible, setVisible] = useState<boolean>(true)
-  const [loading, setLoading] = useState(true)
+  const [visible, setVisible] = useState<boolean>(initialVisible ?? true)
+  const [loading, setLoading] = useState(initialVisible === undefined)
   const [saving, setSaving] = useState(false)
 
+  const hasLoaded = useRef(false)
+
   useEffect(() => {
+    if (initialVisible !== undefined || hasLoaded.current) return
+    hasLoaded.current = true
     loadVisibility()
   }, [])
 

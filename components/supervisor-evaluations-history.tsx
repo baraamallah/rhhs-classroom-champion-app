@@ -7,6 +7,11 @@ import { getEvaluationsBySupervisor } from "@/lib/supabase-data"
 import { motion } from "framer-motion"
 import type { Evaluation, Classroom } from "@/lib/types"
 
+const formatDate = (dateString: string) => {
+  const date = new Date(dateString)
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+}
+
 interface SupervisorEvaluationsHistoryProps {
   supervisorId: string
   onEvaluateClassroom: (classroom: Classroom) => void
@@ -30,11 +35,6 @@ export function SupervisorEvaluationsHistory({ supervisorId, onEvaluateClassroom
 
     fetchEvaluations()
   }, [supervisorId])
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
-  }
 
   const handleEvaluateAgain = (evaluation: Evaluation) => {
     if (evaluation.classroom) {
