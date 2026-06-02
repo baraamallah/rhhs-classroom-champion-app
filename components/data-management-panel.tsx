@@ -552,17 +552,31 @@ export function DataManagementPanel() {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <WinnersPageToggle />
-        <LeaderboardSettingsToggle />
-        <CalculationModeToggle />
-        <EvaluationsToggle />
+      <div className="space-y-1 bg-muted/30 p-6 rounded-2xl border border-border/50 shadow-sm">
+        <h3 className="text-lg font-extrabold tracking-tight uppercase text-foreground/80 flex items-center gap-2 mb-4">
+          <Settings className="h-5 w-5 text-primary" />
+          Global System Controls
+        </h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <WinnersPageToggle />
+          <LeaderboardSettingsToggle />
+          <CalculationModeToggle />
+          <EvaluationsToggle />
+        </div>
       </div>
+
       <DefaultMonthSettings />
-      <Tabs defaultValue="archive">
-        <TabsList>
-          <TabsTrigger value="archive">Archive & Reset</TabsTrigger>
-          <TabsTrigger value="winners">Monthly Winners</TabsTrigger>
+
+      <Tabs defaultValue="archive" className="space-y-6">
+        <TabsList className="bg-muted p-1 rounded-xl h-auto w-full sm:w-auto">
+          <TabsTrigger value="archive" className="rounded-lg py-2.5 px-8 data-[state=active]:bg-background data-[state=active]:shadow-md font-bold">
+            <Archive className="h-4 w-4 mr-2" />
+            Archive & Reset
+          </TabsTrigger>
+          <TabsTrigger value="winners" className="rounded-lg py-2.5 px-8 data-[state=active]:bg-background data-[state=active]:shadow-md font-bold">
+            <TrophyIcon className="h-4 w-4 mr-2 text-amber-500" />
+            Monthly Winners
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="archive" className="space-y-6 mt-6">

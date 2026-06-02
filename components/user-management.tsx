@@ -251,50 +251,65 @@ export function UserManagement({ currentUser }: UserManagementProps) {
   const getRoleIcon = (role: string) => {
     switch (role) {
       case "super_admin":
-        return <Shield className="h-4 w-4 text-red-500" />
+        return <Shield className="h-4 w-4" />
       case "admin":
-        return <Shield className="h-4 w-4 text-primary" />
+        return <Shield className="h-4 w-4" />
       case "stats":
-        return <RefreshCw className="h-4 w-4 text-purple-500" />
+        return <RefreshCw className="h-4 w-4" />
       case "supervisor":
-        return <Eye className="h-4 w-4 text-blue-500" />
+        return <Eye className="h-4 w-4" />
       default:
-        return <Mail className="h-4 w-4 text-muted-foreground" />
+        return <Mail className="h-4 w-4" />
     }
   }
 
-  const getRoleAvatarBg = (role: string) => {
+  const getRoleStyles = (role: string) => {
     switch (role) {
       case "super_admin":
-        return "bg-red-500/10"
+        return {
+          bg: "bg-red-500/10",
+          text: "text-red-600 dark:text-red-400",
+          border: "border-red-200 dark:border-red-900/50",
+          label: "Super Admin",
+          description: "Full system access & control"
+        }
       case "admin":
-        return "bg-primary/10"
+        return {
+          bg: "bg-primary/10",
+          text: "text-primary",
+          border: "border-primary/20",
+          label: "Administrator",
+          description: "Manage users and settings"
+        }
       case "stats":
-        return "bg-purple-500/10"
+        return {
+          bg: "bg-purple-500/10",
+          text: "text-purple-600 dark:text-purple-400",
+          border: "border-purple-200 dark:border-purple-900/50",
+          label: "Stats Analyst",
+          description: "View submission tracking"
+        }
       case "supervisor":
-        return "bg-blue-500/10"
+        return {
+          bg: "bg-blue-500/10",
+          text: "text-blue-600 dark:text-blue-400",
+          border: "border-blue-200 dark:border-blue-900/50",
+          label: "Supervisor",
+          description: "Conduct classroom evaluations"
+        }
       default:
-        return "bg-muted/10"
-    }
-  }
-
-  const getRoleBadgeColor = (role: string) => {
-    switch (role) {
-      case "super_admin":
-        return "bg-red-500/10 text-red-500 border-red-500/20"
-      case "admin":
-        return "bg-primary/10 text-primary border-primary/20"
-      case "stats":
-        return "bg-purple-500/10 text-purple-500 border-purple-500/20"
-      case "supervisor":
-        return "bg-blue-500/10 text-blue-500 border-blue-500/20"
-      default:
-        return "bg-muted text-muted-foreground border-border"
+        return {
+          bg: "bg-muted/50",
+          text: "text-muted-foreground",
+          border: "border-border",
+          label: "Unknown Role",
+          description: "No specific permissions"
+        }
     }
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 max-w-6xl mx-auto">
       {/* Create/Edit User Form */}
       {(showCreateForm || editingUser) && (
         <Card>
@@ -526,259 +541,199 @@ export function UserManagement({ currentUser }: UserManagementProps) {
       )}
 
       {/* Users List */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>All Users</CardTitle>
-              <CardDescription>Manage existing users in the system</CardDescription>
+      <Card className="border-border/60 shadow-sm overflow-hidden">
+        <CardHeader className="bg-muted/30 pb-6 border-b">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <CardTitle className="flex items-center gap-2 text-xl font-bold">
+                <Users className="h-5 w-5 text-primary" />
+                Staff Directory
+              </CardTitle>
+              <CardDescription className="text-sm">
+                Manage accounts, roles, and classroom assignments for all school staff.
+              </CardDescription>
             </div>
             {(currentUser.role === "admin" || currentUser.role === "super_admin") && !showCreateForm && !editingUser && (
               <Button
                 onClick={() => setShowCreateForm(true)}
                 size="sm"
+                className="w-full sm:w-auto shadow-md"
               >
                 <UserPlus className="h-4 w-4 mr-2" />
-                Add New User
+                Add New Staff Member
               </Button>
             )}
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0 sm:p-6">
           {loading ? (
-            <p className="text-muted-foreground text-center py-8">Loading users...</p>
+            <div className="py-20 flex flex-col items-center justify-center text-muted-foreground">
+              <RefreshCw className="h-8 w-8 animate-spin mb-4 opacity-20" />
+              <p className="text-sm font-medium tracking-wide uppercase">Syncing User Data...</p>
+            </div>
           ) : users.length === 0 ? (
-            <p className="text-muted-foreground text-center py-8">No users found</p>
+            <div className="py-20 text-center">
+              <Users className="h-12 w-12 mx-auto text-muted-foreground/20 mb-4" />
+              <p className="text-muted-foreground font-medium">No users found in the system</p>
+            </div>
           ) : (
-            <div className="space-y-6">
-              {/* Supervisors Section */}
-              <div>
-                <div className="flex items-center gap-2 mb-4">
-                  <Eye className="h-5 w-5 text-blue-500" />
-                  <h3 className="text-lg font-semibold">Supervisors</h3>
-                  <span className="text-sm text-muted-foreground">
-                    ({users.filter(user => user.role === "supervisor").length})
-                  </span>
-                </div>
-                <div className="space-y-3">
-                  {users.filter(user => user.role === "supervisor").map((user) => (
-                    <div
-                      key={user.id}
-                      className="flex items-center justify-between p-4 border border-border rounded-lg bg-card hover:bg-accent/5 transition-colors"
-                    >
-                      <div className="flex items-center gap-4 flex-1">
-                        <div className={`flex items-center justify-center w-10 h-10 rounded-full ${getRoleAvatarBg(user.role)}`}>
-                          {getRoleIcon(user.role)}
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <p className="font-medium text-foreground">{user.name || "Unnamed User"}</p>
-                            <span className={`text-xs px-2 py-1 rounded-full border ${getRoleBadgeColor(user.role)}`}>
-                              {user.role}
-                            </span>
-                          </div>
-                          <p className="text-sm text-muted-foreground">{user.email}</p>
-                          <div className="mt-1">
-                            <p className="text-xs text-muted-foreground">
-                              Classrooms: {user.classrooms && user.classrooms.length > 0
-                                ? user.classrooms.map(c => c.name).join(", ")
-                                : "No classrooms assigned"
-                              }
-                            </p>
-                          </div>
-                          {user.created_by_user && (
-                            <p className="text-xs text-muted-foreground">
-                              Created by: {user.created_by_user.name}
-                            </p>
-                          )}
-                        </div>
+            <div className="space-y-10 py-6 sm:py-0">
+              {/* Role Categories */}
+              {[
+                {
+                  title: "Administrators",
+                  roles: ["super_admin", "admin"],
+                  icon: <Shield className="h-5 w-5" />,
+                  color: "text-primary"
+                },
+                {
+                  title: "Supervisors",
+                  roles: ["supervisor"],
+                  icon: <Eye className="h-5 w-5" />,
+                  color: "text-blue-500"
+                },
+                {
+                  title: "Data Analysts",
+                  roles: ["stats"],
+                  icon: <RefreshCw className="h-5 w-5" />,
+                  color: "text-purple-500"
+                }
+              ].map((section) => {
+                const sectionUsers = users.filter(user => section.roles.includes(user.role))
+                if (sectionUsers.length === 0) return null
+
+                return (
+                  <div key={section.title} className="px-4 sm:px-0">
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className={`p-2 rounded-lg bg-muted border border-border/50 ${section.color}`}>
+                        {section.icon}
                       </div>
-                      <div className="flex items-center gap-2">
-                        {(currentUser.role === "admin" || currentUser.role === "super_admin") && (
-                          <>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleAssignClassrooms(user)}
-                            >
-                              <Shield className="h-4 w-4 mr-2" />
-                              Assign to Classrooms
-                            </Button>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="text-muted-foreground hover:text-foreground"
-                                >
-                                  <MoreVertical className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => handleEditUser(user)}>
-                                  <UserPlus className="h-4 w-4 mr-2" />
-                                  Edit User
-                                </DropdownMenuItem>
-                                {currentUser.role === "super_admin" && (
-                                  <DropdownMenuItem
-                                    onClick={() => handleDelete(user.id)}
-                                    variant="destructive"
-                                  >
-                                    <Trash2 className="h-4 w-4 mr-2" />
-                                    Delete User
-                                  </DropdownMenuItem>
+                      <h3 className="text-lg font-extrabold tracking-tight uppercase text-foreground/80 flex items-center gap-2">
+                        {section.title}
+                        <span className="bg-muted px-2 py-0.5 rounded text-xs font-bold text-muted-foreground">
+                          {sectionUsers.length}
+                        </span>
+                      </h3>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-4">
+                      {sectionUsers.map((user) => {
+                        const style = getRoleStyles(user.role)
+                        return (
+                          <div
+                            key={user.id}
+                            className="group relative flex flex-col sm:flex-row sm:items-center justify-between p-4 sm:p-5 border border-border/60 rounded-2xl bg-card hover:bg-muted/5 transition-all duration-300 hover:shadow-lg hover:translate-y-[-2px] border-l-4"
+                            style={{ borderLeftColor: user.role === 'super_admin' ? '#ef4444' : user.role === 'admin' ? 'var(--primary)' : user.role === 'supervisor' ? '#3b82f6' : '#a855f7' }}
+                          >
+                            <div className="flex items-start sm:items-center gap-4 flex-1 mb-4 sm:mb-0">
+                              <div className={`flex items-center justify-center w-12 h-12 rounded-xl border ${style.bg} ${style.border} ${style.text} shadow-inner`}>
+                                {getRoleIcon(user.role)}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex flex-wrap items-center gap-2 mb-0.5">
+                                  <p className="font-extrabold text-foreground text-base sm:text-lg tracking-tight">
+                                    {user.name || "Unnamed User"}
+                                  </p>
+                                  <div className={`text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-widest border ${style.bg} ${style.border} ${style.text}`}>
+                                    {style.label}
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2 text-sm text-muted-foreground font-medium mb-2">
+                                  <Mail className="h-3 w-3 opacity-60" />
+                                  <span className="truncate">{user.email}</span>
+                                </div>
+
+                                {user.role === "supervisor" && (
+                                  <div className="flex flex-wrap items-center gap-2 mt-2">
+                                    <span className="text-[10px] font-bold uppercase text-muted-foreground/60 tracking-widest">
+                                      Assignments:
+                                    </span>
+                                    {user.classrooms && user.classrooms.length > 0 ? (
+                                      <div className="flex flex-wrap gap-1.5">
+                                        {user.classrooms.slice(0, 4).map(c => (
+                                          <span key={c.id} className="text-[10px] font-bold bg-secondary px-2 py-0.5 rounded-md text-secondary-foreground shadow-sm">
+                                            {c.name}
+                                          </span>
+                                        ))}
+                                        {user.classrooms.length > 4 && (
+                                          <span className="text-[10px] font-bold bg-muted px-2 py-0.5 rounded-md text-muted-foreground">
+                                            +{user.classrooms.length - 4} more
+                                          </span>
+                                        )}
+                                      </div>
+                                    ) : (
+                                      <span className="text-[10px] font-bold text-amber-600/70 uppercase italic tracking-tighter">
+                                        None Assigned
+                                      </span>
+                                    )}
+                                  </div>
                                 )}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                  {users.filter(user => user.role === "supervisor").length === 0 && (
-                    <p className="text-muted-foreground text-center py-4">No supervisors found</p>
-                  )}
-                </div>
-              </div>
 
-              {/* Stats Users Section */}
-              <div>
-                <div className="flex items-center gap-2 mb-4">
-                  <RefreshCw className="h-5 w-5 text-purple-500" />
-                  <h3 className="text-lg font-semibold">Stats & Analysis</h3>
-                  <span className="text-sm text-muted-foreground">
-                    ({users.filter(user => user.role === "stats").length})
-                  </span>
-                </div>
-                <div className="space-y-3">
-                  {users.filter(user => user.role === "stats").map((user) => (
-                    <div
-                      key={user.id}
-                      className="flex items-center justify-between p-4 border border-border rounded-lg bg-card hover:bg-accent/5 transition-colors"
-                    >
-                      <div className="flex items-center gap-4 flex-1">
-                        <div className={`flex items-center justify-center w-10 h-10 rounded-full ${getRoleAvatarBg(user.role)}`}>
-                          {getRoleIcon(user.role)}
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <p className="font-medium text-foreground">{user.name || "Unnamed User"}</p>
-                            <span className={`text-xs px-2 py-1 rounded-full border ${getRoleBadgeColor(user.role)}`}>
-                              {user.role}
-                            </span>
-                          </div>
-                          <p className="text-sm text-muted-foreground">{user.email}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {(currentUser.role === "admin" || currentUser.role === "super_admin") && (
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="text-muted-foreground hover:text-foreground"
-                              >
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => handleEditUser(user)}>
-                                <UserPlus className="h-4 w-4 mr-2" />
-                                Edit User
-                              </DropdownMenuItem>
-                              {currentUser.role === "super_admin" && (
-                                <DropdownMenuItem
-                                  onClick={() => handleDelete(user.id)}
-                                  variant="destructive"
-                                >
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  Delete User
-                                </DropdownMenuItem>
-                              )}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                  {users.filter(user => user.role === "stats").length === 0 && (
-                    <p className="text-muted-foreground text-center py-4">No stats users found</p>
-                  )}
-                </div>
-              </div>
+                                {user.created_by_user && (
+                                  <p className="text-[9px] font-bold text-muted-foreground/40 uppercase mt-3 tracking-widest">
+                                    Onboarded by {user.created_by_user.name}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
 
-              {/* Admins Section */}
-              <div>
-                <div className="flex items-center gap-2 mb-4">
-                  <Shield className="h-5 w-5 text-primary" />
-                  <h3 className="text-lg font-semibold">Administrators</h3>
-                  <span className="text-sm text-muted-foreground">
-                    ({users.filter(user => user.role === "admin" || user.role === "super_admin").length})
-                  </span>
-                </div>
-                <div className="space-y-3">
-                  {users.filter(user => user.role === "admin" || user.role === "super_admin").map((user) => (
-                    <div
-                      key={user.id}
-                      className="flex items-center justify-between p-4 border border-border rounded-lg bg-card hover:bg-accent/5 transition-colors"
-                    >
-                      <div className="flex items-center gap-4 flex-1">
-                        <div className={`flex items-center justify-center w-10 h-10 rounded-full ${getRoleAvatarBg(user.role)}`}>
-                          {getRoleIcon(user.role)}
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <p className="font-medium text-foreground">{user.name || "Unnamed User"}</p>
-                            <span className={`text-xs px-2 py-1 rounded-full border ${getRoleBadgeColor(user.role)}`}>
-                              {user.role === "super_admin" ? "Super Admin" : user.role}
-                            </span>
-                          </div>
-                          <p className="text-sm text-muted-foreground">{user.email}</p>
-                          {user.created_by_user && (
-                            <p className="text-xs text-muted-foreground">
-                              Created by: {user.created_by_user.name}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {(currentUser.role === "admin" || currentUser.role === "super_admin") && (
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="text-muted-foreground hover:text-foreground"
-                              >
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => handleEditUser(user)}>
-                                <UserPlus className="h-4 w-4 mr-2" />
-                                Edit User
-                              </DropdownMenuItem>
-                              {currentUser.role === "super_admin" && user.id !== currentUser.id && (
-                                <DropdownMenuItem
-                                  onClick={() => handleDelete(user.id)}
-                                  variant="destructive"
-                                >
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  Delete User
-                                </DropdownMenuItem>
+                            <div className="flex items-center gap-2 self-end sm:self-center">
+                              {(currentUser.role === "admin" || currentUser.role === "super_admin") && (
+                                <>
+                                  {user.role === "supervisor" && (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => handleAssignClassrooms(user)}
+                                      className="h-9 px-3 text-xs font-bold shadow-sm"
+                                    >
+                                      <Shield className="h-3.5 w-3.5 mr-2 opacity-60" />
+                                      Assign Rooms
+                                    </Button>
+                                  )}
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-10 w-10 rounded-full hover:bg-muted group-hover:shadow-sm"
+                                      >
+                                        <MoreVertical className="h-5 w-5 text-muted-foreground" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end" className="w-56 p-1.5">
+                                      <DropdownMenuItem onClick={() => handleEditUser(user)} className="py-2.5">
+                                        <UserPlus className="h-4 w-4 mr-3 text-primary" />
+                                        <span className="font-semibold">Edit Account</span>
+                                      </DropdownMenuItem>
+                                      {user.role === "supervisor" && (
+                                        <DropdownMenuItem onClick={() => handleAssignClassrooms(user)} className="py-2.5">
+                                          <Shield className="h-4 w-4 mr-3 text-blue-500" />
+                                          <span className="font-semibold">Room Assignments</span>
+                                        </DropdownMenuItem>
+                                      )}
+                                      {currentUser.role === "super_admin" && user.id !== currentUser.id && (
+                                        <DropdownMenuItem
+                                          onClick={() => handleDelete(user.id)}
+                                          variant="destructive"
+                                          className="py-2.5 mt-1 border-t"
+                                        >
+                                          <Trash2 className="h-4 w-4 mr-3" />
+                                          <span className="font-semibold">Deactivate User</span>
+                                        </DropdownMenuItem>
+                                      )}
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </>
                               )}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        )}
-                      </div>
+                            </div>
+                          </div>
+                        )
+                      })}
                     </div>
-                  ))}
-                  {users.filter(user => user.role === "admin" || user.role === "super_admin").length === 0 && (
-                    <p className="text-muted-foreground text-center py-4">No administrators found</p>
-                  )}
-                </div>
-              </div>
+                  </div>
+                )
+              })}
             </div>
           )}
         </CardContent>
@@ -786,8 +741,8 @@ export function UserManagement({ currentUser }: UserManagementProps) {
 
       {/* Classroom Assignment Dialog */}
       {showClassroomAssignment && selectedSupervisor && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-background border border-border rounded-lg p-6 w-full max-w-md mx-4">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+          <div className="bg-background border-2 border-border/80 rounded-2xl p-6 w-full max-w-md shadow-2xl animate-in zoom-in-95 duration-300">
             <h3 className="text-lg font-semibold mb-4">
               Assign Classrooms to {selectedSupervisor.name}
             </h3>
