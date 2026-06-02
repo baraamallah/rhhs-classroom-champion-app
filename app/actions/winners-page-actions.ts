@@ -217,3 +217,81 @@ export async function setCalculationMode(enabled: boolean): Promise<{ success: b
     return { success: false, error: error.message || "Failed to update calculation mode setting" }
   }
 }
+
+export interface MonthSetting {
+  year: number
+  month: number
+}
+
+export async function getDefaultMonthSettings(): Promise<{
+  success: boolean;
+  winnersMonth?: MonthSetting | null;
+  leaderboardMonth?: MonthSetting | null;
+  error?: string
+}> {
+  try {
+    const supabase = await createAdminClient()
+    const { data, error } = await supabase
+      .from("system_settings")
+      .select("key, value")
+      .in("key", ["winners_display_month", "leaderboard_display_month"])
+
+    if (error) {
+      console.error("[getDefaultMonthSettings] Error:", error)
+      return { success: false, error: error.message }
+    }
+
+    const winnersMonth = data?.find(s => s.key === "winners_display_month")?.value as MonthSetting | null
+    const leaderboardMonth = data?.find(s => s.key === "leaderboard_display_month")?.value as MonthSetting | null
+
+    return {
+      success: true,
+      winnersMonth: winnersMonth || null,
+      leaderboardMonth: leaderboardMonth || null
+    }
+  } catch (error: any) {
+    console.error("[getDefaultMonthSettings] Unexpected error:", error)
+    return { success: false, error: error.message || "Failed to get default month settings" }
+  }
+}
+
+export async function setDefaultMonthSetting(
+  key: "winners_display_month" | "leaderboard_display_month",
+  setting: MonthSetting | null
+): Promise<{ success: boolean; error?: string }> {
+  const { currentUser, error } = await requireAdmin()
+  if (error || !currentUser) {
+    return { success: false, error }
+  }
+
+  try {
+    const supabase = await createAdminClient()
+
+    const settingData = {
+      key,
+      value: setting,
+      description: key === "winners_display_month"
+        ? "Sets a specific month to display on the winners page (null for current)"
+        : "Sets a specific month to display on the leaderboard when in monthly mode (null for current)",
+      updated_by: currentUser.id,
+      updated_at: new Date().toISOString(),
+    }
+
+    const { error: upsertError } = await supabase
+      .from("system_settings")
+      .upsert(settingData, { onConflict: "key" })
+
+    if (upsertError) {
+      console.error("[setDefaultMonthSetting] Upsert error:", upsertError)
+      return { success: false, error: upsertError.message }
+    }
+
+    revalidatePath("/")
+    revalidatePath("/winners")
+    revalidatePath("/admin")
+    return { success: true }
+  } catch (error: any) {
+    console.error("[setDefaultMonthSetting] Unexpected error:", error)
+    return { success: false, error: error.message || "Failed to update default month setting" }
+  }
+}

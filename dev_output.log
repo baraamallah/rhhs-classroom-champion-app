@@ -1,0 +1,503 @@
+
+> my-v0-project@0.1.0 dev /app
+> next dev
+
+▲ Next.js 16.2.6 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.0.2:3000
+✓ Ready in 533ms
+Attention: Next.js now collects completely anonymous telemetry regarding usage.
+This information is used to shape Next.js' roadmap and prioritize features.
+You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+https://nextjs.org/telemetry
+
+
+○ Compiling / ...
+ GET / 200 in 9.8s (next.js: 8.6s, proxy.ts: 291ms, application-code: 946ms)
+[getWinnersPageVisibility] Unexpected error: Error: Your project's URL and Key are required to create a Supabase client!
+
+Check your Supabase project's API settings to find these values
+
+https://supabase.com/dashboard/project/_/settings/api
+    at <unknown> (https://supabase.com/dashboard/project/_/settings/api)
+    at createAdminClient (lib/supabase/server.ts:32:28)
+    at async getWinnersPageVisibility (app/actions/winners-page-actions.ts:34:22)
+  30 |   const cookieStore = await cookies()
+  31 |
+> 32 |   return createServerClient(
+     |                            ^
+  33 |     process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  34 |     process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  35 |     {
+ GET /api/auth/me 401 in 3.5s (next.js: 3.4s, proxy.ts: 28ms, application-code: 73ms)
+ POST / 200 in 3.4s (next.js: 459ms, proxy.ts: 37ms, application-code: 2.9s)
+  └─ ƒ getWinnersPageVisibility() in 2322ms actions/winners-page-actions.ts
+[browser] [v0] Exception fetching classrooms: Error: @supabase/ssr: Your project's URL and API key are required to create a Supabase client!
+
+Check your Supabase project's API settings to find these values
+
+https://supabase.com/dashboard/project/_/settings/api
+    at <unknown> (https://supabase.com/dashboard/project/_/settings/api)
+    at createClient (lib/supabase/client.ts:4:29)
+    at getClassrooms (lib/supabase-data.ts:7:34)
+    at HomePage.useEffect.loadData (app/page.tsx:49:24)
+    at HomePage.useEffect (app/page.tsx:85:5)
+  2 |
+  3 | export function createClient() {
+> 4 |   return createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC...
+    |                             ^
+  5 | }
+  6 | (lib/supabase-data.ts:32:13)
+[getLeaderboardPointsSetting] Unexpected error: Error: Your project's URL and Key are required to create a Supabase client!
+
+Check your Supabase project's API settings to find these values
+
+https://supabase.com/dashboard/project/_/settings/api
+    at <unknown> (https://supabase.com/dashboard/project/_/settings/api)
+    at createAdminClient (lib/supabase/server.ts:32:28)
+    at async getLeaderboardPointsSetting (app/actions/winners-page-actions.ts:98:22)
+  30 |   const cookieStore = await cookies()
+  31 |
+> 32 |   return createServerClient(
+     |                            ^
+  33 |     process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  34 |     process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  35 |     {
+ POST / 200 in 685ms (next.js: 5ms, proxy.ts: 14ms, application-code: 666ms)
+  └─ ƒ getLeaderboardPointsSetting() in 613ms actions/winners-page-actions.ts
+[getCalculationMode] Unexpected error: Error: Your project's URL and Key are required to create a Supabase client!
+
+Check your Supabase project's API settings to find these values
+
+https://supabase.com/dashboard/project/_/settings/api
+    at <unknown> (https://supabase.com/dashboard/project/_/settings/api)
+    at createAdminClient (lib/supabase/server.ts:32:28)
+    at async getCalculationMode (app/actions/winners-page-actions.ts:160:22)
+  30 |   const cookieStore = await cookies()
+  31 |
+> 32 |   return createServerClient(
+     |                            ^
+  33 |     process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  34 |     process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  35 |     {
+ POST / 200 in 856ms (next.js: 3ms, proxy.ts: 12ms, application-code: 841ms)
+  └─ ƒ getCalculationMode() in 818ms actions/winners-page-actions.ts
+[getDefaultMonthSettings] Unexpected error: Error: Your project's URL and Key are required to create a Supabase client!
+
+Check your Supabase project's API settings to find these values
+
+https://supabase.com/dashboard/project/_/settings/api
+    at <unknown> (https://supabase.com/dashboard/project/_/settings/api)
+    at createAdminClient (lib/supabase/server.ts:32:28)
+    at async getDefaultMonthSettings (app/actions/winners-page-actions.ts:233:22)
+  30 |   const cookieStore = await cookies()
+  31 |
+> 32 |   return createServerClient(
+     |                            ^
+  33 |     process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  34 |     process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  35 |     {
+ POST / 200 in 866ms (next.js: 5ms, proxy.ts: 5ms, application-code: 856ms)
+  └─ ƒ getDefaultMonthSettings() in 610ms actions/winners-page-actions.ts
+[autoArchive] Unexpected error: Error: Your project's URL and Key are required to create a Supabase client!
+
+Check your Supabase project's API settings to find these values
+
+https://supabase.com/dashboard/project/_/settings/api
+    at <unknown> (https://supabase.com/dashboard/project/_/settings/api)
+    at createAdminClient (lib/supabase/server.ts:32:28)
+    at async checkAndAutoArchive (app/actions/auto-archive-actions.ts:11:22)
+  30 |   const cookieStore = await cookies()
+  31 |
+> 32 |   return createServerClient(
+     |                            ^
+  33 |     process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  34 |     process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  35 |     {
+ POST / 200 in 576ms (next.js: 5ms, proxy.ts: 10ms, application-code: 561ms)
+  └─ ƒ checkAndAutoArchive() in 518ms actions/auto-archive-actions.ts
+ GET /winners 200 in 3.1s (next.js: 2.2s, proxy.ts: 32ms, application-code: 806ms)
+ GET /api/auth/me 401 in 19ms (next.js: 7ms, proxy.ts: 6ms, application-code: 6ms)
+[getWinnersPageVisibility] Unexpected error: Error: Your project's URL and Key are required to create a Supabase client!
+
+Check your Supabase project's API settings to find these values
+
+https://supabase.com/dashboard/project/_/settings/api
+    at <unknown> (https://supabase.com/dashboard/project/_/settings/api)
+    at createAdminClient (lib/supabase/server.ts:32:28)
+    at async getWinnersPageVisibility (app/actions/winners-page-actions.ts:34:22)
+  30 |   const cookieStore = await cookies()
+  31 |
+> 32 |   return createServerClient(
+     |                            ^
+  33 |     process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  34 |     process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  35 |     {
+ POST /winners 200 in 655ms (next.js: 7ms, proxy.ts: 16ms, application-code: 632ms)
+  └─ ƒ getWinnersPageVisibility() in 610ms actions/winners-page-actions.ts
+[getWinnersPageVisibility] Unexpected error: Error: Your project's URL and Key are required to create a Supabase client!
+
+Check your Supabase project's API settings to find these values
+
+https://supabase.com/dashboard/project/_/settings/api
+    at <unknown> (https://supabase.com/dashboard/project/_/settings/api)
+    at createAdminClient (lib/supabase/server.ts:32:28)
+    at async getWinnersPageVisibility (app/actions/winners-page-actions.ts:34:22)
+  30 |   const cookieStore = await cookies()
+  31 |
+> 32 |   return createServerClient(
+     |                            ^
+  33 |     process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  34 |     process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  35 |     {
+ POST /winners 200 in 620ms (next.js: 4ms, proxy.ts: 41ms, application-code: 574ms)
+  └─ ƒ getWinnersPageVisibility() in 560ms actions/winners-page-actions.ts
+[getDefaultMonthSettings] Unexpected error: Error: Your project's URL and Key are required to create a Supabase client!
+
+Check your Supabase project's API settings to find these values
+
+https://supabase.com/dashboard/project/_/settings/api
+    at <unknown> (https://supabase.com/dashboard/project/_/settings/api)
+    at createAdminClient (lib/supabase/server.ts:32:28)
+    at async getDefaultMonthSettings (app/actions/winners-page-actions.ts:233:22)
+  30 |   const cookieStore = await cookies()
+  31 |
+> 32 |   return createServerClient(
+     |                            ^
+  33 |     process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  34 |     process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  35 |     {
+ POST /winners 200 in 446ms (next.js: 5ms, proxy.ts: 4ms, application-code: 437ms)
+  └─ ƒ getDefaultMonthSettings() in 427ms actions/winners-page-actions.ts
+[getClassroomWinCounts] Unexpected error: Error: Your project's URL and Key are required to create a Supabase client!
+
+Check your Supabase project's API settings to find these values
+
+https://supabase.com/dashboard/project/_/settings/api
+    at <unknown> (https://supabase.com/dashboard/project/_/settings/api)
+    at createAdminClient (lib/supabase/server.ts:32:28)
+    at async getClassroomWinCounts (app/actions/win-count-actions.ts:8:22)
+  30 |   const cookieStore = await cookies()
+  31 |
+> 32 |   return createServerClient(
+     |                            ^
+  33 |     process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  34 |     process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  35 |     {
+ POST /winners 200 in 552ms (next.js: 5ms, proxy.ts: 4ms, application-code: 543ms)
+  └─ ƒ getClassroomWinCounts() in 527ms actions/win-count-actions.ts
+[autoArchive] Unexpected error: Error: Your project's URL and Key are required to create a Supabase client!
+
+Check your Supabase project's API settings to find these values
+
+https://supabase.com/dashboard/project/_/settings/api
+    at <unknown> (https://supabase.com/dashboard/project/_/settings/api)
+    at createAdminClient (lib/supabase/server.ts:32:28)
+    at async checkAndAutoArchive (app/actions/auto-archive-actions.ts:11:22)
+  30 |   const cookieStore = await cookies()
+  31 |
+> 32 |   return createServerClient(
+     |                            ^
+  33 |     process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  34 |     process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  35 |     {
+ POST /winners 200 in 620ms (next.js: 4ms, proxy.ts: 5ms, application-code: 611ms)
+  └─ ƒ checkAndAutoArchive() in 590ms actions/auto-archive-actions.ts
+⨯ Error: Your project's URL and Key are required to create a Supabase client!
+
+Check your Supabase project's API settings to find these values
+
+https://supabase.com/dashboard/project/_/settings/api
+    at <unknown> (https://supabase.com/dashboard/project/_/settings/api)
+    at createAdminClient (lib/supabase/server.ts:32:28)
+    at async getPublicMonthlyWinners (app/actions/public-winners-actions.ts:7:20)
+  30 |   const cookieStore = await cookies()
+  31 |
+> 32 |   return createServerClient(
+     |                            ^
+  33 |     process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  34 |     process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  35 |     { {
+  digest: '2107867406'
+}
+ POST /winners 500 in 763ms (next.js: 3ms, proxy.ts: 20ms, application-code: 740ms)
+  └─ ƒ getPublicMonthlyWinners(2026, 6) in 7ms actions/public-winners-actions.ts
+ GET /login 200 in 1432ms (next.js: 1200ms, proxy.ts: 7ms, application-code: 225ms)
+[autoArchive] Unexpected error: Error: Your project's URL and Key are required to create a Supabase client!
+
+Check your Supabase project's API settings to find these values
+
+https://supabase.com/dashboard/project/_/settings/api
+    at <unknown> (https://supabase.com/dashboard/project/_/settings/api)
+    at createAdminClient (lib/supabase/server.ts:32:28)
+    at async checkAndAutoArchive (app/actions/auto-archive-actions.ts:11:22)
+  30 |   const cookieStore = await cookies()
+  31 |
+> 32 |   return createServerClient(
+     |                            ^
+  33 |     process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  34 |     process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  35 |     {
+ POST /login 200 in 1428ms (next.js: 290ms, proxy.ts: 5ms, application-code: 1133ms)
+  └─ ƒ checkAndAutoArchive() in 1117ms actions/auto-archive-actions.ts
+ GET / 200 in 91ms (next.js: 4ms, proxy.ts: 9ms, application-code: 78ms)
+ GET /api/auth/me 401 in 18ms (next.js: 3ms, proxy.ts: 9ms, application-code: 6ms)
+[getWinnersPageVisibility] Unexpected error: Error: Your project's URL and Key are required to create a Supabase client!
+
+Check your Supabase project's API settings to find these values
+
+https://supabase.com/dashboard/project/_/settings/api
+    at <unknown> (https://supabase.com/dashboard/project/_/settings/api)
+    at createAdminClient (lib/supabase/server.ts:32:28)
+    at async getWinnersPageVisibility (app/actions/winners-page-actions.ts:34:22)
+  30 |   const cookieStore = await cookies()
+  31 |
+> 32 |   return createServerClient(
+     |                            ^
+  33 |     process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  34 |     process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  35 |     {
+[browser] [v0] Exception fetching classrooms: Error: @supabase/ssr: Your project's URL and API key are required to create a Supabase client!
+
+Check your Supabase project's API settings to find these values
+
+https://supabase.com/dashboard/project/_/settings/api
+    at <unknown> (https://supabase.com/dashboard/project/_/settings/api)
+    at createClient (lib/supabase/client.ts:4:29)
+    at getClassrooms (lib/supabase-data.ts:7:34)
+    at HomePage.useEffect.loadData (app/page.tsx:49:24)
+    at HomePage.useEffect (app/page.tsx:85:5)
+  2 |
+  3 | export function createClient() {
+> 4 |   return createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC...
+    |                             ^
+  5 | }
+  6 | (lib/supabase-data.ts:32:13)
+ POST / 200 in 695ms (next.js: 5ms, proxy.ts: 5ms, application-code: 686ms)
+  └─ ƒ getWinnersPageVisibility() in 662ms actions/winners-page-actions.ts
+[getLeaderboardPointsSetting] Unexpected error: Error: Your project's URL and Key are required to create a Supabase client!
+
+Check your Supabase project's API settings to find these values
+
+https://supabase.com/dashboard/project/_/settings/api
+    at <unknown> (https://supabase.com/dashboard/project/_/settings/api)
+    at createAdminClient (lib/supabase/server.ts:32:28)
+    at async getLeaderboardPointsSetting (app/actions/winners-page-actions.ts:98:22)
+  30 |   const cookieStore = await cookies()
+  31 |
+> 32 |   return createServerClient(
+     |                            ^
+  33 |     process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  34 |     process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  35 |     {
+ POST / 200 in 484ms (next.js: 5ms, proxy.ts: 8ms, application-code: 471ms)
+  └─ ƒ getLeaderboardPointsSetting() in 449ms actions/winners-page-actions.ts
+[getCalculationMode] Unexpected error: Error: Your project's URL and Key are required to create a Supabase client!
+
+Check your Supabase project's API settings to find these values
+
+https://supabase.com/dashboard/project/_/settings/api
+    at <unknown> (https://supabase.com/dashboard/project/_/settings/api)
+    at createAdminClient (lib/supabase/server.ts:32:28)
+    at async getCalculationMode (app/actions/winners-page-actions.ts:160:22)
+  30 |   const cookieStore = await cookies()
+  31 |
+> 32 |   return createServerClient(
+     |                            ^
+  33 |     process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  34 |     process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  35 |     {
+ POST / 200 in 538ms (next.js: 6ms, proxy.ts: 5ms, application-code: 528ms)
+  └─ ƒ getCalculationMode() in 517ms actions/winners-page-actions.ts
+[getDefaultMonthSettings] Unexpected error: Error: Your project's URL and Key are required to create a Supabase client!
+
+Check your Supabase project's API settings to find these values
+
+https://supabase.com/dashboard/project/_/settings/api
+    at <unknown> (https://supabase.com/dashboard/project/_/settings/api)
+    at createAdminClient (lib/supabase/server.ts:32:28)
+    at async getDefaultMonthSettings (app/actions/winners-page-actions.ts:233:22)
+  30 |   const cookieStore = await cookies()
+  31 |
+> 32 |   return createServerClient(
+     |                            ^
+  33 |     process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  34 |     process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  35 |     {
+ POST / 200 in 497ms (next.js: 4ms, proxy.ts: 4ms, application-code: 488ms)
+  └─ ƒ getDefaultMonthSettings() in 478ms actions/winners-page-actions.ts
+⨯ Error: aborted
+    at ignore-listed frames {
+  code: 'ECONNRESET',
+  digest: '1052313065'
+}
+[browser] [v0] Exception fetching evaluations by date range: Error: @supabase/ssr: Your project's URL and API key are required to create a Supabase client!
+
+Check your Supabase project's API settings to find these values
+
+https://supabase.com/dashboard/project/_/settings/api
+    at <unknown> (https://supabase.com/dashboard/project/_/settings/api)
+    at createClient (lib/supabase/client.ts:4:29)
+    at getEvaluationsByDateRange (lib/supabase-data.ts:619:34)
+    at HomePage.useEffect.loadData (app/page.tsx:72:56)
+  2 |
+  3 | export function createClient() {
+> 4 |   return createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC...
+    |                             ^
+  5 | }
+  6 | (lib/supabase-data.ts:676:13)
+ GET /winners 200 in 108ms (next.js: 4ms, proxy.ts: 5ms, application-code: 99ms)
+ GET /api/auth/me 401 in 18ms (next.js: 6ms, proxy.ts: 5ms, application-code: 8ms)
+[getWinnersPageVisibility] Unexpected error: Error: Your project's URL and Key are required to create a Supabase client!
+
+Check your Supabase project's API settings to find these values
+
+https://supabase.com/dashboard/project/_/settings/api
+    at <unknown> (https://supabase.com/dashboard/project/_/settings/api)
+    at createAdminClient (lib/supabase/server.ts:32:28)
+    at async getWinnersPageVisibility (app/actions/winners-page-actions.ts:34:22)
+  30 |   const cookieStore = await cookies()
+  31 |
+> 32 |   return createServerClient(
+     |                            ^
+  33 |     process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  34 |     process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  35 |     {
+ POST /winners 200 in 513ms (next.js: 6ms, proxy.ts: 9ms, application-code: 498ms)
+  └─ ƒ getWinnersPageVisibility() in 485ms actions/winners-page-actions.ts
+[getWinnersPageVisibility] Unexpected error: Error: Your project's URL and Key are required to create a Supabase client!
+
+Check your Supabase project's API settings to find these values
+
+https://supabase.com/dashboard/project/_/settings/api
+    at <unknown> (https://supabase.com/dashboard/project/_/settings/api)
+    at createAdminClient (lib/supabase/server.ts:32:28)
+    at async getWinnersPageVisibility (app/actions/winners-page-actions.ts:34:22)
+  30 |   const cookieStore = await cookies()
+  31 |
+> 32 |   return createServerClient(
+     |                            ^
+  33 |     process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  34 |     process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  35 |     {
+ POST /winners 200 in 483ms (next.js: 4ms, proxy.ts: 5ms, application-code: 474ms)
+  └─ ƒ getWinnersPageVisibility() in 465ms actions/winners-page-actions.ts
+[getDefaultMonthSettings] Unexpected error: Error: Your project's URL and Key are required to create a Supabase client!
+
+Check your Supabase project's API settings to find these values
+
+https://supabase.com/dashboard/project/_/settings/api
+    at <unknown> (https://supabase.com/dashboard/project/_/settings/api)
+    at createAdminClient (lib/supabase/server.ts:32:28)
+    at async getDefaultMonthSettings (app/actions/winners-page-actions.ts:233:22)
+  30 |   const cookieStore = await cookies()
+  31 |
+> 32 |   return createServerClient(
+     |                            ^
+  33 |     process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  34 |     process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  35 |     {
+ POST /winners 200 in 500ms (next.js: 3ms, proxy.ts: 4ms, application-code: 493ms)
+  └─ ƒ getDefaultMonthSettings() in 480ms actions/winners-page-actions.ts
+[getClassroomWinCounts] Unexpected error: Error: Your project's URL and Key are required to create a Supabase client!
+
+Check your Supabase project's API settings to find these values
+
+https://supabase.com/dashboard/project/_/settings/api
+    at <unknown> (https://supabase.com/dashboard/project/_/settings/api)
+    at createAdminClient (lib/supabase/server.ts:32:28)
+    at async getClassroomWinCounts (app/actions/win-count-actions.ts:8:22)
+  30 |   const cookieStore = await cookies()
+  31 |
+> 32 |   return createServerClient(
+     |                            ^
+  33 |     process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  34 |     process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  35 |     {
+ POST /winners 200 in 582ms (next.js: 10ms, proxy.ts: 9ms, application-code: 563ms)
+  └─ ƒ getClassroomWinCounts() in 550ms actions/win-count-actions.ts
+[autoArchive] Unexpected error: Error: Your project's URL and Key are required to create a Supabase client!
+
+Check your Supabase project's API settings to find these values
+
+https://supabase.com/dashboard/project/_/settings/api
+    at <unknown> (https://supabase.com/dashboard/project/_/settings/api)
+    at createAdminClient (lib/supabase/server.ts:32:28)
+    at async checkAndAutoArchive (app/actions/auto-archive-actions.ts:11:22)
+  30 |   const cookieStore = await cookies()
+  31 |
+> 32 |   return createServerClient(
+     |                            ^
+  33 |     process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  34 |     process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  35 |     {
+ POST /winners 200 in 502ms (next.js: 4ms, proxy.ts: 4ms, application-code: 493ms)
+  └─ ƒ checkAndAutoArchive() in 472ms actions/auto-archive-actions.ts
+⨯ Error: Your project's URL and Key are required to create a Supabase client!
+
+Check your Supabase project's API settings to find these values
+
+https://supabase.com/dashboard/project/_/settings/api
+    at <unknown> (https://supabase.com/dashboard/project/_/settings/api)
+    at createAdminClient (lib/supabase/server.ts:32:28)
+    at async getPublicMonthlyWinners (app/actions/public-winners-actions.ts:7:20)
+  30 |   const cookieStore = await cookies()
+  31 |
+> 32 |   return createServerClient(
+     |                            ^
+  33 |     process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  34 |     process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  35 |     { {
+  digest: '2107867406'
+}
+ POST /winners 500 in 672ms (next.js: 135ms, proxy.ts: 16ms, application-code: 522ms)
+  └─ ƒ getPublicMonthlyWinners(2026, 6) in 6ms actions/public-winners-actions.ts
+ GET /login 200 in 701ms (next.js: 11ms, proxy.ts: 14ms, application-code: 675ms)
+[v0] Login attempt for email: admin@example.com
+[v0] Login error: Error: Your project's URL and Key are required to create a Supabase client!
+
+Check your Supabase project's API settings to find these values
+
+https://supabase.com/dashboard/project/_/settings/api
+    at <unknown> (https://supabase.com/dashboard/project/_/settings/api)
+    at createClient (lib/supabase/server.ts:7:28)
+    at async POST (app/api/login/route.ts:18:22)
+   5 |   const cookieStore = await cookies()
+   6 |
+>  7 |   return createServerClient(
+     |                            ^
+   8 |     process.env.NEXT_PUBLIC_SUPABASE_URL!,
+   9 |     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  10 |     {
+ POST /api/login 500 in 448ms (next.js: 247ms, proxy.ts: 5ms, application-code: 197ms)
+[browser] Login error: Error: Unable to sign in at this time
+    at handleSubmit (components/login-form.tsx:36:15)
+  34 |       if (!response.ok) {
+  35 |         const data = await response.json().catch(() => ({ error: "Invalid email or passwor...
+> 36 |         throw new Error(data.error || "Invalid email or password")
+     |               ^
+  37 |       }
+  38 |
+  39 |       const data = (await response.json()) as { role: string } (components/login-form.tsx:55:15)
+[autoArchive] Unexpected error: Error: Your project's URL and Key are required to create a Supabase client!
+
+Check your Supabase project's API settings to find these values
+
+https://supabase.com/dashboard/project/_/settings/api
+    at <unknown> (https://supabase.com/dashboard/project/_/settings/api)
+    at createAdminClient (lib/supabase/server.ts:32:28)
+    at async checkAndAutoArchive (app/actions/auto-archive-actions.ts:11:22)
+  30 |   const cookieStore = await cookies()
+  31 |
+> 32 |   return createServerClient(
+     |                            ^
+  33 |     process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  34 |     process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  35 |     {
+ POST /login 200 in 487ms (next.js: 3ms, proxy.ts: 5ms, application-code: 479ms)
+  └─ ƒ checkAndAutoArchive() in 469ms actions/auto-archive-actions.ts
+ GET /login?redirect=%2Fadmin 200 in 74ms (next.js: 3ms, proxy.ts: 4ms, application-code: 67ms)
+⨯ Error: aborted
+    at ignore-listed frames {
+  code: 'ECONNRESET'
+}
