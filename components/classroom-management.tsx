@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Building2, Plus, Pencil, Trash2, Users, MoreVertical, Filter, CheckSquare, Square } from "lucide-react"
+import { Building2, Plus, Pencil, Trash2, Users, MoreVertical, Filter, CheckSquare, Square, Info, Layers, GraduationCap } from "lucide-react"
 import { createClassroom, updateClassroom, deleteClassroom, getAllUsers, bulkUpdateClassroomDivisions } from "@/lib/supabase-data"
 import { createClient } from "@/lib/supabase/client"
 import type { Classroom, User } from "@/lib/types"
@@ -302,36 +302,40 @@ export function ClassroomManagement({ currentUser }: ClassroomManagementProps) {
   }, [selectedDivision])
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <Building2 className="h-5 w-5" />
-              Classrooms
+    <Card className="border-border/60 shadow-sm overflow-hidden">
+      <CardHeader className="bg-muted/30 pb-6 border-b">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <CardTitle className="flex items-center gap-2 text-xl">
+              <Building2 className="h-5 w-5 text-primary" />
+              Classroom Directory
             </CardTitle>
-            <CardDescription>Manage classrooms in the system</CardDescription>
+            <CardDescription className="text-sm">
+              Register and organize classrooms for evaluations and tracking.
+            </CardDescription>
           </div>
           {!isAdding && !editingId && (
-            <Button onClick={handleAddNew} size="sm">
+            <Button onClick={handleAddNew} size="sm" className="w-full sm:w-auto shadow-sm">
               <Plus className="h-4 w-4 mr-2" />
-              Add Classroom
+              New Classroom
             </Button>
           )}
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="p-0 sm:p-6 space-y-6">
         {/* Division Filter and Bulk Actions */}
-        <div className="space-y-3">
-          <div className="flex items-center gap-2 p-3 bg-muted/30 rounded-lg border">
-            <Filter className="h-4 w-4 text-muted-foreground" />
-            <Label className="text-sm font-medium">Filter by Division:</Label>
+        <div className="px-4 sm:px-0 space-y-4 pt-4 sm:pt-0">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 bg-muted/20 rounded-xl border border-border/40 shadow-inner">
+            <div className="flex items-center gap-2 text-muted-foreground min-w-max">
+              <Filter className="h-4 w-4" />
+              <Label className="text-sm font-bold uppercase tracking-wider">Filter Division</Label>
+            </div>
             <Select value={selectedDivision} onValueChange={setSelectedDivision}>
-              <SelectTrigger className="w-[200px]">
+              <SelectTrigger className="w-full sm:w-[240px] bg-background">
                 <SelectValue placeholder="Select division" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Divisions</SelectItem>
+                <SelectItem value="all">All School Divisions</SelectItem>
                 {DIVISION_OPTIONS.map(option => (
                   <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
                 ))}
@@ -341,34 +345,40 @@ export function ClassroomManagement({ currentUser }: ClassroomManagementProps) {
 
           {/* Bulk Action Bar */}
           {selectedClassrooms.size > 0 && (
-            <div className="flex items-center justify-between p-3 bg-primary/10 border border-primary/20 rounded-lg">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium">
-                  {selectedClassrooms.size} classroom{selectedClassrooms.size !== 1 ? 's' : ''} selected
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 bg-primary/10 border-2 border-primary/20 rounded-xl animate-in zoom-in-95 duration-200">
+              <div className="flex items-center gap-3">
+                <div className="bg-primary text-primary-foreground h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold shadow-sm">
+                  {selectedClassrooms.size}
+                </div>
+                <span className="text-sm font-bold text-primary uppercase tracking-tight">
+                  {selectedClassrooms.size === 1 ? 'Classroom' : 'Classrooms'} selected for update
                 </span>
               </div>
-              <div className="flex items-center gap-2">
-                <Label className="text-sm font-medium">Bulk Change Division:</Label>
-                <Select
-                  onValueChange={handleBulkUpdateDivision}
-                  disabled={bulkUpdating}
-                >
-                  <SelectTrigger className="w-[200px]">
-                    <SelectValue placeholder="Select division" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {DIVISION_OPTIONS.map(option => (
-                      <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <Label className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest whitespace-nowrap">Apply Division:</Label>
+                  <Select
+                    onValueChange={handleBulkUpdateDivision}
+                    disabled={bulkUpdating}
+                  >
+                    <SelectTrigger className="w-[180px] bg-background h-9 text-xs">
+                      <SelectValue placeholder="Choose division..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DIVISION_OPTIONS.map(option => (
+                        <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <Button
-                  variant="outline"
+                  variant="ghost"
                   size="sm"
                   onClick={() => setSelectedClassrooms(new Set())}
                   disabled={bulkUpdating}
+                  className="text-xs font-semibold"
                 >
-                  Clear Selection
+                  Clear
                 </Button>
               </div>
             </div>
@@ -376,38 +386,44 @@ export function ClassroomManagement({ currentUser }: ClassroomManagementProps) {
         </div>
 
         {/* Classrooms List */}
-        <div className="space-y-2">
+        <div className="space-y-4">
           {/* Add Form */}
           {isAdding && (
-            <div className="p-4 bg-muted/50 rounded-lg border space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="mx-4 sm:mx-0 p-6 bg-primary/5 rounded-xl border-2 border-primary/10 space-y-6 animate-in slide-in-from-top duration-300">
+              <div className="flex items-center gap-2 text-primary font-bold">
+                <Plus className="h-5 w-5" />
+                Register New Classroom
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="name">Classroom Name</Label>
+                  <Label htmlFor="name" className="text-xs font-bold uppercase text-muted-foreground">Name / Room Number</Label>
                   <Input
                     id="name"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="Room 101"
+                    placeholder="e.g., Room 101 or Science Lab"
+                    className="bg-background"
                     required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="grade">Grade</Label>
+                  <Label htmlFor="grade" className="text-xs font-bold uppercase text-muted-foreground">Grade Level</Label>
                   <Input
                     id="grade"
                     value={formData.grade}
                     onChange={(e) => setFormData({ ...formData, grade: e.target.value })}
-                    placeholder="Grade 5"
+                    placeholder="e.g., Grade 9"
+                    className="bg-background"
                     required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="division">Division</Label>
+                  <Label htmlFor="division" className="text-xs font-bold uppercase text-muted-foreground">Assigned Division</Label>
                   <Select
                     value={formData.division}
                     onValueChange={(value) => setFormData({ ...formData, division: value })}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="bg-background">
                       <SelectValue placeholder="Select division" />
                     </SelectTrigger>
                     <SelectContent>
@@ -417,24 +433,25 @@ export function ClassroomManagement({ currentUser }: ClassroomManagementProps) {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="description">Description</Label>
+                <div className="md:col-span-2 space-y-2">
+                  <Label htmlFor="description" className="text-xs font-bold uppercase text-muted-foreground">Additional Notes (Optional)</Label>
                   <Textarea
                     id="description"
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    placeholder="Optional description of the classroom"
+                    placeholder="Brief description or location details..."
                     rows={2}
+                    className="bg-background resize-none"
                   />
                 </div>
-                <div className="space-y-2 md:col-span-2">
-                  <Label>Assigned Supervisors</Label>
-                  <div className="border rounded-md p-4 space-y-2 max-h-48 overflow-y-auto bg-background">
+                <div className="md:col-span-2 space-y-3">
+                  <Label className="text-xs font-bold uppercase text-muted-foreground">Assign Responsible Supervisors</Label>
+                  <div className="border-2 border-border/40 rounded-xl p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-48 overflow-y-auto bg-background/50">
                     {supervisors.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">No supervisors found.</p>
+                      <p className="text-sm text-muted-foreground col-span-full py-4 text-center italic">No active supervisors found in the system.</p>
                     ) : (
                       supervisors.map((supervisor) => (
-                        <div key={supervisor.id} className="flex items-center space-x-2">
+                        <div key={supervisor.id} className="flex items-center space-x-2 p-2 hover:bg-muted/50 rounded-lg transition-colors border border-transparent hover:border-border/40">
                           <input
                             type="checkbox"
                             id={`supervisor-${supervisor.id}`}
@@ -452,13 +469,14 @@ export function ClassroomManagement({ currentUser }: ClassroomManagementProps) {
                                 })
                               }
                             }}
-                            className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                            className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
                           />
                           <label
                             htmlFor={`supervisor-${supervisor.id}`}
-                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                            className="text-xs font-medium cursor-pointer truncate"
+                            title={supervisor.email}
                           >
-                            {supervisor.name} ({supervisor.email})
+                            {supervisor.name}
                           </label>
                         </div>
                       ))
@@ -466,11 +484,11 @@ export function ClassroomManagement({ currentUser }: ClassroomManagementProps) {
                   </div>
                 </div>
               </div>
-              <div className="flex gap-2">
-                <Button onClick={handleSubmit} disabled={creating} size="sm">
-                  {creating ? "Saving..." : "Create Classroom"}
+              <div className="flex items-center gap-3 pt-2">
+                <Button onClick={handleSubmit} disabled={creating} className="flex-1 sm:flex-none">
+                  {creating ? "Saving..." : "Register Classroom"}
                 </Button>
-                <Button onClick={handleCancel} variant="outline" size="sm">
+                <Button onClick={handleCancel} variant="ghost" className="flex-1 sm:flex-none">
                   Cancel
                 </Button>
               </div>
@@ -478,226 +496,270 @@ export function ClassroomManagement({ currentUser }: ClassroomManagementProps) {
           )}
 
           {loading ? (
-            <p className="text-muted-foreground text-center py-8">Loading classrooms...</p>
+            <div className="py-20 flex flex-col items-center justify-center text-muted-foreground">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-4"></div>
+              <p className="text-sm font-medium">Synchronizing classroom data...</p>
+            </div>
           ) : filteredClassrooms.length === 0 ? (
-            <p className="text-muted-foreground text-center py-8">
-              {selectedDivision === "all" ? "No classrooms found" : `No classrooms in ${selectedDivision}`}
-            </p>
+            <div className="py-20 text-center px-6">
+              <Info className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
+              <p className="text-lg font-bold text-muted-foreground mb-1">No classrooms found</p>
+              <p className="text-sm text-muted-foreground/70 mb-6 max-w-xs mx-auto">
+                {selectedDivision === "all"
+                  ? "Your school directory is currently empty. Start by adding a classroom."
+                  : `There are no classrooms currently assigned to the ${getDivisionDisplayName(selectedDivision)} division.`}
+              </p>
+              {selectedDivision !== "all" ? (
+                <Button onClick={() => setSelectedDivision("all")} variant="outline" size="sm">Show All Divisions</Button>
+              ) : (
+                <Button onClick={handleAddNew} size="sm">Add First Classroom</Button>
+              )}
+            </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-4">
               {/* Select All Header */}
-              <div className="flex items-center gap-2 p-2 border-b">
+              <div className="flex items-center px-4 sm:px-0 py-2 border-b sm:border-0">
                 <button
                   onClick={handleSelectAll}
-                  className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors px-2 py-1 rounded"
                 >
                   {selectedClassrooms.size === filteredClassrooms.length && filteredClassrooms.length > 0 ? (
-                    <CheckSquare className="h-4 w-4" />
+                    <CheckSquare className="h-4 w-4 text-primary" />
                   ) : (
                     <Square className="h-4 w-4" />
                   )}
-                  <span>Select All ({filteredClassrooms.length})</span>
+                  <span>Toggle All ({filteredClassrooms.length})</span>
                 </button>
               </div>
 
-              {filteredClassrooms.map((classroom) => (
-                <div key={classroom.id} className="border border-border rounded-lg bg-card">
-                  {editingId === classroom.id ? (
-                    // Inline edit form
-
-                    <div className="p-4 space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor={`edit-name-${classroom.id}`}>Classroom Name</Label>
-                          <Input
-                            id={`edit-name-${classroom.id}`}
-                            value={formData.name}
-                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                            placeholder="Room 101"
-                            required
-                          />
+              <div className="grid grid-cols-1 gap-3 px-4 sm:px-0">
+                {filteredClassrooms.map((classroom) => (
+                  <div key={classroom.id} className="group relative border border-border/60 rounded-xl bg-card hover:bg-muted/5 transition-all duration-200 hover:shadow-md">
+                    {editingId === classroom.id ? (
+                      // Inline edit form
+                      <div className="p-6 space-y-6 animate-in fade-in duration-200">
+                        <div className="flex items-center gap-2 text-primary font-bold">
+                          <Pencil className="h-4 w-4" />
+                          Update: {classroom.name}
                         </div>
-                        <div className="space-y-2">
-                          <Label htmlFor={`edit-grade-${classroom.id}`}>Grade</Label>
-                          <Input
-                            id={`edit-grade-${classroom.id}`}
-                            value={formData.grade}
-                            onChange={(e) => setFormData({ ...formData, grade: e.target.value })}
-                            placeholder="Grade 5"
-                            required
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor={`edit-division-${classroom.id}`}>Division</Label>
-                          <Select
-                            value={formData.division}
-                            onValueChange={(value) => setFormData({ ...formData, division: value })}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select division" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {DIVISION_OPTIONS.map(option => (
-                                <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-2 md:col-span-2">
-                          <Label htmlFor={`edit-description-${classroom.id}`}>Description</Label>
-                          <Textarea
-                            id={`edit-description-${classroom.id}`}
-                            value={formData.description}
-                            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                            placeholder="Optional description of the classroom"
-                            rows={2}
-                          />
-                        </div>
-                        <div className="space-y-2 md:col-span-2">
-                          <Label>Assigned Supervisors</Label>
-                          <div className="border rounded-md p-4 space-y-2 max-h-48 overflow-y-auto bg-background">
-                            {supervisors.length === 0 ? (
-                              <p className="text-sm text-muted-foreground">No supervisors found.</p>
-                            ) : (
-                              supervisors.map((supervisor) => (
-                                <div key={`edit-supervisor-${supervisor.id}`} className="flex items-center space-x-2">
-                                  <input
-                                    type="checkbox"
-                                    id={`edit-supervisor-${supervisor.id}`}
-                                    checked={formData.supervisorIds.includes(supervisor.id)}
-                                    onChange={(e) => {
-                                      if (e.target.checked) {
-                                        setFormData({
-                                          ...formData,
-                                          supervisorIds: [...formData.supervisorIds, supervisor.id]
-                                        })
-                                      } else {
-                                        setFormData({
-                                          ...formData,
-                                          supervisorIds: formData.supervisorIds.filter(id => id !== supervisor.id)
-                                        })
-                                      }
-                                    }}
-                                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                                  />
-                                  <label
-                                    htmlFor={`edit-supervisor-${supervisor.id}`}
-                                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                                  >
-                                    {supervisor.name} ({supervisor.email})
-                                  </label>
-                                </div>
-                              ))
-                            )}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="space-y-2">
+                            <Label htmlFor={`edit-name-${classroom.id}`} className="text-xs font-bold uppercase text-muted-foreground">Classroom Name</Label>
+                            <Input
+                              id={`edit-name-${classroom.id}`}
+                              value={formData.name}
+                              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                              className="bg-background"
+                              required
+                            />
                           </div>
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button onClick={handleUpdate} disabled={creating} size="sm">
-                          {creating ? "Saving..." : "Update Classroom"}
-                        </Button>
-                        <Button onClick={handleCancel} variant="outline" size="sm">
-                          Cancel
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    // Normal display view
-                    <div className="flex items-center justify-between p-4 hover:bg-accent/5 transition-colors">
-                      <div className="flex items-center gap-4 flex-1">
-                        <button
-                          onClick={() => handleToggleSelect(classroom.id)}
-                          className="flex-shrink-0"
-                        >
-                          {selectedClassrooms.has(classroom.id) ? (
-                            <CheckSquare className="h-5 w-5 text-primary" />
-                          ) : (
-                            <Square className="h-5 w-5 text-muted-foreground" />
-                          )}
-                        </button>
-                        <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10">
-                          <Building2 className="h-5 w-5 text-primary" />
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <p className="font-medium text-foreground">{classroom.name}</p>
-                            <span className="text-sm text-muted-foreground">{classroom.grade}</span>
-                            {classroom.division && (
-                              <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
-                                {getDivisionDisplayName(classroom.division)}
-                              </span>
-                            )}
+                          <div className="space-y-2">
+                            <Label htmlFor={`edit-grade-${classroom.id}`} className="text-xs font-bold uppercase text-muted-foreground">Grade Level</Label>
+                            <Input
+                              id={`edit-grade-${classroom.id}`}
+                              value={formData.grade}
+                              onChange={(e) => setFormData({ ...formData, grade: e.target.value })}
+                              className="bg-background"
+                              required
+                            />
                           </div>
-                          {classroom.description && (
-                            <p className="text-sm text-muted-foreground">{classroom.description}</p>
-                          )}
-                          <div className="flex items-center gap-4 mt-1">
-                            {classroom.supervisors && classroom.supervisors.length > 0 ? (
-                              <div className="flex flex-wrap gap-1">
-                                <div className="flex items-center gap-1 text-sm text-muted-foreground mr-1">
-                                  <Users className="h-3 w-3" />
-                                  <span>Supervisors:</span>
-                                </div>
-                                {classroom.supervisors.map((supervisor) => (
-                                  <span key={supervisor.id} className="text-xs bg-secondary px-1.5 py-0.5 rounded-md text-secondary-foreground">
-                                    {supervisor.name}
-                                  </span>
+                          <div className="space-y-2">
+                            <Label htmlFor={`edit-division-${classroom.id}`} className="text-xs font-bold uppercase text-muted-foreground">Division</Label>
+                            <Select
+                              value={formData.division}
+                              onValueChange={(value) => setFormData({ ...formData, division: value })}
+                            >
+                              <SelectTrigger className="bg-background">
+                                <SelectValue placeholder="Select division" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {DIVISION_OPTIONS.map(option => (
+                                  <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
                                 ))}
-                              </div>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="md:col-span-2 space-y-2">
+                            <Label htmlFor={`edit-description-${classroom.id}`} className="text-xs font-bold uppercase text-muted-foreground">Notes</Label>
+                            <Textarea
+                              id={`edit-description-${classroom.id}`}
+                              value={formData.description}
+                              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                              rows={2}
+                              className="bg-background resize-none"
+                            />
+                          </div>
+                          <div className="md:col-span-2 space-y-3">
+                            <Label className="text-xs font-bold uppercase text-muted-foreground">Update Supervisors</Label>
+                            <div className="border-2 border-border/40 rounded-xl p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-48 overflow-y-auto bg-background/50">
+                              {supervisors.length === 0 ? (
+                                <p className="text-sm text-muted-foreground col-span-full py-4 text-center italic">No active supervisors found.</p>
+                              ) : (
+                                supervisors.map((supervisor) => (
+                                  <div key={`edit-supervisor-${supervisor.id}`} className="flex items-center space-x-2 p-2 hover:bg-muted/50 rounded-lg transition-colors border border-transparent hover:border-border/40">
+                                    <input
+                                      type="checkbox"
+                                      id={`edit-supervisor-${supervisor.id}`}
+                                      checked={formData.supervisorIds.includes(supervisor.id)}
+                                      onChange={(e) => {
+                                        if (e.target.checked) {
+                                          setFormData({
+                                            ...formData,
+                                            supervisorIds: [...formData.supervisorIds, supervisor.id]
+                                          })
+                                        } else {
+                                          setFormData({
+                                            ...formData,
+                                            supervisorIds: formData.supervisorIds.filter(id => id !== supervisor.id)
+                                          })
+                                        }
+                                      }}
+                                      className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
+                                    />
+                                    <label
+                                      htmlFor={`edit-supervisor-${supervisor.id}`}
+                                      className="text-xs font-medium cursor-pointer truncate"
+                                    >
+                                      {supervisor.name}
+                                    </label>
+                                  </div>
+                                ))
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3 pt-2">
+                          <Button onClick={handleUpdate} disabled={creating} className="flex-1 sm:flex-none">
+                            Update Details
+                          </Button>
+                          <Button onClick={handleCancel} variant="ghost" className="flex-1 sm:flex-none">
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      // Normal display view
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 sm:p-5">
+                        <div className="flex items-center gap-4 flex-1">
+                          <button
+                            onClick={() => handleToggleSelect(classroom.id)}
+                            className="flex-shrink-0 transition-transform hover:scale-110 active:scale-95"
+                          >
+                            {selectedClassrooms.has(classroom.id) ? (
+                              <CheckSquare className="h-6 w-6 text-primary" />
                             ) : (
-                              <span className="text-sm text-muted-foreground">No supervisors assigned</span>
+                              <Square className="h-6 w-6 text-muted-foreground/30" />
                             )}
+                          </button>
+
+                          <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300 shadow-sm border border-primary/20">
+                            <Building2 className="h-6 w-6" />
+                          </div>
+
+                          <div className="flex-1 min-w-0">
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mb-1">
+                              <h4 className="font-extrabold text-foreground text-lg tracking-tight truncate leading-tight">
+                                {classroom.name}
+                              </h4>
+                              <div className="flex items-center gap-1 bg-muted px-2 py-0.5 rounded text-[10px] font-bold uppercase text-muted-foreground tracking-tight">
+                                <GraduationCap className="h-3 w-3" />
+                                {classroom.grade}
+                              </div>
+                              {classroom.division && (
+                                <div className="flex items-center gap-1 bg-primary/10 text-primary px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest border border-primary/10">
+                                  <Layers className="h-3 w-3" />
+                                  {getDivisionDisplayName(classroom.division)}
+                                </div>
+                              )}
+                            </div>
+
+                            {classroom.description && (
+                              <p className="text-xs text-muted-foreground mb-2 line-clamp-1 italic">
+                                {classroom.description}
+                              </p>
+                            )}
+
+                            <div className="flex items-center gap-4">
+                              {classroom.supervisors && classroom.supervisors.length > 0 ? (
+                                <div className="flex items-center gap-2">
+                                  <div className="flex -space-x-1.5">
+                                    {classroom.supervisors.slice(0, 3).map((s) => (
+                                      <div key={s.id} className="h-5 w-5 rounded-full border-2 border-background bg-secondary flex items-center justify-center text-[8px] font-bold shadow-sm" title={s.name}>
+                                        {s.name.substring(0, 1)}
+                                      </div>
+                                    ))}
+                                    {classroom.supervisors.length > 3 && (
+                                      <div className="h-5 w-5 rounded-full border-2 border-background bg-muted flex items-center justify-center text-[8px] font-bold">
+                                        +{classroom.supervisors.length - 3}
+                                      </div>
+                                    )}
+                                  </div>
+                                  <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-tight">
+                                    Responsible: {classroom.supervisors.map(s => s.name.split(' ')[0]).join(', ')}
+                                  </span>
+                                </div>
+                              ) : (
+                                <div className="text-[10px] font-bold uppercase text-amber-600/70 tracking-widest flex items-center gap-1">
+                                  <Info className="h-3 w-3" />
+                                  Unsupervised
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between sm:justify-end gap-3 mt-3 sm:mt-0 pt-3 sm:pt-0 border-t sm:border-0">
+                          <div className="flex sm:hidden items-center gap-2 text-[10px] font-bold uppercase text-muted-foreground tracking-widest">
+                            Quick Division:
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Select
+                              value={classroom.division || ""}
+                              onValueChange={(value) => handleQuickDivisionChange(classroom.id, value)}
+                              disabled={bulkUpdating}
+                            >
+                              <SelectTrigger className="h-9 w-[130px] sm:w-[150px] bg-background border-border/60 text-xs font-semibold shadow-sm">
+                                <SelectValue placeholder="Set division" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {DIVISION_OPTIONS.map(option => (
+                                  <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-9 w-9 rounded-full hover:bg-muted transition-colors"
+                                >
+                                  <MoreVertical className="h-5 w-5 text-muted-foreground" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-48">
+                                <DropdownMenuItem onClick={() => handleEdit(classroom)} className="py-2.5">
+                                  <Pencil className="h-4 w-4 mr-2 text-primary" />
+                                  Edit Details
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => handleDelete(classroom.id)}
+                                  variant="destructive"
+                                  className="py-2.5"
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Deactivate
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        {/* Quick Division Change */}
-                        <div className="flex items-center gap-1 border rounded-md p-1">
-                          <span className="text-xs text-muted-foreground px-2">Division:</span>
-                          <Select
-                            value={classroom.division || ""}
-                            onValueChange={(value) => handleQuickDivisionChange(classroom.id, value)}
-                            disabled={bulkUpdating}
-                          >
-                            <SelectTrigger className="h-8 w-[140px] border-0 shadow-none">
-                              <SelectValue placeholder="Set division" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {DIVISION_OPTIONS.map(option => (
-                                <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="text-muted-foreground hover:text-foreground"
-                            >
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleEdit(classroom)}>
-                              <Pencil className="h-4 w-4 mr-2" />
-                              Edit Classroom
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => handleDelete(classroom.id)}
-                              variant="destructive"
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Delete Classroom
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>
