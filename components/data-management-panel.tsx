@@ -30,6 +30,7 @@ import { WinnersPageToggle } from "@/components/winners-page-toggle"
 import { LeaderboardSettingsToggle } from "@/components/leaderboard-settings-toggle"
 import { CalculationModeToggle } from "@/components/calculation-mode-toggle"
 import { EvaluationsToggle } from "@/components/evaluations-toggle"
+import { DefaultMonthSettings } from "@/components/default-month-settings"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { exportAllDataAsZip, exportDataAsExcel } from "@/app/actions/export-data-actions"
 
@@ -557,6 +558,7 @@ export function DataManagementPanel() {
         <CalculationModeToggle />
         <EvaluationsToggle />
       </div>
+      <DefaultMonthSettings />
       <Tabs defaultValue="archive">
         <TabsList>
           <TabsTrigger value="archive">Archive & Reset</TabsTrigger>

@@ -7,7 +7,7 @@ import { Confetti } from "@/components/confetti"
 import { CelebrationAnimation } from "@/components/celebration-animation"
 import { TrophyIcon, StarIcon, MedalIcon, CrownIcon } from "@/components/icons"
 import { getPublicMonthlyWinners, getPublicTopClassroomsByDivision } from "@/app/actions/public-winners-actions"
-import { getWinnersPageVisibility } from "@/app/actions/winners-page-actions"
+import { getWinnersPageVisibility, getDefaultMonthSettings } from "@/app/actions/winners-page-actions"
 import { getClassroomWinCounts } from "@/app/actions/win-count-actions"
 import { useRouter } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
@@ -92,20 +92,28 @@ export default function WinnersPage() {
   const checkVisibility = async () => {
     try {
       setLoading(true)
-      const result = await getWinnersPageVisibility()
-      if (result.success) {
-        const isVisible = result.visible ?? true
+      const [visibilityResult, monthSettingsResult] = await Promise.all([
+        getWinnersPageVisibility(),
+        getDefaultMonthSettings()
+      ])
+
+      if (visibilityResult.success) {
+        const isVisible = visibilityResult.visible ?? true
         setVisible(isVisible)
         if (!isVisible) {
           router.replace("/")
           return
         }
       } else {
-        // Default to visible if check fails
         setVisible(true)
       }
+
+      if (monthSettingsResult.success && monthSettingsResult.winnersMonth) {
+        setSelectedYear(monthSettingsResult.winnersMonth.year)
+        setSelectedMonth(monthSettingsResult.winnersMonth.month)
+      }
     } catch (error) {
-      console.error("[WinnersPage] Visibility check failed:", error)
+      console.error("[WinnersPage] Initialization failed:", error)
       setVisible(true)
     } finally {
       setLoading(false)

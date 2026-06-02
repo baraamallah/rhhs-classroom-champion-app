@@ -6,7 +6,7 @@ import { Header } from "@/components/header"
 import { SimpleClassroomCard } from "@/components/simple-classroom-card"
 import { calculateLeaderboard } from "@/lib/utils-leaderboard"
 import { getClassrooms, getEvaluationsByDateRange, getEvaluations } from "@/lib/supabase-data"
-import { getLeaderboardPointsSetting, getCalculationMode } from "@/app/actions/winners-page-actions"
+import { getLeaderboardPointsSetting, getCalculationMode, getDefaultMonthSettings } from "@/app/actions/winners-page-actions"
 import { CalculationAnimation } from "@/components/calculation-animation"
 
 import { LeafIcon } from "@/components/icons"
@@ -44,10 +44,11 @@ export default function HomePage() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [settingResult, classrooms, calcModeResult] = await Promise.all([
+        const [settingResult, classrooms, calcModeResult, monthSettingsResult] = await Promise.all([
           getLeaderboardPointsSetting(),
           getClassrooms(),
-          getCalculationMode()
+          getCalculationMode(),
+          getDefaultMonthSettings()
         ])
 
         const isMonthly = settingResult.success ? (settingResult.showMonthly ?? true) : true
@@ -56,9 +57,18 @@ export default function HomePage() {
 
         let evaluations
         if (isMonthly) {
-          const now = new Date()
-          const startDate = format(startOfMonth(now), "yyyy-MM-dd")
-          const endDate = format(endOfMonth(now), "yyyy-MM-dd")
+          let startDate, endDate
+
+          if (monthSettingsResult.success && monthSettingsResult.leaderboardMonth) {
+            const frozenDate = new Date(monthSettingsResult.leaderboardMonth.year, monthSettingsResult.leaderboardMonth.month - 1, 1)
+            startDate = format(startOfMonth(frozenDate), "yyyy-MM-dd")
+            endDate = format(endOfMonth(frozenDate), "yyyy-MM-dd")
+          } else {
+            const now = new Date()
+            startDate = format(startOfMonth(now), "yyyy-MM-dd")
+            endDate = format(endOfMonth(now), "yyyy-MM-dd")
+          }
+
           evaluations = await getEvaluationsByDateRange(startDate, endDate)
         } else {
           evaluations = await getEvaluations()
