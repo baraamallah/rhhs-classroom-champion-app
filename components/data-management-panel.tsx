@@ -24,7 +24,7 @@ import {
   restoreEvaluations,
   archiveAndReset
 } from "@/app/actions/data-management-actions"
-import { Loader2, Trash2, Archive, Search, History, RotateCcw, Download, FileSpreadsheet } from "lucide-react"
+import { Loader2, Trash2, Archive, Search, History, RotateCcw, Download, FileSpreadsheet, Settings, Trophy } from "lucide-react"
 import { MonthlyWinnersManager } from "@/components/monthly-winners-manager"
 import { WinnersPageToggle } from "@/components/winners-page-toggle"
 import { LeaderboardSettingsToggle } from "@/components/leaderboard-settings-toggle"
@@ -574,7 +574,7 @@ export function DataManagementPanel() {
             Archive & Reset
           </TabsTrigger>
           <TabsTrigger value="winners" className="rounded-lg py-2.5 px-8 data-[state=active]:bg-background data-[state=active]:shadow-md font-bold">
-            <TrophyIcon className="h-4 w-4 mr-2 text-amber-500" />
+            <Trophy className="h-4 w-4 mr-2 text-amber-500" />
             Monthly Winners
           </TabsTrigger>
         </TabsList>

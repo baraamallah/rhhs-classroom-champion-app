@@ -6,7 +6,6 @@ import { getEvaluations } from "@/lib/supabase-data"
 import type { Evaluation } from "@/lib/types"
 import { FileText, Calendar, User, Search, Filter, ArrowUpRight } from "lucide-react"
 import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
 
 export function EvaluationsList() {
   const [evaluations, setEvaluations] = useState<Evaluation[]>([])

@@ -32,3 +32,4 @@ https://supabase.com/dashboard/project/_/settings/api
   35 |     {
  POST /login?redirect=%2Fadmin 200 in 2.4s (next.js: 613ms, proxy.ts: 24ms, application-code: 1738ms)
   └─ ƒ checkAndAutoArchive() in 1607ms actions/auto-archive-actions.ts
+✓ Compiled in 1018ms
