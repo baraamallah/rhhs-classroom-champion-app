@@ -6,8 +6,9 @@ import { Header } from "@/components/header"
 import { SimpleClassroomCard } from "@/components/simple-classroom-card"
 import { calculateLeaderboard } from "@/lib/utils-leaderboard"
 import { getClassrooms, getEvaluationsByDateRange, getEvaluations } from "@/lib/supabase-data"
-import { getLeaderboardPointsSetting, getCalculationMode, getDefaultMonthSettings } from "@/app/actions/winners-page-actions"
+import { getLeaderboardPointsSetting, getCalculationMode, getDefaultMonthSettings, getWinnerRevealMode } from "@/app/actions/winners-page-actions"
 import { CalculationAnimation } from "@/components/calculation-animation"
+import { WinnerRevealAnimation } from "@/components/winner-reveal-animation"
 
 import { LeafIcon } from "@/components/icons"
 import type { ClassroomScore } from "@/lib/types"
@@ -40,20 +41,23 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true)
   const [showMonthly, setShowMonthly] = useState(true)
   const [calculationMode, setCalculationMode] = useState(false)
+  const [winnerRevealMode, setWinnerRevealMode] = useState(false)
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [settingResult, classrooms, calcModeResult, monthSettingsResult] = await Promise.all([
+        const [settingResult, classrooms, calcModeResult, winnerRevealResult, monthSettingsResult] = await Promise.all([
           getLeaderboardPointsSetting(),
           getClassrooms(),
           getCalculationMode(),
+          getWinnerRevealMode(),
           getDefaultMonthSettings()
         ])
 
         const isMonthly = settingResult.success ? (settingResult.showMonthly ?? true) : true
         setShowMonthly(isMonthly)
         setCalculationMode(calcModeResult.success ? (calcModeResult.enabled ?? false) : false)
+        setWinnerRevealMode(winnerRevealResult.success ? (winnerRevealResult.enabled ?? false) : false)
 
         let evaluations
         if (isMonthly) {
@@ -145,6 +149,8 @@ export default function HomePage() {
           </div>
         ) : calculationMode ? (
           <CalculationAnimation />
+        ) : winnerRevealMode ? (
+          <WinnerRevealAnimation />
         ) : leaderboard.length === 0 ? (
           <motion.div
             className="text-center py-12"

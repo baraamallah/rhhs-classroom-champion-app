@@ -8,6 +8,7 @@ export type AdminSettings = {
   winners_page_visible: boolean
   leaderboard_show_monthly: boolean
   calculation_mode: boolean
+  winner_reveal_mode: boolean
   evaluations_enabled: boolean
   winners_display_month: { year: number; month: number } | null
   leaderboard_display_month: { year: number; month: number } | null
@@ -36,6 +37,7 @@ export async function getAdminSettings(): Promise<{ success: boolean; settings?:
       winners_page_visible: parseBool("winners_page_visible", true),
       leaderboard_show_monthly: parseBool("leaderboard_show_monthly", true),
       calculation_mode: parseBool("calculation_mode", false),
+      winner_reveal_mode: parseBool("winner_reveal_mode", false),
       evaluations_enabled: parseBool("evaluations_enabled", true),
       winners_display_month: (map.get("winners_display_month") as AdminSettings["winners_display_month"]) || null,
       leaderboard_display_month: (map.get("leaderboard_display_month") as AdminSettings["leaderboard_display_month"]) || null,
@@ -259,6 +261,69 @@ export async function setCalculationMode(enabled: boolean): Promise<{ success: b
   } catch (error: any) {
     console.error("[setCalculationMode] Unexpected error:", error)
     return { success: false, error: error.message || "Failed to update calculation mode setting" }
+  }
+}
+
+export async function getWinnerRevealMode(): Promise<{ success: boolean; enabled?: boolean; error?: string }> {
+  try {
+    const supabase = await createAdminClient()
+    const { data, error } = await supabase
+      .from("system_settings")
+      .select("value")
+      .eq("key", "winner_reveal_mode")
+      .maybeSingle()
+
+    if (error) {
+      console.error("[getWinnerRevealMode] Error:", error)
+      return { success: false, error: error.message }
+    }
+
+    // Default to false if setting doesn't exist
+    const rawValue = data?.value
+    const enabled = rawValue === true || rawValue === "true"
+
+    console.log(`[getWinnerRevealMode] Returning enabled: ${enabled} (raw: ${rawValue})`)
+    return { success: true, enabled }
+  } catch (error: any) {
+    console.error("[getWinnerRevealMode] Unexpected error:", error)
+    return { success: false, error: error.message || "Failed to get winner reveal mode setting" }
+  }
+}
+
+export async function setWinnerRevealMode(enabled: boolean): Promise<{ success: boolean; error?: string }> {
+  const { currentUser, error } = await requireAdmin()
+  if (error || !currentUser) {
+    return { success: false, error }
+  }
+
+  try {
+    const supabase = await createAdminClient()
+
+    const settingData = {
+      key: "winner_reveal_mode",
+      value: enabled,
+      description: "Hides the leaderboard and shows a winner reveal button on the homepage",
+      updated_by: currentUser.id,
+      updated_at: new Date().toISOString(),
+    }
+
+    const { error: upsertError } = await supabase
+      .from("system_settings")
+      .upsert(settingData, { onConflict: "key" })
+
+    if (upsertError) {
+      console.error("[setWinnerRevealMode] Upsert error:", upsertError)
+      return { success: false, error: upsertError.message }
+    }
+
+    console.log(`[setWinnerRevealMode] Setting winner_reveal_mode to: ${enabled}`)
+    revalidatePath("/")
+    revalidatePath("/admin")
+    revalidatePath("/winners")
+    return { success: true }
+  } catch (error: any) {
+    console.error("[setWinnerRevealMode] Unexpected error:", error)
+    return { success: false, error: error.message || "Failed to update winner reveal mode setting" }
   }
 }
 

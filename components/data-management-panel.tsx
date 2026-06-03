@@ -29,6 +29,7 @@ import { MonthlyWinnersManager } from "@/components/monthly-winners-manager"
 import { WinnersPageToggle } from "@/components/winners-page-toggle"
 import { LeaderboardSettingsToggle } from "@/components/leaderboard-settings-toggle"
 import { CalculationModeToggle } from "@/components/calculation-mode-toggle"
+import { WinnerRevealModeToggle } from "@/components/winner-reveal-mode-toggle"
 import { EvaluationsToggle } from "@/components/evaluations-toggle"
 import { DefaultMonthSettings } from "@/components/default-month-settings"
 import { getAdminSettings } from "@/app/actions/winners-page-actions"
@@ -568,10 +569,11 @@ export function DataManagementPanel() {
           <Settings className="h-5 w-5 text-primary" />
           Global System Controls
         </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
           <WinnersPageToggle initialVisible={adminSettings?.winners_page_visible} />
           <LeaderboardSettingsToggle initialShowMonthly={adminSettings?.leaderboard_show_monthly} />
           <CalculationModeToggle initialEnabled={adminSettings?.calculation_mode} />
+          <WinnerRevealModeToggle initialEnabled={adminSettings?.winner_reveal_mode} />
           <EvaluationsToggle initialEnabled={adminSettings?.evaluations_enabled} />
         </div>
       </div>
