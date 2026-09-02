@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/client"
-import type { Classroom, ChecklistItem, Evaluation, User, AuditLog, SystemSetting } from "./types"
+import { getEvaluationsStatus } from "@/app/actions/evaluation-settings-actions"
+import type { Classroom, ChecklistItem, Evaluation, User } from "./types"
 
 // Client-side data functions
 export async function getClassrooms(): Promise<Classroom[]> {
@@ -9,7 +10,7 @@ export async function getClassrooms(): Promise<Classroom[]> {
       .from("classrooms")
       .select(`
         *,
-        classroom_supervisors!classroom_id(
+        classroom_supervisors(
           supervisor_id,
           users!classroom_supervisors_supervisor_id_fkey(id, name, email)
         )
@@ -18,18 +19,18 @@ export async function getClassrooms(): Promise<Classroom[]> {
       .order("name")
 
     if (error) {
-      console.error("[v0] Error fetching classrooms:", error)
-      console.error("[v0] Error details:", JSON.stringify(error, null, 2))
+      console.error("[Database] Error fetching classrooms:", error)
+      console.error("[Database] Error details:", JSON.stringify(error, null, 2))
       return []
     }
 
     // Transform data to flatten the nested structure
     return (data || []).map((classroom: any) => ({
       ...classroom,
-      supervisors: classroom.classroom_supervisors?.map((s: any) => s.users) || []
+      supervisors: classroom.classroom_supervisors?.map((s: any) => s.users).filter(Boolean) || []
     }))
   } catch (error) {
-    console.error("[v0] Exception fetching classrooms:", error)
+    console.error("[Database] Exception fetching classrooms:", error)
     return []
   }
 }
@@ -51,16 +52,16 @@ export async function getClassroomsBySupervisor(supervisorId: string): Promise<C
       .order("name")
 
     if (error) {
-      console.error("[v0] Error fetching classrooms by supervisor:", error)
+      console.error("[Database] Error fetching classrooms by supervisor:", error)
       return []
     }
 
     return (data || []).map((classroom: any) => ({
       ...classroom,
-      supervisors: classroom.classroom_supervisors?.map((s: any) => s.users) || []
+      supervisors: classroom.classroom_supervisors?.map((s: any) => s.users).filter(Boolean) || []
     }))
   } catch (error) {
-    console.error("[v0] Exception fetching classrooms by supervisor:", error)
+    console.error("[Database] Exception fetching classrooms by supervisor:", error)
     return []
   }
 }
@@ -73,7 +74,7 @@ export async function getChecklistItems(): Promise<ChecklistItem[]> {
       .from("checklist_items")
       .select(`
         *,
-        checklist_item_assignments!checklist_item_id(
+        checklist_item_assignments(
           supervisor_id,
           users!checklist_item_assignments_supervisor_id_fkey(id, name, email)
         )
@@ -83,17 +84,17 @@ export async function getChecklistItems(): Promise<ChecklistItem[]> {
       .order("created_at", { ascending: true })
 
     if (error) {
-      console.error("[v0] Error fetching checklist items:", error)
+      console.error("[Database] Error fetching checklist items:", error)
       return []
     }
 
     // Transform data to flatten the nested structure
     return (data || []).map((item: any) => ({
       ...item,
-      assigned_supervisors: item.checklist_item_assignments?.map((s: any) => s.users) || []
+      assigned_supervisors: item.checklist_item_assignments?.map((s: any) => s.users).filter(Boolean) || []
     }))
   } catch (error) {
-    console.error("[v0] Exception fetching checklist items:", error)
+    console.error("[Database] Exception fetching checklist items:", error)
     return []
   }
 }
@@ -119,7 +120,7 @@ export async function addChecklistItem(
     }).select().single()
 
     if (error) {
-      console.error("[v0] Error adding checklist item:", error)
+      console.error("[Database] Error adding checklist item:", error)
       return { success: false, error: error.message }
     }
 
@@ -135,13 +136,13 @@ export async function addChecklistItem(
         .insert(assignments)
 
       if (assignmentError) {
-        console.error("[v0] Error adding checklist assignments:", assignmentError)
+        console.error("[Database] Error adding checklist assignments:", assignmentError)
       }
     }
 
     return { success: true }
   } catch (error) {
-    console.error("[v0] Exception adding checklist item:", error)
+    console.error("[Database] Exception adding checklist item:", error)
     return { success: false, error: "Failed to add checklist item" }
   }
 }
@@ -167,7 +168,7 @@ export async function updateChecklistItem(
     const { error } = await supabase.from("checklist_items").update(updateData).eq("id", id)
 
     if (error) {
-      console.error("[v0] Error updating checklist item:", error)
+      console.error("[Database] Error updating checklist item:", error)
       return { success: false, error: error.message }
     }
 
@@ -191,14 +192,14 @@ export async function updateChecklistItem(
           .insert(assignments)
 
         if (assignmentError) {
-          console.error("[v0] Error updating checklist assignments:", assignmentError)
+          console.error("[Database] Error updating checklist assignments:", assignmentError)
         }
       }
     }
 
     return { success: true }
   } catch (error) {
-    console.error("[v0] Exception updating checklist item:", error)
+    console.error("[Database] Exception updating checklist item:", error)
     return { success: false, error: "Failed to update checklist item" }
   }
 }
@@ -210,33 +211,13 @@ export async function deleteChecklistItem(id: string): Promise<{ success: boolea
     const { error } = await supabase.from("checklist_items").update({ is_active: false }).eq("id", id)
 
     if (error) {
-      console.error("[v0] Error deleting checklist item:", error)
+      console.error("[Database] Error deleting checklist item:", error)
       return { success: false, error: error.message }
     }
     return { success: true }
   } catch (error) {
-    console.error("[v0] Exception deleting checklist item:", error)
+    console.error("[Database] Exception deleting checklist item:", error)
     return { success: false, error: "Failed to delete checklist item" }
-  }
-}
-
-export async function getAllUsers(): Promise<{ success: boolean; data: User[]; error?: string }> {
-  try {
-    const supabase = createClient()
-    const { data, error } = await supabase
-      .from("users")
-      .select("*")
-      .eq("is_active", true)
-      .order("created_at", { ascending: false })
-
-    if (error) {
-      console.error("[v0] Error fetching all users:", error)
-      return { success: false, data: [], error: error.message || "Failed to fetch users" }
-    }
-    return { success: true, data: data || [] }
-  } catch (error: any) {
-    console.error("[v0] Exception fetching all users:", error)
-    return { success: false, data: [], error: error?.message || "Failed to fetch users" }
   }
 }
 
@@ -259,7 +240,7 @@ export async function createClassroom(
     }).select().single()
 
     if (error) {
-      console.error("[v0] Error creating classroom:", error)
+      console.error("[Database] Error creating classroom:", error)
       return { success: false, error: error.message }
     }
 
@@ -275,13 +256,13 @@ export async function createClassroom(
         .insert(assignments)
 
       if (assignmentError) {
-        console.error("[v0] Error adding classroom supervisors:", assignmentError)
+        console.error("[Database] Error adding classroom supervisors:", assignmentError)
       }
     }
 
     return { success: true }
   } catch (error) {
-    console.error("[v0] Exception creating classroom:", error)
+    console.error("[Database] Exception creating classroom:", error)
     return { success: false, error: "Failed to create classroom" }
   }
 }
@@ -308,7 +289,7 @@ export async function updateClassroom(
     const { error } = await supabase.from("classrooms").update(updateData).eq("id", id)
 
     if (error) {
-      console.error("[v0] Error updating classroom:", error)
+      console.error("[Database] Error updating classroom:", error)
       return { success: false, error: error.message }
     }
 
@@ -332,15 +313,15 @@ export async function updateClassroom(
           .insert(assignments)
 
         if (assignmentError) {
-          console.error("[v0] Error updating classroom supervisors:", assignmentError)
-          console.error("[v0] Assignment error details:", JSON.stringify(assignmentError, null, 2))
+          console.error("[Database] Error updating classroom supervisors:", assignmentError)
+          console.error("[Database] Assignment error details:", JSON.stringify(assignmentError, null, 2))
         }
       }
     }
 
     return { success: true }
   } catch (error) {
-    console.error("[v0] Exception updating classroom:", error)
+    console.error("[Database] Exception updating classroom:", error)
     return { success: false, error: "Failed to update classroom" }
   }
 }
@@ -371,13 +352,13 @@ export async function bulkUpdateClassroomDivisions(
       .select("id")
 
     if (error) {
-      console.error("[v0] Error bulk updating classroom divisions:", error)
+      console.error("[Database] Error bulk updating classroom divisions:", error)
       return { success: false, error: error.message }
     }
 
     return { success: true, updatedCount: data?.length || 0 }
   } catch (error) {
-    console.error("[v0] Exception bulk updating classroom divisions:", error)
+    console.error("[Database] Exception bulk updating classroom divisions:", error)
     return { success: false, error: "Failed to update classroom divisions" }
   }
 }
@@ -389,53 +370,13 @@ export async function deleteClassroom(id: string): Promise<{ success: boolean; e
     const { error } = await supabase.from("classrooms").update({ is_active: false }).eq("id", id)
 
     if (error) {
-      console.error("[v0] Error deleting classroom:", error)
+      console.error("[Database] Error deleting classroom:", error)
       return { success: false, error: error.message }
     }
     return { success: true }
   } catch (error) {
-    console.error("[v0] Exception deleting classroom:", error)
+    console.error("[Database] Exception deleting classroom:", error)
     return { success: false, error: "Failed to delete classroom" }
-  }
-}
-
-// Audit and system settings
-export async function getAuditLogs(limit: number = 50): Promise<AuditLog[]> {
-  try {
-    const supabase = createClient()
-    const { data, error } = await supabase
-      .from("audit_log")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(limit)
-
-    if (error) {
-      console.error("[v0] Error fetching audit logs:", error)
-      return []
-    }
-    return data || []
-  } catch (error) {
-    console.error("[v0] Exception fetching audit logs:", error)
-    return []
-  }
-}
-
-export async function getSystemSettings(): Promise<SystemSetting[]> {
-  try {
-    const supabase = createClient()
-    const { data, error } = await supabase
-      .from("system_settings")
-      .select("*")
-      .order("updated_at", { ascending: false })
-
-    if (error) {
-      console.error("[v0] Error fetching system settings:", error)
-      return []
-    }
-    return data || []
-  } catch (error) {
-    console.error("[v0] Exception fetching system settings:", error)
-    return []
   }
 }
 
@@ -451,13 +392,8 @@ export async function submitEvaluation(
     const supabase = createClient()
 
     // Check if evaluations are enabled
-    const { data: statusData } = await supabase
-      .from("system_settings")
-      .select("value")
-      .eq("key", "evaluations_enabled")
-      .maybeSingle()
-
-    const enabled = statusData?.value === null || statusData?.value === undefined ? true : (statusData?.value === true || statusData?.value === "true")
+    const statusResult = await getEvaluationsStatus()
+    const enabled = statusResult.success ? statusResult.enabled !== false : true
 
     if (!enabled) {
       return { success: false, error: "System is closed and not accepting evaluations anymore." }
@@ -478,13 +414,13 @@ export async function submitEvaluation(
     })
 
     if (error) {
-      console.error("[v0] Error submitting evaluation:", error)
+      console.error("[Database] Error submitting evaluation:", error)
       return { success: false, error: error.message }
     }
 
     return { success: true }
   } catch (error) {
-    console.error("[v0] Exception submitting evaluation:", error)
+    console.error("[Database] Exception submitting evaluation:", error)
     return { success: false, error: "Failed to submit evaluation" }
   }
 }
@@ -499,7 +435,6 @@ export async function getEvaluations(): Promise<Evaluation[]> {
         classroom_id,
         supervisor_id,
         evaluation_date,
-        items,
         total_score,
         max_score,
         created_at,
@@ -516,7 +451,7 @@ export async function getEvaluations(): Promise<Evaluation[]> {
       .order("evaluation_date", { ascending: false })
 
     if (error) {
-      console.error("[v0] Error fetching evaluations:", error)
+      console.error("[Database] Error fetching evaluations:", error)
       return []
     }
 
@@ -527,7 +462,7 @@ export async function getEvaluations(): Promise<Evaluation[]> {
       classroom_id: row.classroom_id,
       supervisor_id: row.supervisor_id,
       evaluation_date: row.evaluation_date,
-      items: row.items,
+      items: row.items || {},
       total_score: row.total_score,
       max_score: row.max_score,
       created_at: row.created_at,
@@ -546,7 +481,7 @@ export async function getEvaluations(): Promise<Evaluation[]> {
         : undefined,
     }))
   } catch (error) {
-    console.error("[v0] Exception fetching evaluations:", error)
+    console.error("[Database] Exception fetching evaluations:", error)
     return []
   }
 }
@@ -561,7 +496,6 @@ export async function getEvaluationsBySupervisor(supervisorId: string): Promise<
         classroom_id,
         supervisor_id,
         evaluation_date,
-        items,
         total_score,
         max_score,
         created_at,
@@ -579,7 +513,7 @@ export async function getEvaluationsBySupervisor(supervisorId: string): Promise<
       .order("evaluation_date", { ascending: false })
 
     if (error) {
-      console.error("[v0] Error fetching evaluations by supervisor:", error)
+      console.error("[Database] Error fetching evaluations by supervisor:", error)
       return []
     }
 
@@ -590,7 +524,7 @@ export async function getEvaluationsBySupervisor(supervisorId: string): Promise<
       classroom_id: row.classroom_id,
       supervisor_id: row.supervisor_id,
       evaluation_date: row.evaluation_date,
-      items: row.items,
+      items: row.items || {},
       total_score: row.total_score,
       max_score: row.max_score,
       created_at: row.created_at,
@@ -609,7 +543,7 @@ export async function getEvaluationsBySupervisor(supervisorId: string): Promise<
         : undefined,
     }))
   } catch (error) {
-    console.error("[v0] Exception fetching evaluations by supervisor:", error)
+    console.error("[Database] Exception fetching evaluations by supervisor:", error)
     return []
   }
 }
@@ -624,7 +558,6 @@ export async function getEvaluationsByDateRange(startDate: string, endDate: stri
         classroom_id,
         supervisor_id,
         evaluation_date,
-        items,
         total_score,
         max_score,
         created_at,
@@ -643,7 +576,7 @@ export async function getEvaluationsByDateRange(startDate: string, endDate: stri
       .order("evaluation_date", { ascending: false })
 
     if (error) {
-      console.error("[v0] Error fetching evaluations by date range:", error)
+      console.error("[Database] Error fetching evaluations by date range:", error)
       return []
     }
 
@@ -654,7 +587,7 @@ export async function getEvaluationsByDateRange(startDate: string, endDate: stri
       classroom_id: row.classroom_id,
       supervisor_id: row.supervisor_id,
       evaluation_date: row.evaluation_date,
-      items: row.items,
+      items: row.items || {},
       total_score: row.total_score,
       max_score: row.max_score,
       created_at: row.created_at,
@@ -673,7 +606,105 @@ export async function getEvaluationsByDateRange(startDate: string, endDate: stri
         : undefined,
     }))
   } catch (error) {
-    console.error("[v0] Exception fetching evaluations by date range:", error)
+    console.error("[Database] Exception fetching evaluations by date range:", error)
     return []
   }
 }
+
+export async function getArchivedEvaluationsList(): Promise<Evaluation[]> {
+  try {
+    const supabase = createClient()
+    const { data: archiveData, error } = await supabase
+      .from("archive_evaluations")
+      .select("id, classroom_id, supervisor_id, evaluation_date, total_score, max_score, created_at, archived_at")
+      .order("archived_at", { ascending: false })
+
+    if (error) {
+      console.error("[Database] Error fetching archive evaluations:", error)
+      return []
+    }
+
+    if (!archiveData || archiveData.length === 0) return []
+
+    const [{ data: activeRooms }, { data: archiveRooms }, { data: users }] = await Promise.all([
+      supabase.from("classrooms").select("id, name, grade, division"),
+      supabase.from("archive_classrooms").select("id, name, grade, division"),
+      supabase.from("users").select("id, name, email"),
+    ])
+
+    const allRooms = [...(activeRooms || []), ...(archiveRooms || [])]
+    const userMap = new Map<string, { id: string; name: string; email?: string }>((users || []).map((u: any) => [u.id, u]))
+    const roomMap = new Map<string, { id: string; name: string; grade?: string; division?: any }>(allRooms.map((r: any) => [r.id, r]))
+
+    return archiveData.map((row: any) => {
+      const cls = roomMap.get(row.classroom_id)
+      const usr = userMap.get(row.supervisor_id)
+
+      return {
+        id: row.id,
+        classroom_id: row.classroom_id,
+        supervisor_id: row.supervisor_id,
+        evaluation_date: row.evaluation_date,
+        items: row.items || {},
+        total_score: row.total_score,
+        max_score: row.max_score,
+        created_at: row.created_at,
+        is_archived: true,
+        classroom: cls
+          ? {
+              name: cls.name,
+              grade: cls.grade ?? "",
+              division: cls.division,
+            }
+          : undefined,
+        supervisor: usr
+          ? {
+              name: usr.name,
+              email: usr.email ?? "",
+            }
+          : undefined,
+      }
+    })
+  } catch (error) {
+    console.error("[Database] Exception fetching archive evaluations:", error)
+    return []
+  }
+}
+
+// Ultra-fast direct query from server aggregation view
+export async function getLeaderboardFromDatabaseView(): Promise<{
+  success: boolean
+  data?: any[]
+  error?: string
+}> {
+  try {
+    const supabase = createClient()
+    const { data, error } = await supabase
+      .from("v_live_classroom_leaderboard")
+      .select("*")
+      .order("total_score", { ascending: false })
+
+    if (error) {
+      return { success: false, error: error.message }
+    }
+
+    const formatted = (data || []).map((row: any) => ({
+      classroom: {
+        id: row.classroom_id,
+        name: row.classroom_name,
+        grade: row.classroom_grade,
+        division: row.classroom_division,
+      },
+      totalScore: row.total_score,
+      evaluationCount: row.total_evaluations,
+      averageScore: row.average_score_pct,
+      lastEvaluated: row.last_evaluated_at || "Never",
+    }))
+
+    return { success: true, data: formatted }
+  } catch (err: any) {
+    return { success: false, error: err.message || "Failed to load view" }
+  }
+}
+
+

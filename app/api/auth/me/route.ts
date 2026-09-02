@@ -1,40 +1,39 @@
 import { NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/server"
 import { clearSessionCookie, getSessionFromCookies } from "@/lib/auth/session"
 
 export async function GET() {
   const session = await getSessionFromCookies()
 
   if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
+    return NextResponse.json({ user: null })
   }
 
-    const supabase = await createClient()
-  
+  const supabase = await createAdminClient()
+
   const { data: userData, error: userError } = await supabase
-    .from('users')
-    .select('id, email, name, role, is_active')
-    .eq('id', session.userId)
+    .from("users")
+    .select("id, email, name, role, is_active")
+    .eq("id", session.userId)
     .single()
 
   if (process.env.NODE_ENV === "development") {
     console.log("🔍 Auth me check:", { userData, userError, sessionUserId: session.userId })
   }
 
-  if (userError || !userData) {
+  if (userError) {
     if (process.env.NODE_ENV === "development") {
-      console.log("❌ User not found in auth check:", userError)
+      console.log("❌ DB error in auth check:", userError)
     }
-    await clearSessionCookie()
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
+    return NextResponse.json({ user: null })
   }
 
-  if (!userData.is_active) {
+  if (!userData || !userData.is_active) {
     if (process.env.NODE_ENV === "development") {
-      console.log("❌ User is inactive in auth check")
+      console.log("❌ User not found or inactive in auth check")
     }
     await clearSessionCookie()
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
+    return NextResponse.json({ user: null })
   }
 
   if (process.env.NODE_ENV === "development") {

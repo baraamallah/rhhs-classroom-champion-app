@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/server"
 import { setSessionCookie } from "@/lib/auth/session"
 
 async function getUserCount(): Promise<number> {
-  const supabase = await createClient()
+  const supabase = await createAdminClient()
   const { count, error } = await supabase
     .from('users')
     .select('*', { count: 'exact', head: true })
@@ -41,7 +41,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Password must be at least 6 characters" }, { status: 400 })
   }
 
-  const supabase = await createClient()
+  const supabase = await createAdminClient()
   
   try {
     const { data: userData, error: insertError } = await supabase

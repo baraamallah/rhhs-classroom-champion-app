@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "node:crypto"
 import { cookies } from "next/headers"
 import type { User } from "@/lib/types"
 
@@ -59,7 +60,12 @@ export async function decodeSessionToken(token?: string | null): Promise<Session
   if (!payload || !signature) return null
 
   const expectedSignature = await signPayload(payload)
-  if (signature !== expectedSignature) return null
+  const signatureBytes = Buffer.from(signature)
+  const expectedSignatureBytes = Buffer.from(expectedSignature)
+  if (
+    signatureBytes.length !== expectedSignatureBytes.length ||
+    !timingSafeEqual(signatureBytes, expectedSignatureBytes)
+  ) return null
 
   try {
     // Convert base64url back to base64 for decoding

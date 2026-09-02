@@ -73,7 +73,6 @@ export async function checkAndAutoArchive() {
     }
 
     // Perform the archive
-    console.log(`[autoArchive] New month detected. Archiving evaluations from ${evalYear}-${evalMonth}`)
 
     // Fetch all evaluations to archive
     const { data: allEvaluations, error: fetchError } = await supabase
@@ -111,8 +110,6 @@ export async function checkAndAutoArchive() {
       console.error("[autoArchive] Error deleting evaluations:", deleteError)
       return { success: false, archived: false }
     }
-
-    console.log(`[autoArchive] Successfully archived ${allEvaluations.length} evaluations`)
 
     return { 
       success: true, 

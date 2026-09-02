@@ -1,14 +1,24 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { createClient, createAdminClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/server"
 import { getSessionFromCookies, clearSessionCookie } from "@/lib/auth/session"
+import { calculateLeaderboard } from "@/lib/utils-leaderboard"
 
 type UserRole = "super_admin" | "admin" | "supervisor" | "viewer"
 
 interface CurrentUser {
   id: string
   role: UserRole
+}
+
+// Utility to chunk arrays into safe batch sizes (prevents 16KB HTTP headers overflow error)
+function chunkArray<T>(items: T[], size = 40): T[][] {
+  const chunks: T[][] = []
+  for (let i = 0; i < items.length; i += size) {
+    chunks.push(items.slice(i, i + size))
+  }
+  return chunks
 }
 
 async function requireSuperAdmin(): Promise<{ currentUser?: CurrentUser; error?: string }> {
@@ -18,8 +28,6 @@ async function requireSuperAdmin(): Promise<{ currentUser?: CurrentUser; error?:
     return { error: "Not authenticated" }
   }
 
-  // Use admin client to bypass RLS for authentication check
-  // This is safe because we're only checking the user's own data based on their session
   const supabase = await createAdminClient()
   const { data: userData, error: userError } = await supabase
     .from("users")
@@ -38,7 +46,6 @@ async function requireSuperAdmin(): Promise<{ currentUser?: CurrentUser; error?:
     return { error: "Not authenticated" }
   }
 
-  // Allow both admin and super_admin roles (matches admin page access and RLS policies)
   if (userData.role !== "super_admin" && userData.role !== "admin") {
     return { error: "Unauthorized: Admin access required" }
   }
@@ -47,57 +54,57 @@ async function requireSuperAdmin(): Promise<{ currentUser?: CurrentUser; error?:
 }
 
 export async function archiveAndReset() {
-  console.log("[archiveAndReset] Starting archive and reset operation")
   const { currentUser, error } = await requireSuperAdmin()
   if (error || !currentUser) {
     console.error("[archiveAndReset] Auth failed:", error)
     return { success: false, error }
   }
 
-  // Use admin client to bypass RLS for system-wide archive operations
   const supabase = await createAdminClient()
 
   try {
-    // Archive evaluations
-    console.log("[archiveAndReset] Fetching evaluations to archive...")
-    const { data: evaluations, error: evalFetchError } = await supabase.from("evaluations").select("*")
+    const { data: evaluations, error: evalFetchError } = await supabase
+      .from("evaluations")
+      .select("*")
 
     if (evalFetchError) {
       console.error("[archiveAndReset] Failed to fetch evaluations:", evalFetchError)
       return { success: false, error: `Failed to fetch evaluations for archiving: ${evalFetchError.message}` }
     }
 
-    console.log(`[archiveAndReset] Found ${evaluations?.length || 0} evaluations to archive`)
-
     if (evaluations && evaluations.length > 0) {
-      // Use upsert to handle cases where data might already exist in archive (e.g. from a failed previous run)
-      const { error: archiveEvalError } = await supabase.from("archive_evaluations").upsert(evaluations, { onConflict: "id" })
+      // Chunk batches for safe upsert
+      const chunks = chunkArray(evaluations, 40)
+      for (const chunk of chunks) {
+        const { error: archiveEvalError } = await supabase
+          .from("archive_evaluations")
+          .upsert(chunk, { onConflict: "id" })
 
-      if (archiveEvalError) {
-        console.error("Archive evaluations error:", archiveEvalError)
-        return { success: false, error: `Failed to archive evaluations: ${archiveEvalError.message}` }
+        if (archiveEvalError) {
+          console.error("Archive evaluations error:", archiveEvalError)
+          return { success: false, error: `Failed to archive evaluations: ${archiveEvalError.message}` }
+        }
       }
 
-      console.log("[archiveAndReset] Evaluations archived, now deleting from main table...")
-      const { error: deleteEvalError } = await supabase.from("evaluations").delete().neq("id", "") // Delete all
+      // Chunk IDs for safe deletion
+      const idChunks = chunkArray(evaluations.map((e) => e.id), 40)
+      for (const idChunk of idChunks) {
+        const { error: deleteEvalError } = await supabase
+          .from("evaluations")
+          .delete()
+          .in("id", idChunk)
 
-      if (deleteEvalError) {
-        console.error("[archiveAndReset] Failed to delete evaluations:", deleteEvalError)
-        return { success: false, error: `Failed to delete evaluations: ${deleteEvalError.message}` }
+        if (deleteEvalError) {
+          console.error("[archiveAndReset] Failed to delete evaluations:", deleteEvalError)
+          return { success: false, error: `Failed to delete evaluations: ${deleteEvalError.message}` }
+        }
       }
     }
 
-    // Note: We do NOT archive/delete classrooms because:
-    // 1. Monthly winners reference classrooms
-    // 2. Classrooms are persistent entities that should remain
-    // 3. Only evaluations are archived/reset monthly
-    console.log("[archiveAndReset] Skipping classroom archiving - classrooms are preserved for monthly winners")
-
-    console.log("[archiveAndReset] Archive and reset completed successfully")
     revalidatePath("/admin")
     return {
       success: true,
-      message: `Successfully archived ${evaluations?.length || 0} evaluations. Classrooms preserved for monthly winners tracking.`,
+      message: `Successfully archived ${evaluations?.length || 0} evaluations. Classrooms preserved.`,
     }
   } catch (dbError: any) {
     console.error("[data-management-actions] archiveAndReset error", dbError)
@@ -106,143 +113,91 @@ export async function archiveAndReset() {
 }
 
 export async function deleteEvaluation(evaluationId: string) {
-  console.log("[deleteEvaluation] Starting deletion for ID:", evaluationId)
   const { currentUser, error } = await requireSuperAdmin()
   if (error || !currentUser) {
-    console.error("[deleteEvaluation] Auth failed:", error)
     return { success: false, error }
   }
 
   const supabase = await createAdminClient()
 
   try {
-    const { error: deleteError } = await supabase.from("evaluations").delete().eq("id", evaluationId)
+    const { error: deleteError } = await supabase
+      .from("evaluations")
+      .delete()
+      .eq("id", evaluationId)
 
     if (deleteError) {
-      console.error("[data-management-actions] deleteEvaluation error", deleteError)
+      console.error("[deleteEvaluation] Delete error:", deleteError)
       return { success: false, error: `Failed to delete evaluation: ${deleteError.message}` }
     }
 
-    console.log("[deleteEvaluation] Successfully deleted evaluation:", evaluationId)
     revalidatePath("/admin")
     return { success: true, message: "Evaluation deleted successfully" }
   } catch (dbError: any) {
-    console.error("[data-management-actions] deleteEvaluation error", dbError)
+    console.error("[deleteEvaluation] Unexpected error:", dbError)
     return { success: false, error: `Failed to delete evaluation: ${dbError.message || "Unknown error"}` }
   }
 }
 
 export async function deleteClassroom(classroomId: string) {
-  console.log("[deleteClassroom] Starting deletion for ID:", classroomId)
   const { currentUser, error } = await requireSuperAdmin()
   if (error || !currentUser) {
-    console.error("[deleteClassroom] Auth failed:", error)
     return { success: false, error }
   }
 
   const supabase = await createAdminClient()
 
   try {
-    // First delete all evaluations for this classroom
-    const { error: deleteEvalsError } = await supabase.from("evaluations").delete().eq("classroom_id", classroomId)
+    const { error: deleteError } = await supabase
+      .from("classrooms")
+      .update({ is_active: false })
+      .eq("id", classroomId)
 
-    if (deleteEvalsError) {
-      console.error("[data-management-actions] deleteClassroom evaluations error", deleteEvalsError)
-      return { success: false, error: `Failed to delete classroom evaluations: ${deleteEvalsError.message}` }
+    if (deleteError) {
+      console.error("[deleteClassroom] Delete error:", deleteError)
+      return { success: false, error: `Failed to delete classroom: ${deleteError.message}` }
     }
 
-    // Then delete the classroom
-    const { error: deleteClassError } = await supabase.from("classrooms").delete().eq("id", classroomId)
-
-    if (deleteClassError) {
-      console.error("[data-management-actions] deleteClassroom error", deleteClassError)
-      return { success: false, error: `Failed to delete classroom: ${deleteClassError.message}` }
-    }
-
-    console.log("[deleteClassroom] Successfully deleted classroom:", classroomId)
+    revalidatePath("/", "layout")
     revalidatePath("/admin")
-    return { success: true, message: "Classroom and all related evaluations deleted successfully" }
+    return { success: true, message: "Classroom removed successfully" }
   } catch (dbError: any) {
-    console.error("[data-management-actions] deleteClassroom error", dbError)
+    console.error("[deleteClassroom] Unexpected error:", dbError)
     return { success: false, error: `Failed to delete classroom: ${dbError.message || "Unknown error"}` }
   }
 }
 
-export async function archiveEvaluation(evaluationId: string) {
+export async function deleteEvaluations(evaluationIds: string[]) {
   const { currentUser, error } = await requireSuperAdmin()
   if (error || !currentUser) {
     return { success: false, error }
   }
 
-  if (!evaluationId || evaluationId.trim() === "") {
-    return { success: false, error: "Invalid evaluation ID" }
+  if (!evaluationIds || evaluationIds.length === 0) {
+    return { success: false, error: "No evaluations selected" }
   }
 
   const supabase = await createAdminClient()
 
   try {
-    console.log("[archiveEvaluation] Starting archive process for ID:", evaluationId)
+    const idChunks = chunkArray(evaluationIds, 40)
+    for (const chunk of idChunks) {
+      const { error: deleteError } = await supabase
+        .from("evaluations")
+        .delete()
+        .in("id", chunk)
 
-    const { data: evaluation, error: fetchError } = await supabase
-      .from("evaluations")
-      .select("*")
-      .eq("id", evaluationId)
-      .single()
-
-    if (fetchError) {
-      console.error("[archiveEvaluation] Fetch error:", fetchError)
-      return { success: false, error: `Failed to fetch evaluation: ${fetchError.message}` }
-    }
-
-    if (!evaluation) {
-      console.error("[archiveEvaluation] No evaluation found with ID:", evaluationId)
-      return { success: false, error: "Evaluation not found" }
-    }
-
-    console.log("[archiveEvaluation] Evaluation fetched:", evaluation.id)
-
-    const { data: archiveData, error: archiveError } = await supabase
-      .from("archive_evaluations")
-      .upsert(evaluation, { onConflict: "id" })
-      .select()
-
-    if (archiveError) {
-      console.error("[archiveEvaluation] Archive insert error:", archiveError)
-      return { success: false, error: `Failed to archive evaluation: ${archiveError.message}` }
-    }
-
-    console.log("[archiveEvaluation] Archived successfully:", archiveData)
-
-    const { data: deleteData, error: deleteError, count } = await supabase
-      .from("evaluations")
-      .delete()
-      .eq("id", evaluationId)
-      .select()
-
-    if (deleteError) {
-      console.error("[archiveEvaluation] Delete error:", deleteError)
-      return {
-        success: false,
-        error: `Evaluation was archived but failed to delete from main table: ${deleteError.message}`,
-      }
-    }
-
-    console.log("[archiveEvaluation] Deleted from main table:", deleteData, "Count:", count)
-
-    if (!deleteData || deleteData.length === 0) {
-      console.error("[archiveEvaluation] No rows deleted for ID:", evaluationId)
-      return {
-        success: false,
-        error: "Evaluation was archived but no rows were deleted from main table. Check RLS policies.",
+      if (deleteError) {
+        console.error("[deleteEvaluations] Delete error:", deleteError)
+        return { success: false, error: `Failed to delete evaluations: ${deleteError.message}` }
       }
     }
 
     revalidatePath("/admin")
-    console.log("[archiveEvaluation] Process completed successfully for ID:", evaluationId)
-    return { success: true, message: `Evaluation archived and removed successfully (ID: ${evaluationId})` }
+    return { success: true, message: `Successfully deleted ${evaluationIds.length} evaluations` }
   } catch (dbError: any) {
-    console.error("[archiveEvaluation] Unexpected error:", dbError)
-    return { success: false, error: `Failed to archive evaluation: ${dbError.message || "Unknown error"}` }
+    console.error("[deleteEvaluations] Unexpected error:", dbError)
+    return { success: false, error: `Failed to delete evaluations: ${dbError.message || "Unknown error"}` }
   }
 }
 
@@ -252,12 +207,9 @@ export async function getAllEvaluationsForManagement() {
     return { success: false, error, data: [] }
   }
 
-  // Use admin client to bypass RLS since we already verified super admin access
   const supabase = await createAdminClient()
 
   try {
-    console.log("[getAllEvaluationsForManagement] Fetching evaluations...")
-
     const { data, error: fetchError } = await supabase
       .from("evaluations")
       .select(`
@@ -268,7 +220,8 @@ export async function getAllEvaluationsForManagement() {
         created_at,
         classrooms:classroom_id (
           name,
-          grade
+          grade,
+          division
         ),
         users:supervisor_id (
           name
@@ -281,7 +234,6 @@ export async function getAllEvaluationsForManagement() {
       return { success: false, error: `Failed to fetch evaluations: ${fetchError.message}`, data: [] }
     }
 
-    console.log(`[getAllEvaluationsForManagement] Successfully fetched ${data?.length || 0} evaluations`)
     return { success: true, data: data || [] }
   } catch (dbError: any) {
     console.error("[data-management-actions] getAllEvaluationsForManagement error", dbError)
@@ -289,6 +241,7 @@ export async function getAllEvaluationsForManagement() {
   }
 }
 
+// BATCHED TO PREVENT 16KB HEADERS OVERFLOW ERROR
 export async function archiveEvaluations(evaluationIds: string[]) {
   const { currentUser, error } = await requireSuperAdmin()
   if (error || !currentUser) {
@@ -302,55 +255,57 @@ export async function archiveEvaluations(evaluationIds: string[]) {
   const supabase = await createAdminClient()
 
   try {
-    console.log(`[archiveEvaluations] Starting bulk archive for ${evaluationIds.length} evaluations`)
+    const idChunks = chunkArray(evaluationIds, 40)
+    let totalArchived = 0
 
-    // 1. Fetch the evaluations to be archived
-    const { data: evaluations, error: fetchError } = await supabase
-      .from("evaluations")
-      .select("*")
-      .in("id", evaluationIds)
+    for (const chunk of idChunks) {
+      // 1. Fetch in small chunk
+      const { data: evaluations, error: fetchError } = await supabase
+        .from("evaluations")
+        .select("*")
+        .in("id", chunk)
 
-    if (fetchError) {
-      console.error("[archiveEvaluations] Fetch error:", fetchError)
-      return { success: false, error: `Failed to fetch evaluations: ${fetchError.message}` }
-    }
+      if (fetchError) {
+        console.error("[archiveEvaluations] Fetch error:", fetchError)
+        return { success: false, error: `Failed to fetch evaluations: ${fetchError.message}` }
+      }
 
-    if (!evaluations || evaluations.length === 0) {
-      return { success: false, error: "No evaluations found to archive" }
-    }
+      if (evaluations && evaluations.length > 0) {
+        const evaluationsToArchive = evaluations.map((ev) => ({
+          ...ev,
+          archived_at: new Date().toISOString(),
+        }))
 
-    // 2. Prepare data with archived_at timestamp
-    const evaluationsToArchive = evaluations.map((ev) => ({
-      ...ev,
-      archived_at: new Date().toISOString(),
-    }))
+        // 2. Upsert chunk
+        const { error: archiveError } = await supabase
+          .from("archive_evaluations")
+          .upsert(evaluationsToArchive, { onConflict: "id" })
 
-    // 3. Insert into archive table (upsert to be safe)
-    const { error: archiveError } = await supabase
-      .from("archive_evaluations")
-      .upsert(evaluationsToArchive, { onConflict: "id" })
+        if (archiveError) {
+          console.error("[archiveEvaluations] Archive insert error:", archiveError)
+          return { success: false, error: `Failed to archive evaluations: ${archiveError.message}` }
+        }
 
-    if (archiveError) {
-      console.error("[archiveEvaluations] Archive insert error:", archiveError)
-      return { success: false, error: `Failed to archive evaluations: ${archiveError.message}` }
-    }
+        // 3. Delete chunk from main table
+        const { error: deleteError } = await supabase
+          .from("evaluations")
+          .delete()
+          .in("id", chunk)
 
-    // 4. Delete from main table
-    const { error: deleteError } = await supabase
-      .from("evaluations")
-      .delete()
-      .in("id", evaluationIds)
+        if (deleteError) {
+          console.error("[archiveEvaluations] Delete error:", deleteError)
+          return {
+            success: false,
+            error: `Evaluations archived but failed to delete from main table: ${deleteError.message}`,
+          }
+        }
 
-    if (deleteError) {
-      console.error("[archiveEvaluations] Delete error:", deleteError)
-      return {
-        success: false,
-        error: `Evaluations archived but failed to delete from main table: ${deleteError.message}`,
+        totalArchived += evaluations.length
       }
     }
 
     revalidatePath("/admin")
-    return { success: true, message: `Successfully archived ${evaluations.length} evaluations` }
+    return { success: true, message: `Successfully archived ${totalArchived} evaluations` }
   } catch (dbError: any) {
     console.error("[archiveEvaluations] Unexpected error:", dbError)
     return { success: false, error: `Failed to archive evaluations: ${dbError.message || "Unknown error"}` }
@@ -377,21 +332,16 @@ export async function getArchivedEvaluations(limit = 50, offset = 0) {
       return { success: false, error: `Failed to fetch archived evaluations: ${fetchError.message}`, data: [] }
     }
 
-    // Fetch BOTH active and archived classrooms to ensure we find the name
-    const { data: activeClassrooms } = await supabase
-      .from("classrooms")
-      .select("id, name, grade")
+    const [
+      { data: activeClassrooms },
+      { data: archivedClassrooms },
+      { data: users }
+    ] = await Promise.all([
+      supabase.from("classrooms").select("id, name, grade"),
+      supabase.from("archive_classrooms").select("id, name, grade"),
+      supabase.from("users").select("id, name"),
+    ])
 
-    const { data: archivedClassrooms } = await supabase
-      .from("archive_classrooms")
-      .select("id, name, grade")
-
-    // Fetch supervisors
-    const { data: users } = await supabase
-      .from("users")
-      .select("id, name")
-
-    // Combine classroom lists
     const allClassrooms = [
       ...(activeClassrooms || []),
       ...(archivedClassrooms || [])
@@ -415,87 +365,6 @@ export async function getArchivedEvaluations(limit = 50, offset = 0) {
   }
 }
 
-export async function restoreEvaluation(evaluationId: string) {
-  const { currentUser, error } = await requireSuperAdmin()
-  if (error || !currentUser) {
-    return { success: false, error }
-  }
-
-  if (!evaluationId || evaluationId.trim() === "") {
-    return { success: false, error: "Invalid evaluation ID" }
-  }
-
-  const supabase = await createAdminClient()
-
-  try {
-    console.log("[restoreEvaluation] Starting restore process for ID:", evaluationId)
-
-    const { data: evaluation, error: fetchError } = await supabase
-      .from("archive_evaluations")
-      .select("*")
-      .eq("id", evaluationId)
-      .single()
-
-    if (fetchError) {
-      console.error("[restoreEvaluation] Fetch error:", fetchError)
-      return { success: false, error: `Failed to fetch archived evaluation: ${fetchError.message}` }
-    }
-
-    if (!evaluation) {
-      console.error("[restoreEvaluation] No archived evaluation found with ID:", evaluationId)
-      return { success: false, error: "Archived evaluation not found" }
-    }
-
-    console.log("[restoreEvaluation] Archived evaluation fetched:", evaluation.id)
-
-    // Remove archived_at field before restoring to main table
-    const { archived_at, ...evaluationToRestore } = evaluation
-
-    const { data: restoreData, error: restoreError } = await supabase
-      .from("evaluations")
-      .upsert(evaluationToRestore, { onConflict: "id" })
-      .select()
-
-    if (restoreError) {
-      console.error("[restoreEvaluation] Restore insert error:", restoreError)
-      return { success: false, error: `Failed to restore evaluation: ${restoreError.message}` }
-    }
-
-    console.log("[restoreEvaluation] Restored successfully:", restoreData)
-
-    const { data: deleteData, error: deleteError, count } = await supabase
-      .from("archive_evaluations")
-      .delete()
-      .eq("id", evaluationId)
-      .select()
-
-    if (deleteError) {
-      console.error("[restoreEvaluation] Delete from archive error:", deleteError)
-      return {
-        success: false,
-        error: `Evaluation was restored but failed to delete from archive: ${deleteError.message}`,
-      }
-    }
-
-    console.log("[restoreEvaluation] Deleted from archive:", deleteData, "Count:", count)
-
-    if (!deleteData || deleteData.length === 0) {
-      console.error("[restoreEvaluation] No rows deleted from archive for ID:", evaluationId)
-      return {
-        success: false,
-        error: "Evaluation was restored but no rows were deleted from archive. Check RLS policies.",
-      }
-    }
-
-    revalidatePath("/admin")
-    console.log("[restoreEvaluation] Process completed successfully for ID:", evaluationId)
-    return { success: true, message: `Evaluation restored and removed from archive successfully (ID: ${evaluationId})` }
-  } catch (dbError: any) {
-    console.error("[restoreEvaluation] Unexpected error:", dbError)
-    return { success: false, error: `Failed to restore evaluation: ${dbError.message || "Unknown error"}` }
-  }
-}
-
 export async function restoreEvaluations(evaluationIds: string[]) {
   const { currentUser, error } = await requireSuperAdmin()
   if (error || !currentUser) {
@@ -509,54 +378,346 @@ export async function restoreEvaluations(evaluationIds: string[]) {
   const supabase = await createAdminClient()
 
   try {
-    console.log(`[restoreEvaluations] Starting bulk restore for ${evaluationIds.length} evaluations`)
+    const idChunks = chunkArray(evaluationIds, 40)
+    let totalRestored = 0
 
-    // 1. Fetch the evaluations to be restored
-    const { data: evaluations, error: fetchError } = await supabase
-      .from("archive_evaluations")
-      .select("*")
-      .in("id", evaluationIds)
+    for (const chunk of idChunks) {
+      const { data: evaluations, error: fetchError } = await supabase
+        .from("archive_evaluations")
+        .select("*")
+        .in("id", chunk)
 
-    if (fetchError) {
-      console.error("[restoreEvaluations] Fetch error:", fetchError)
-      return { success: false, error: `Failed to fetch archived evaluations: ${fetchError.message}` }
-    }
+      if (fetchError) {
+        console.error("[restoreEvaluations] Fetch error:", fetchError)
+        return { success: false, error: `Failed to fetch archived evaluations: ${fetchError.message}` }
+      }
 
-    if (!evaluations || evaluations.length === 0) {
-      return { success: false, error: "No archived evaluations found to restore" }
-    }
+      if (evaluations && evaluations.length > 0) {
+        const evaluationsToRestore = evaluations.map(({ archived_at, ...rest }) => rest)
 
-    // 2. Prepare data without archived_at timestamp for main table
-    const evaluationsToRestore = evaluations.map(({ archived_at, ...rest }) => rest)
+        const { error: restoreError } = await supabase
+          .from("evaluations")
+          .upsert(evaluationsToRestore, { onConflict: "id" })
 
-    // 3. Insert into main table (upsert to be safe)
-    const { error: restoreError } = await supabase
-      .from("evaluations")
-      .upsert(evaluationsToRestore, { onConflict: "id" })
+        if (restoreError) {
+          console.error("[restoreEvaluations] Restore insert error:", restoreError)
+          return { success: false, error: `Failed to restore evaluations: ${restoreError.message}` }
+        }
 
-    if (restoreError) {
-      console.error("[restoreEvaluations] Restore insert error:", restoreError)
-      return { success: false, error: `Failed to restore evaluations: ${restoreError.message}` }
-    }
+        const { error: deleteError } = await supabase
+          .from("archive_evaluations")
+          .delete()
+          .in("id", chunk)
 
-    // 4. Delete from archive table
-    const { error: deleteError } = await supabase
-      .from("archive_evaluations")
-      .delete()
-      .in("id", evaluationIds)
+        if (deleteError) {
+          console.error("[restoreEvaluations] Delete from archive error:", deleteError)
+          return {
+            success: false,
+            error: `Evaluations restored but failed to delete from archive: ${deleteError.message}`,
+          }
+        }
 
-    if (deleteError) {
-      console.error("[restoreEvaluations] Delete from archive error:", deleteError)
-      return {
-        success: false,
-        error: `Evaluations restored but failed to delete from archive: ${deleteError.message}`,
+        totalRestored += evaluations.length
       }
     }
 
     revalidatePath("/admin")
-    return { success: true, message: `Successfully restored ${evaluations.length} evaluations` }
+    return { success: true, message: `Successfully restored ${totalRestored} evaluations` }
   } catch (dbError: any) {
     console.error("[restoreEvaluations] Unexpected error:", dbError)
     return { success: false, error: `Failed to restore evaluations: ${dbError.message || "Unknown error"}` }
+  }
+}
+
+// ============================================================================
+// 🌟 NEW ACADEMIC YEAR ARCHIVE SYSTEM
+// ============================================================================
+
+export async function createAcademicYearArchive(
+  name: string,
+  description?: string,
+  academicYear?: string
+): Promise<{ success: boolean; archiveId?: string; message?: string; error?: string }> {
+  const { currentUser, error } = await requireSuperAdmin()
+  if (error || !currentUser) {
+    return { success: false, error }
+  }
+
+  if (!name || name.trim() === "") {
+    return { success: false, error: "Archive name is required (e.g., 'Academic Year 2025-2026')" }
+  }
+
+  const supabase = await createAdminClient()
+
+  try {
+    // 1. Fetch all active classrooms and all current evaluations
+    const [{ data: classrooms, error: classError }, { data: evaluations, error: evalError }, { data: users }] = await Promise.all([
+      supabase.from("classrooms").select("*").eq("is_active", true),
+      supabase.from("evaluations").select("*"),
+      supabase.from("users").select("id, name"),
+    ])
+
+    if (classError) throw new Error(`Classroom fetch failed: ${classError.message}`)
+    if (evalError) throw new Error(`Evaluation fetch failed: ${evalError.message}`)
+
+    const evals = evaluations || []
+    const rooms = classrooms || []
+
+    // 2. Calculate Final Leaderboard Snapshot across divisions
+    const fullLeaderboard = calculateLeaderboard(evals, rooms)
+
+    // Calculate Division Champions (Rank #1 in each division)
+    const divisionChampions: Record<string, any> = {}
+    const divisions = ["Pre-School", "Elementary", "Middle School", "High School", "Technical Institute"]
+
+    for (const div of divisions) {
+      const divRankings = fullLeaderboard.filter((item) => item.classroom.division === div)
+      if (divRankings.length > 0) {
+        divisionChampions[div] = {
+          classroomId: divRankings[0].classroom.id,
+          name: divRankings[0].classroom.name,
+          grade: divRankings[0].classroom.grade,
+          totalScore: divRankings[0].totalScore,
+          averageScore: divRankings[0].averageScore,
+        }
+      }
+    }
+
+    // 3. Create Master Archive Record
+    const archivePayload = {
+      name: name.trim(),
+      academic_year: academicYear?.trim() || name.trim(),
+      description: description?.trim() || null,
+      total_evaluations: evals.length,
+      total_classrooms: rooms.length,
+      leaderboard_snapshot: fullLeaderboard,
+      division_champions: divisionChampions,
+      created_by: currentUser.id,
+      archived_at: new Date().toISOString(),
+    }
+
+    const { data: createdArchive, error: archiveInsertError } = await supabase
+      .from("academic_archives")
+      .insert(archivePayload)
+      .select("id")
+      .single()
+
+    if (archiveInsertError) {
+      throw new Error(`Failed to create academic archive: ${archiveInsertError.message}`)
+    }
+
+    const archiveId = createdArchive.id
+
+    // 4. Save evaluation detail records into academic_archive_evaluations (in safe 40-item chunks)
+    if (evals.length > 0) {
+      const userMap = new Map((users || []).map((u) => [u.id, u.name]))
+      const classMap = new Map(rooms.map((c) => [c.id, c]))
+
+      const archiveEvalRecords = evals.map((e) => {
+        const cls = classMap.get(e.classroom_id)
+        return {
+          id: e.id,
+          archive_id: archiveId,
+          classroom_id: e.classroom_id,
+          classroom_name: cls?.name || "Unknown",
+          classroom_grade: cls?.grade || "",
+          classroom_division: cls?.division || "",
+          supervisor_id: e.supervisor_id,
+          supervisor_name: userMap.get(e.supervisor_id) || "Unknown",
+          evaluation_date: e.evaluation_date,
+          items: e.items,
+          total_score: e.total_score,
+          max_score: e.max_score,
+          notes: e.notes,
+          created_at: e.created_at,
+          archived_at: new Date().toISOString(),
+        }
+      })
+
+      const evalChunks = chunkArray(archiveEvalRecords, 40)
+      for (const chunk of evalChunks) {
+        const { error: chunkError } = await supabase
+          .from("academic_archive_evaluations")
+          .upsert(chunk, { onConflict: "id" })
+
+        if (chunkError) {
+          console.error("[createAcademicYearArchive] Detail insert error:", chunkError)
+        }
+      }
+
+      // 5. Safely wipe live evaluations to reset the leaderboard for the new academic year
+      const idChunks = chunkArray(evals.map((e) => e.id), 40)
+      for (const idChunk of idChunks) {
+        await supabase.from("evaluations").delete().in("id", idChunk)
+      }
+    }
+
+    revalidatePath("/", "layout")
+    revalidatePath("/admin")
+    revalidatePath("/winners")
+
+    return {
+      success: true,
+      archiveId,
+      message: `Successfully created "${name}" archive with ${evals.length} evaluations and final standings preserved!`,
+    }
+  } catch (err: any) {
+    console.error("[createAcademicYearArchive] Error:", err)
+    return { success: false, error: err.message || "Failed to create academic year archive" }
+  }
+}
+
+export async function getAcademicArchives() {
+  const { currentUser, error } = await requireSuperAdmin()
+  if (error || !currentUser) {
+    return { success: false, error, data: [] }
+  }
+
+  const supabase = await createAdminClient()
+
+  try {
+    const { data, error: fetchError } = await supabase
+      .from("academic_archives")
+      .select("*")
+      .order("archived_at", { ascending: false })
+
+    if (fetchError) {
+      console.error("[getAcademicArchives] Error:", fetchError)
+      return { success: false, error: fetchError.message, data: [] }
+    }
+
+    return { success: true, data: data || [] }
+  } catch (err: any) {
+    console.error("[getAcademicArchives] Error:", err)
+    return { success: false, error: err.message || "Failed to fetch academic archives", data: [] }
+  }
+}
+
+export async function getAcademicArchiveById(archiveId: string) {
+  const { currentUser, error } = await requireSuperAdmin()
+  if (error || !currentUser) {
+    return { success: false, error, data: null }
+  }
+
+  const supabase = await createAdminClient()
+
+  try {
+    const { data: archive, error: archiveError } = await supabase
+      .from("academic_archives")
+      .select("*")
+      .eq("id", archiveId)
+      .single()
+
+    if (archiveError || !archive) {
+      return { success: false, error: archiveError?.message || "Archive not found", data: null }
+    }
+
+    const { data: evaluations, error: evalError } = await supabase
+      .from("academic_archive_evaluations")
+      .select("*")
+      .eq("archive_id", archiveId)
+      .order("evaluation_date", { ascending: false })
+
+    const evals = evaluations || []
+    let leaderboardSnapshot = archive.leaderboard_snapshot || []
+    const hasZeroScores = leaderboardSnapshot.length === 0 || leaderboardSnapshot.every((item: any) => !item.totalScore || item.totalScore === 0)
+
+    if (evals.length > 0 && hasZeroScores) {
+      const mappedEvals = evals.map((e: any) => ({
+        ...e,
+        classroom: {
+          id: e.classroom_id,
+          name: e.classroom_name,
+          grade: e.classroom_grade,
+          division: e.classroom_division,
+        },
+      }))
+
+      const distinctRooms = Array.from(
+        new Map(
+          evals.map((e: any) => [
+            e.classroom_id,
+            {
+              id: e.classroom_id,
+              name: e.classroom_name,
+              grade: e.classroom_grade,
+              division: e.classroom_division,
+              is_active: true,
+              description: "",
+              supervisor_id: e.supervisor_id,
+            },
+          ])
+        ).values()
+      )
+
+      leaderboardSnapshot = calculateLeaderboard(mappedEvals, distinctRooms)
+
+      const divisionChampions: Record<string, any> = {}
+      const divisions = ["Pre-School", "Elementary", "Middle School", "High School", "Technical Institute"]
+      for (const div of divisions) {
+        const divRankings = leaderboardSnapshot.filter((item: any) => item.classroom.division === div)
+        if (divRankings.length > 0 && divRankings[0].totalScore > 0) {
+          divisionChampions[div] = {
+            classroomId: divRankings[0].classroom.id,
+            name: divRankings[0].classroom.name,
+            grade: divRankings[0].classroom.grade,
+            totalScore: divRankings[0].totalScore,
+            averageScore: divRankings[0].averageScore,
+          }
+        }
+      }
+
+      await supabase
+        .from("academic_archives")
+        .update({
+          leaderboard_snapshot: leaderboardSnapshot,
+          division_champions: divisionChampions,
+          total_evaluations: evals.length,
+          total_classrooms: distinctRooms.length,
+        })
+        .eq("id", archiveId)
+
+      archive.leaderboard_snapshot = leaderboardSnapshot
+      archive.division_champions = divisionChampions
+      archive.total_evaluations = evals.length
+      archive.total_classrooms = distinctRooms.length
+    }
+
+    return {
+      success: true,
+      data: {
+        ...archive,
+        evaluations: evals,
+        leaderboard_snapshot: leaderboardSnapshot,
+      },
+    }
+  } catch (err: any) {
+    console.error("[getAcademicArchiveById] Error:", err)
+    return { success: false, error: err.message || "Failed to fetch archive details", data: null }
+  }
+}
+
+export async function deleteAcademicArchive(archiveId: string) {
+  const { currentUser, error } = await requireSuperAdmin()
+  if (error || !currentUser) {
+    return { success: false, error }
+  }
+
+  const supabase = await createAdminClient()
+
+  try {
+    const { error: deleteError } = await supabase
+      .from("academic_archives")
+      .delete()
+      .eq("id", archiveId)
+
+    if (deleteError) {
+      return { success: false, error: deleteError.message }
+    }
+
+    revalidatePath("/admin")
+    return { success: true, message: "Archive deleted successfully" }
+  } catch (err: any) {
+    return { success: false, error: err.message || "Failed to delete archive" }
   }
 }

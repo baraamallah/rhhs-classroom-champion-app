@@ -1,19 +1,26 @@
 "use client"
 
 import type { ChecklistItem, Evaluation, User } from "./types"
-import { defaultChecklistItems, mockEvaluations, users as defaultUsers } from "./data"
+import { createMockEvaluations, defaultChecklistItems, users as defaultUsers } from "./data"
+
+const STORAGE_KEYS = {
+  checklistItems: "checklistItems:v1",
+  evaluations: "evaluations:v1",
+  users: "users:v1",
+  currentUser: "currentUser:v1",
+} as const
 
 // Client-side storage using localStorage
 export const storage = {
   // Checklist items
   getChecklistItems: (): ChecklistItem[] => {
     if (typeof window === "undefined") return defaultChecklistItems
-    const stored = localStorage.getItem("checklistItems")
+    const stored = localStorage.getItem(STORAGE_KEYS.checklistItems)
     return stored ? JSON.parse(stored) : defaultChecklistItems
   },
 
   setChecklistItems: (items: ChecklistItem[]) => {
-    localStorage.setItem("checklistItems", JSON.stringify(items))
+    localStorage.setItem(STORAGE_KEYS.checklistItems, JSON.stringify(items))
   },
 
   addChecklistItem: async (
@@ -37,7 +44,7 @@ export const storage = {
         is_active: true,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        assigned_supervisors: assignedSupervisorIds.map(id => ({ id }))
+        assigned_supervisors: assignedSupervisorIds.map(id => ({ id, name: "", email: "" }))
       }
       items.push(newItem)
       storage.setChecklistItems(items)
@@ -73,7 +80,7 @@ export const storage = {
         display_order: displayOrder,
         is_active: isActive !== undefined ? isActive : items[index].is_active,
         updated_at: new Date().toISOString(),
-        assigned_supervisors: assignedSupervisorIds.map(supId => ({ id: supId }))
+        assigned_supervisors: assignedSupervisorIds.map(id => ({ id, name: "", email: "" }))
       }
       
       storage.setChecklistItems(items)
@@ -101,46 +108,46 @@ export const storage = {
 
   // Evaluations
   getEvaluations: (): Evaluation[] => {
-    if (typeof window === "undefined") return mockEvaluations
-    const stored = localStorage.getItem("evaluations")
-    return stored ? JSON.parse(stored) : mockEvaluations
+    if (typeof window === "undefined") return createMockEvaluations()
+    const stored = localStorage.getItem(STORAGE_KEYS.evaluations)
+    return stored ? JSON.parse(stored) : createMockEvaluations()
   },
 
   addEvaluation: (evaluation: Evaluation) => {
     const evaluations = storage.getEvaluations()
     evaluations.push(evaluation)
-    localStorage.setItem("evaluations", JSON.stringify(evaluations))
+    localStorage.setItem(STORAGE_KEYS.evaluations, JSON.stringify(evaluations))
   },
 
   // Users
   getUsers: (): User[] => {
     if (typeof window === "undefined") return defaultUsers
-    const stored = localStorage.getItem("users")
+    const stored = localStorage.getItem(STORAGE_KEYS.users)
     return stored ? JSON.parse(stored) : defaultUsers
   },
 
   addUser: (user: User) => {
     const users = storage.getUsers()
     users.push(user)
-    localStorage.setItem("users", JSON.stringify(users))
+    localStorage.setItem(STORAGE_KEYS.users, JSON.stringify(users))
   },
 
   // Auth
   getCurrentUser: (): User | null => {
     if (typeof window === "undefined") return null
-    const stored = localStorage.getItem("currentUser")
+    const stored = localStorage.getItem(STORAGE_KEYS.currentUser)
     return stored ? JSON.parse(stored) : null
   },
 
   setCurrentUser: (user: User | null) => {
     if (user) {
-      localStorage.setItem("currentUser", JSON.stringify(user))
+      localStorage.setItem(STORAGE_KEYS.currentUser, JSON.stringify(user))
     } else {
-      localStorage.removeItem("currentUser")
+      localStorage.removeItem(STORAGE_KEYS.currentUser)
     }
   },
 
   logout: () => {
-    localStorage.removeItem("currentUser")
+    localStorage.removeItem(STORAGE_KEYS.currentUser)
   },
 }

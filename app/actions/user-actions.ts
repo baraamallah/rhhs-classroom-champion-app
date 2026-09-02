@@ -1,7 +1,7 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/server"
 import { clearSessionCookie, getSessionFromCookies } from "@/lib/auth/session"
 import { generateSecurePassword } from "./password-actions"
 
@@ -20,7 +20,7 @@ async function requireAdmin(): Promise<{ currentUser?: CurrentUser; error?: stri
     return { error: "Not authenticated" }
   }
 
-  const supabase = await createClient()
+  const supabase = await createAdminClient()
   const { data: userData, error: userError } = await supabase
     .from('users')
     .select('id, role, is_active')
@@ -28,7 +28,7 @@ async function requireAdmin(): Promise<{ currentUser?: CurrentUser; error?: stri
     .single()
 
   if (userError || !userData) {
-    await clearSessionCookie()
+    console.error("[user-actions] requireAdmin check failed:", userError?.message || "User not found")
     return { error: "Not authenticated" }
   }
 
@@ -60,7 +60,7 @@ export async function createUserAccount(formData: { email: string; role: Managed
     return { success: false, error: "Name and email are required" }
   }
 
-  const supabase = await createClient()
+  const supabase = await createAdminClient()
 
   try {
     const { error } = await supabase
@@ -98,12 +98,12 @@ export async function getAllUsers() {
     return { success: false, error, data: [] as any[] }
   }
 
-  const supabase = await createClient()
+  const supabase = await createAdminClient()
 
   try {
     let query = supabase
       .from('users')
-      .select('*')
+      .select('id, email, name, role, is_active, created_at')
       .eq('is_active', true)
       .order('created_at', { ascending: false })
 
@@ -132,7 +132,14 @@ export async function getAllUsers() {
       if (!relError && supervisorClassrooms) {
         for (const item of supervisorClassrooms) {
           const existing = classroomsBySupervisor.get(item.supervisor_id) || []
-          existing.push(item.classrooms as { id: string; name: string; grade: string })
+          const relatedClassrooms = Array.isArray(item.classrooms)
+            ? item.classrooms
+            : [item.classrooms]
+          for (const classroom of relatedClassrooms) {
+            if (classroom?.id && classroom.name && classroom.grade) {
+              existing.push({ id: classroom.id, name: classroom.name, grade: classroom.grade })
+            }
+          }
           classroomsBySupervisor.set(item.supervisor_id, existing)
         }
       }
@@ -143,7 +150,7 @@ export async function getAllUsers() {
       email: row.email,
       name: row.name,
       role: row.role,
-      password_hash: row.password_hash,
+      password_hash: undefined,
       created_by: undefined,
       is_active: row.is_active,
       created_at: row.created_at,
@@ -168,7 +175,7 @@ export async function deleteUser(userId: string) {
     return { success: false, error: "Cannot deactivate your own account" }
   }
 
-  const supabase = await createClient()
+  const supabase = await createAdminClient()
 
   try {
     const { data: targetData, error: targetError } = await supabase
@@ -216,7 +223,7 @@ export async function updateUser(formData: { userId: string; email: string; name
 
   // Allow admins to edit admin accounts, but not create them (restriction remains in createUserAccount)
 
-  const supabase = await createClient()
+  const supabase = await createAdminClient()
 
   try {
     // Check if user exists and current user has permission to edit
@@ -270,7 +277,7 @@ export async function updateUserPassword(formData: { userId: string; password: s
     return { success: false, error: "Password must be at least 8 characters" }
   }
 
-  const supabase = await createClient()
+  const supabase = await createAdminClient()
 
   try {
     // Check if user exists and current user has permission to edit
@@ -317,7 +324,7 @@ export async function sendUserPasswordReset(email: string) {
   }
 
   const normalizedEmail = email.trim().toLowerCase()
-  const supabase = await createClient()
+  const supabase = await createAdminClient()
 
   try {
     const { data: userData, error: userError } = await supabase
@@ -362,7 +369,7 @@ export async function getSupervisorClassrooms(supervisorId: string) {
     return { success: false, error, data: [] }
   }
 
-  const supabase = await createClient()
+  const supabase = await createAdminClient()
   
   try {
     // Query using the classroom_supervisors junction table
@@ -392,7 +399,7 @@ export async function getAvailableClassrooms() {
     return { success: false, error, data: [] }
   }
 
-  const supabase = await createClient()
+  const supabase = await createAdminClient()
 
   try {
     const { data, error: queryError } = await supabase
@@ -419,7 +426,7 @@ export async function assignSupervisorToClassrooms(supervisorId: string, classro
     return { success: false, error }
   }
 
-  const supabase = await createClient()
+  const supabase = await createAdminClient()
   
   try {
     // First, remove all existing assignments for this supervisor from the junction table
@@ -455,5 +462,56 @@ export async function assignSupervisorToClassrooms(supervisorId: string, classro
   } catch (dbError) {
     console.error("[user-actions] assignSupervisorToClassrooms error", dbError)
     return { success: false, error: "Failed to update classroom assignments" }
+  }
+}
+
+export async function assignDivisionToSupervisor(supervisorId: string, division: string, replaceExisting = false) {
+  const { currentUser, error } = await requireAdmin()
+  if (error || !currentUser) {
+    return { success: false, error }
+  }
+
+  const supabase = await createAdminClient()
+
+  try {
+    const { data: divisionClassrooms, error: queryError } = await supabase
+      .from("classrooms")
+      .select("id")
+      .eq("division", division)
+      .eq("is_active", true)
+
+    if (queryError) {
+      return { success: false, error: queryError.message }
+    }
+
+    if (!divisionClassrooms || divisionClassrooms.length === 0) {
+      return { success: false, error: `No active classrooms found in ${division}` }
+    }
+
+    const divisionIds = divisionClassrooms.map((c) => c.id)
+
+    if (replaceExisting) {
+      await supabase.from("classroom_supervisors").delete().eq("supervisor_id", supervisorId)
+      const assignments = divisionIds.map((id) => ({
+        classroom_id: id,
+        supervisor_id: supervisorId,
+      }))
+      await supabase.from("classroom_supervisors").insert(assignments)
+    } else {
+      const assignments = divisionIds.map((id) => ({
+        classroom_id: id,
+        supervisor_id: supervisorId,
+      }))
+      await supabase.from("classroom_supervisors").upsert(assignments, { onConflict: "classroom_id, supervisor_id" })
+    }
+
+    revalidatePath("/admin")
+    return {
+      success: true,
+      message: `Assigned all ${divisionIds.length} classrooms in ${division} to supervisor.`,
+    }
+  } catch (dbError: any) {
+    console.error("[user-actions] assignDivisionToSupervisor error", dbError)
+    return { success: false, error: dbError.message || "Failed to assign division" }
   }
 }

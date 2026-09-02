@@ -94,7 +94,6 @@ export async function getWinnersPageVisibility(): Promise<{ success: boolean; vi
     const rawValue = data?.value
     const visible = rawValue === null || rawValue === undefined ? true : (rawValue === true || rawValue === "true")
     
-    console.log(`[getWinnersPageVisibility] Returning visible: ${visible} (raw: ${rawValue})`)
     return { success: true, visible }
   } catch (error: any) {
     console.error("[getWinnersPageVisibility] Unexpected error:", error)
@@ -128,7 +127,6 @@ export async function setWinnersPageVisibility(visible: boolean): Promise<{ succ
       return { success: false, error: upsertError.message }
     }
 
-    console.log(`[setWinnersPageVisibility] Setting winners_page_visible to: ${visible}`)
     revalidatePath("/", "layout")
     revalidatePath("/winners")
     revalidatePath("/admin")
@@ -157,7 +155,6 @@ export async function getLeaderboardPointsSetting(): Promise<{ success: boolean;
     const rawValue = data?.value
     const showMonthly = rawValue === null || rawValue === undefined ? true : (rawValue === true || rawValue === "true")
     
-    console.log(`[getLeaderboardPointsSetting] Returning showMonthly: ${showMonthly} (raw: ${rawValue})`)
     return { success: true, showMonthly }
   } catch (error: any) {
     console.error("[getLeaderboardPointsSetting] Unexpected error:", error)
@@ -191,7 +188,6 @@ export async function setLeaderboardPointsSetting(showMonthly: boolean): Promise
       return { success: false, error: upsertError.message }
     }
 
-    console.log(`[setLeaderboardPointsSetting] Setting leaderboard_show_monthly to: ${showMonthly}`)
     revalidatePath("/")
     revalidatePath("/admin")
     return { success: true }
@@ -219,7 +215,6 @@ export async function getCalculationMode(): Promise<{ success: boolean; enabled?
     const rawValue = data?.value
     const enabled = rawValue === true || rawValue === "true"
 
-    console.log(`[getCalculationMode] Returning enabled: ${enabled} (raw: ${rawValue})`)
     return { success: true, enabled }
   } catch (error: any) {
     console.error("[getCalculationMode] Unexpected error:", error)
@@ -253,7 +248,6 @@ export async function setCalculationMode(enabled: boolean): Promise<{ success: b
       return { success: false, error: upsertError.message }
     }
 
-    console.log(`[setCalculationMode] Setting calculation_mode to: ${enabled}`)
     revalidatePath("/")
     revalidatePath("/admin")
     revalidatePath("/winners")
@@ -282,7 +276,6 @@ export async function getWinnerRevealMode(): Promise<{ success: boolean; enabled
     const rawValue = data?.value
     const enabled = rawValue === true || rawValue === "true"
 
-    console.log(`[getWinnerRevealMode] Returning enabled: ${enabled} (raw: ${rawValue})`)
     return { success: true, enabled }
   } catch (error: any) {
     console.error("[getWinnerRevealMode] Unexpected error:", error)
@@ -316,7 +309,6 @@ export async function setWinnerRevealMode(enabled: boolean): Promise<{ success: 
       return { success: false, error: upsertError.message }
     }
 
-    console.log(`[setWinnerRevealMode] Setting winner_reveal_mode to: ${enabled}`)
     revalidatePath("/")
     revalidatePath("/admin")
     revalidatePath("/winners")
@@ -376,23 +368,36 @@ export async function setDefaultMonthSetting(
   try {
     const supabase = await createAdminClient()
 
-    const settingData = {
-      key,
-      value: setting,
-      description: key === "winners_display_month"
-        ? "Sets a specific month to display on the winners page (null for current)"
-        : "Sets a specific month to display on the leaderboard when in monthly mode (null for current)",
-      updated_by: currentUser.id,
-      updated_at: new Date().toISOString(),
-    }
+    if (setting === null) {
+      // Deleting the setting key restores the system to the default (Current Month)
+      const { error: deleteError } = await supabase
+        .from("system_settings")
+        .delete()
+        .eq("key", key)
 
-    const { error: upsertError } = await supabase
-      .from("system_settings")
-      .upsert(settingData, { onConflict: "key" })
+      if (deleteError) {
+        console.error("[setDefaultMonthSetting] Delete error:", deleteError)
+        return { success: false, error: deleteError.message }
+      }
+    } else {
+      const settingData = {
+        key,
+        value: setting,
+        description: key === "winners_display_month"
+          ? "Sets a specific month to display on the winners page (null for current)"
+          : "Sets a specific month to display on the leaderboard when in monthly mode (null for current)",
+        updated_by: currentUser.id,
+        updated_at: new Date().toISOString(),
+      }
 
-    if (upsertError) {
-      console.error("[setDefaultMonthSetting] Upsert error:", upsertError)
-      return { success: false, error: upsertError.message }
+      const { error: upsertError } = await supabase
+        .from("system_settings")
+        .upsert(settingData, { onConflict: "key" })
+
+      if (upsertError) {
+        console.error("[setDefaultMonthSetting] Upsert error:", upsertError)
+        return { success: false, error: upsertError.message }
+      }
     }
 
     revalidatePath("/")

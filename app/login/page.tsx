@@ -1,8 +1,18 @@
+import type { Metadata } from "next"
 import Link from "next/link"
 import Image from "next/image"
-import { LoginForm } from "@/components/login-form"
+import { LoginForm } from "@/components/features/auth/login-form"
 import { Button } from "@/components/ui/button"
-import { ThemeToggle } from "@/components/theme-toggle"
+import { ThemeToggle } from "@/components/layout/theme-toggle"
+
+export const metadata: Metadata = {
+  title: "Sign In",
+  description: "Sign in to the RHHS Classroom Champion platform to manage classrooms, evaluations, and awards.",
+  robots: {
+    index: false,
+    follow: false,
+  },
+}
 
 export default function LoginPage() {
   return (
@@ -22,8 +32,8 @@ export default function LoginPage() {
                 />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-foreground">ECO Club</h1>
-                <p className="text-xs text-muted-foreground">Classroom Champion</p>
+                <span className="text-xl font-bold text-foreground block">ECO Club</span>
+                <span className="text-xs text-muted-foreground block">Classroom Champion</span>
               </div>
             </Link>
             <ThemeToggle />
@@ -32,7 +42,7 @@ export default function LoginPage() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 flex items-center justify-center px-4 py-12">
+      <main id="main-content" className="flex-1 flex items-center justify-center px-4 py-12">
         <div className="w-full max-w-md">
           <LoginForm />
           <div className="mt-6 text-center space-y-2">

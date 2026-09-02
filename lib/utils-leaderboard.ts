@@ -33,33 +33,28 @@ export function calculateLeaderboard(
 
   // Calculate totals for each classroom
   evaluations.forEach((evaluation) => {
-    if (!evaluation.classroom) return
+    const existing = scoreMap.get(evaluation.classroom_id)
+    if (!existing && !evaluation.classroom) return
 
-    const existing = scoreMap.get(evaluation.classroom_id) || {
-      classroom: {
-        id: evaluation.classroom_id,
-        name: evaluation.classroom.name,
-        grade: evaluation.classroom.grade,
-        division: evaluation.classroom.division,
-      },
-      total: 0,
-      count: 0,
-      lastDate: evaluation.evaluation_date,
+    const roomInfo = existing?.classroom || {
+      id: evaluation.classroom_id,
+      name: evaluation.classroom?.name || "Unknown Classroom",
+      grade: evaluation.classroom?.grade || "",
+      division: evaluation.classroom?.division,
     }
 
+    const currentTotal = (existing?.total || 0) + (evaluation.total_score || 0)
+    const currentCount = (existing?.count || 0) + 1
+    const currentDate =
+      !existing || existing.lastDate === "Never" || (evaluation.evaluation_date && new Date(evaluation.evaluation_date) > new Date(existing.lastDate))
+        ? evaluation.evaluation_date || "Never"
+        : existing.lastDate
+
     scoreMap.set(evaluation.classroom_id, {
-      classroom: {
-        id: evaluation.classroom_id,
-        name: evaluation.classroom.name,
-        grade: evaluation.classroom.grade,
-        division: evaluation.classroom.division,
-      },
-      total: existing.total + evaluation.total_score,
-      count: existing.count + 1,
-      lastDate:
-        existing.lastDate === "Never" || new Date(evaluation.evaluation_date) > new Date(existing.lastDate)
-          ? evaluation.evaluation_date
-          : existing.lastDate,
+      classroom: roomInfo,
+      total: currentTotal,
+      count: currentCount,
+      lastDate: currentDate,
     })
   })
 

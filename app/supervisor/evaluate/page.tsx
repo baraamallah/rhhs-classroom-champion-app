@@ -1,12 +1,12 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { Suspense, useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { ProtectedRoute } from "@/components/protected-route"
-import { DashboardHeader } from "@/components/dashboard-header"
-import { ClassroomSelector } from "@/components/classroom-selector"
-import { EvaluationForm } from "@/components/evaluation-form"
-import { EvaluationSuccess } from "@/components/evaluation-success"
+import { ProtectedRoute } from "@/components/providers/protected-route"
+import { DashboardHeader } from "@/components/layout/dashboard-header"
+import { ClassroomSelector } from "@/components/features/evaluations/classroom-selector"
+import { EvaluationForm } from "@/components/features/evaluations/evaluation-form"
+import { EvaluationSuccess } from "@/components/features/evaluations/evaluation-success"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { getClassrooms } from "@/lib/supabase-data"
@@ -17,7 +17,7 @@ import { AlertCircle } from "lucide-react"
 type ViewState = "select" | "evaluate" | "success" | "closed"
 
 interface SupervisorEvaluateContentProps {
-  currentUser: User
+  currentUser?: User
 }
 
 function SupervisorEvaluateContent({ currentUser }: SupervisorEvaluateContentProps) {
@@ -85,6 +85,8 @@ function SupervisorEvaluateContent({ currentUser }: SupervisorEvaluateContentPro
   const handleBackToDashboard = () => {
     router.push("/supervisor")
   }
+
+  if (!currentUser) return null
 
   return (
     <div className="min-h-screen bg-background">
@@ -176,10 +178,18 @@ function SupervisorEvaluateContent({ currentUser }: SupervisorEvaluateContentPro
   )
 }
 
-export default function SupervisorEvaluatePage() {
+function SupervisorEvaluatePageContent() {
   return (
     <ProtectedRoute allowedRoles={["supervisor"]}>
       <SupervisorEvaluateContent />
     </ProtectedRoute>
+  )
+}
+
+export default function SupervisorEvaluatePage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-background" />}>
+      <SupervisorEvaluatePageContent />
+    </Suspense>
   )
 }

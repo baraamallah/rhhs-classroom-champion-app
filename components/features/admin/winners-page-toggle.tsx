@@ -1,0 +1,104 @@
+"use client"
+
+import { useState, useEffect, useRef } from "react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { useToast } from "@/hooks/use-toast"
+import { Eye, EyeOff, Trophy } from "lucide-react"
+import { getWinnersPageVisibility, setWinnersPageVisibility } from "@/app/actions/winners-page-actions"
+// TODO: Refactor to avoid using cookies for static rendering or switch to dynamic rendering.
+
+interface WinnersPageToggleProps {
+  initialVisible?: boolean
+}
+
+export function WinnersPageToggle({ initialVisible }: WinnersPageToggleProps) {
+  const { toast } = useToast()
+  const [visible, setVisible] = useState<boolean>(initialVisible ?? true)
+  const [loading, setLoading] = useState(initialVisible === undefined)
+  const [saving, setSaving] = useState(false)
+
+  const hasLoaded = useRef(false)
+
+  useEffect(() => {
+    if (initialVisible !== undefined || hasLoaded.current) return
+    hasLoaded.current = true
+    loadVisibility()
+  }, [])
+
+  const loadVisibility = async () => {
+    setLoading(true)
+    try {
+      const result = await getWinnersPageVisibility()
+      if (result.success) setVisible(result.visible ?? true)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleToggle = async () => {
+    setSaving(true)
+    const newVisibility = !visible
+    try {
+      const result = await setWinnersPageVisibility(newVisibility)
+      if (result.success) {
+        setVisible(newVisibility)
+        toast({ title: "Success", description: newVisibility ? "Winners page is now visible to all users" : "Winners page is now hidden" })
+      } else {
+        toast({ title: "Error", description: result.error || "Failed to update visibility", variant: "destructive" })
+      }
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Trophy className="h-5 w-5" />
+          Winners Page Control
+        </CardTitle>
+        <CardDescription>
+          Control the visibility of the animated winners/leaderboard page
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="font-medium">Winners Page Visibility</p>
+            <p className="text-sm text-muted-foreground">
+              {visible ? "Page is currently visible to all users" : "Page is currently hidden"}
+            </p>
+          </div>
+          <Button
+            onClick={handleToggle}
+            disabled={loading || saving}
+            variant={visible ? "default" : "outline"}
+          >
+            {loading ? (
+              "Loading..."
+            ) : visible ? (
+              <>
+                <EyeOff className="h-4 w-4 mr-2" />
+                Hide Page
+              </>
+            ) : (
+              <>
+                <Eye className="h-4 w-4 mr-2" />
+                Show Page
+              </>
+            )}
+          </Button>
+        </div>
+        {visible && (
+          <div className="mt-4 p-3 bg-primary/10 rounded-lg border border-primary/20">
+            <p className="text-sm text-muted-foreground">
+              Users can access the winners page at: <code className="text-primary">/winners</code>
+            </p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}

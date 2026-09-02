@@ -69,34 +69,38 @@ export async function exportDataAsExcel() {
     const DIVISIONS = DIVISION_OPTIONS.map(opt => opt.value)
     const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 
-    // 1. Fetch all data
-    const { data: evaluations } = await supabase
-      .from("evaluations")
-      .select(`*, classrooms:classroom_id (name, grade, division), users:supervisor_id (name, email)`)
-      .order("evaluation_date", { ascending: false })
-
-    const { data: archivedEvals } = await supabase
-      .from("archive_evaluations")
-      .select("*")
-      .order("archived_at", { ascending: false })
-
-    const { data: classrooms } = await supabase
-      .from("classrooms")
-      .select("*")
-      .order("name", { ascending: true })
-
-    const { data: supervisors } = await supabase
-      .from("users")
-      .select("*")
-      .eq("role", "supervisor")
-      .eq("is_active", true)
-      .order("name", { ascending: true })
-
-    const { data: winners } = await supabase
-      .from("monthly_winners")
-      .select(`*, classrooms:classroom_id (name, grade, division), declared_by_user:declared_by (name, email)`)
-      .order("year", { ascending: false })
-      .order("month", { ascending: false })
+    // 1. Fetch all data concurrently
+    const [
+      { data: evaluations },
+      { data: archivedEvals },
+      { data: classrooms },
+      { data: supervisors },
+      { data: winners }
+    ] = await Promise.all([
+      supabase
+        .from("evaluations")
+        .select(`*, classrooms:classroom_id (name, grade, division), users:supervisor_id (name, email)`)
+        .order("evaluation_date", { ascending: false }),
+      supabase
+        .from("archive_evaluations")
+        .select("*")
+        .order("archived_at", { ascending: false }),
+      supabase
+        .from("classrooms")
+        .select("*")
+        .order("name", { ascending: true }),
+      supabase
+        .from("users")
+        .select("*")
+        .eq("role", "supervisor")
+        .eq("is_active", true)
+        .order("name", { ascending: true }),
+      supabase
+        .from("monthly_winners")
+        .select(`*, classrooms:classroom_id (name, grade, division), declared_by_user:declared_by (name, email)`)
+        .order("year", { ascending: false })
+        .order("month", { ascending: false }),
+    ])
 
     // 2. Summary Dashboard Sheet
     const totalEvaluations = (evaluations?.length || 0) + (archivedEvals?.length || 0)
