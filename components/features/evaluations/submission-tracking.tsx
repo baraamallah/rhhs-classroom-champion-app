@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo, useRef } from "react"
+import { useState, useEffect, useMemo, useRef, useDeferredValue } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -47,6 +47,7 @@ function useSubmissionTrackingContent({ currentUser }: SubmissionTrackingProps) 
   const [evaluations, setEvaluations] = useState<Evaluation[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
+  const deferredSearch = useDeferredValue(searchTerm)
   const [selectedDivision, setSelectedDivision] = useState<string>("all")
   const [exporting, setExporting] = useState(false)
 
@@ -113,8 +114,8 @@ function useSubmissionTrackingContent({ currentUser }: SubmissionTrackingProps) 
     if (selectedDivision !== "all") {
       filtered = filtered.filter(c => c.division === selectedDivision)
     }
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase()
+    if (deferredSearch) {
+      const term = deferredSearch.toLowerCase()
       filtered = filtered.filter(c =>
         c.name.toLowerCase().includes(term) ||
         c.grade.toLowerCase().includes(term) ||
@@ -122,7 +123,7 @@ function useSubmissionTrackingContent({ currentUser }: SubmissionTrackingProps) 
       )
     }
     return filtered
-  }, [classrooms, selectedDivision, searchTerm])
+  }, [classrooms, selectedDivision, deferredSearch])
 
   const submissionStats = useMemo(() => {
     if (viewType === "daily") {

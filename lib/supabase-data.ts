@@ -387,14 +387,18 @@ export async function submitEvaluation(
   supervisorId: string,
   checkedItemIds: string[],
   totalScore: number,
-  maxScore: number
+  maxScore: number,
+  evaluationDate?: string,
+  notes?: string
 ): Promise<{ success: boolean; error?: string }> {
   return await submitEvaluationAction(
     classroomId,
     supervisorId,
     checkedItemIds,
     totalScore,
-    maxScore
+    maxScore,
+    evaluationDate,
+    notes
   )
 }
 

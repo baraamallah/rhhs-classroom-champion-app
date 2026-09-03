@@ -1,97 +1,41 @@
 "use client"
 
-import { m } from "framer-motion"
-import { useEffect, useState } from "react"
 import Image from "next/image"
 
-import { LazyMotionProvider } from "@/components/providers/lazy-motion-provider"
 export default function Loading() {
-  const [showContent, setShowContent] = useState(false)
+  return (
+    <div className="min-h-[70vh] flex flex-col items-center justify-center p-6 select-none">
+      <div className="relative flex items-center justify-center">
+        {/* Soft pulsing halo */}
+        <div className="absolute w-28 h-28 rounded-full bg-primary/20 animate-ping opacity-60 pointer-events-none" />
+        <div className="absolute w-24 h-24 rounded-full bg-emerald-500/15 blur-xl pointer-events-none" />
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowContent(true)
-    }, 5000)
-
-    return () => clearTimeout(timer)
-  }, [])
-
-  if (!showContent) {
-    return (
-      <LazyMotionProvider>
-        <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-8">
-          <m.div
-          animate={{
-            rotate: [0, 10, -10, 10, 0],
-            y: [0, -20, 0]
-          }}
-          transition={{
-            duration: 2,
-            repeat: Infinity,
-            ease: "easeInOut"
-          }}
-        >
-          <Image 
-            src="/icon.svg" 
-            alt="Loading" 
-            width={120} 
-            height={120}
+        {/* Brand Icon */}
+        <div className="relative z-10 w-20 h-20 rounded-2xl bg-card border border-border shadow-xl p-3 flex items-center justify-center">
+          <Image
+            src="/Eco Champ.png"
+            alt="Eco Champ"
+            width={64}
+            height={64}
+            className="w-full h-full object-contain animate-pulse"
             priority
           />
-          </m.div>
-        
-          <m.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5, duration: 0.8 }}
-          className="text-center"
-        >
-          <m.h2 
-            className="text-2xl font-bold mb-2"
-            animate={{ 
-              opacity: [0.5, 1, 0.5],
-            }}
-            transition={{
-              duration: 2,
-              repeat: Infinity,
-              ease: "easeInOut"
-            }}
-          >
-            Loading...
-          </m.h2>
-          
-          <m.p
-            className="text-muted-foreground"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 1, duration: 0.6 }}
-          >
-            Preparing your evaluation
-          </m.p>
-          </m.div>
-
-          <div className="flex gap-2">
-            {[0, 1, 2].map((i) => (
-              <m.div
-                key={i}
-                className="w-3 h-3 bg-primary rounded-full"
-                animate={{
-                  scale: [1, 1.5, 1],
-                  opacity: [0.5, 1, 0.5]
-                }}
-                transition={{
-                  duration: 1.5,
-                  repeat: Infinity,
-                  delay: i * 0.2,
-                  ease: "easeInOut"
-                }}
-              />
-            ))}
-          </div>
         </div>
-      </LazyMotionProvider>
-    )
-  }
+      </div>
 
-  return null
+      <div className="mt-6 text-center space-y-1.5">
+        <h3 className="text-base font-bold text-foreground">
+          Loading Classroom Inspection...
+        </h3>
+        <p className="text-xs text-muted-foreground max-w-xs">
+          Preparing daily rubrics and verification checklist
+        </p>
+      </div>
+
+      {/* Shimmering Progress Indicator */}
+      <div className="mt-6 w-36 h-1.5 bg-muted rounded-full overflow-hidden">
+        <div className="h-full w-full bg-linear-to-r from-primary/30 via-primary to-primary/30 rounded-full animate-pulse" />
+      </div>
+    </div>
+  )
 }

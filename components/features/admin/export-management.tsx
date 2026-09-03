@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
+import { useExcelWorker } from "@/lib/workers/use-excel-worker"
 import { exportAllDataAsZip, exportDataAsExcel } from "@/app/actions/export-data-actions"
 import { getEvaluationsByDateRange, getClassrooms } from "@/lib/supabase-data"
 import { DIVISION_OPTIONS } from "@/lib/division-display"
@@ -28,6 +29,7 @@ import {
 
 export function ExportManagement() {
   const { toast } = useToast()
+  const { exportSheets, isExporting: isWorkerExporting, exportProgress } = useExcelWorker()
   const [exportingZip, setExportingZip] = useState(false)
   const [exportingExcel, setExportingExcel] = useState(false)
   const [exportingCustom, setExportingCustom] = useState(false)
@@ -80,7 +82,7 @@ export function ExportManagement() {
     })
   }
 
-  // 1. Export Master Excel Workbook
+  // 1. Export Master Excel Workbook via Web Worker
   const handleExportMasterExcel = async () => {
     setExportingExcel(true)
     try {
@@ -94,55 +96,8 @@ export function ExportManagement() {
         return
       }
 
-      const XLSX = await loadScript("https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js", "XLSX")
-      const workbook = XLSX.utils.book_new()
-
-      result.sheets.forEach((sheet: any) => {
-        const wsData: (string | number)[][] = []
-
-        if (sheet.stats && sheet.stats.length > 0) {
-          wsData.push(["=== SUMMARY STATISTICS ===", ""])
-          sheet.stats.forEach((stat: any) => {
-            wsData.push([stat.label, stat.value])
-          })
-          wsData.push([])
-          wsData.push([])
-        }
-
-        wsData.push(sheet.headers)
-        sheet.rows.forEach((row: any) => {
-          wsData.push(row)
-        })
-
-        const ws = XLSX.utils.aoa_to_sheet(wsData)
-        const colWidths = sheet.headers.map((_: any, i: number) => {
-          const maxLen = Math.max(
-            sheet.headers[i]?.toString().length || 10,
-            ...sheet.rows.map((row: any) => row[i]?.toString().length || 0)
-          )
-          return { wch: Math.min(Math.max(maxLen + 2, 12), 45) }
-        })
-        ws["!cols"] = colWidths
-
-        const sheetName = sheet.name.substring(0, 31)
-        XLSX.utils.book_append_sheet(workbook, ws, sheetName)
-      })
-
-      const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" })
-      const blob = new Blob([excelBuffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement("a")
-      a.href = url
-      a.download = `RHHS-Classroom-Champion-Master-Report-${format(new Date(), "yyyy-MM-dd")}.xlsx`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
-
-      toast({
-        title: "Master Excel Report Generated",
-        description: `Exported ${result.sheets.length} sheets successfully.`,
-      })
+      const fileName = `RHHS-Classroom-Champion-Master-Report-${format(new Date(), "yyyy-MM-dd")}.xlsx`
+      await exportSheets(result.sheets, fileName)
     } catch (err: any) {
       console.error("Excel generation error:", err)
       toast({
@@ -265,43 +220,19 @@ export function ExportManagement() {
         ]
       })
 
-      const wsData = [
-        ["=== CUSTOM EVALUATION REPORT ===", ""],
-        ["Date Range", `${startDate} to ${endDate}`],
-        ["Division Filter", selectedDivision === "all" ? "All Divisions" : selectedDivision],
-        ["Total Records", filtered.length],
-        [],
+      const sheet = {
+        name: "Evaluations",
         headers,
-        ...rows,
-      ]
+        rows,
+        stats: [
+          { label: "Date Range", value: `${startDate} to ${endDate}` },
+          { label: "Division Filter", value: selectedDivision === "all" ? "All Divisions" : selectedDivision },
+          { label: "Total Records", value: filtered.length },
+        ],
+      }
 
-      const ws = XLSX.utils.aoa_to_sheet(wsData)
-      const colWidths = headers.map((_, i) => {
-        const maxLen = Math.max(
-          headers[i].length,
-          ...rows.map((r) => r[i]?.toString().length || 0)
-        )
-        return { wch: Math.min(Math.max(maxLen + 2, 12), 40) }
-      })
-      ws["!cols"] = colWidths
-
-      XLSX.utils.book_append_sheet(workbook, ws, "Evaluations")
-
-      const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" })
-      const blob = new Blob([excelBuffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement("a")
-      a.href = url
-      a.download = `RHHS-Evaluations-${startDate}-to-${endDate}.xlsx`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
-
-      toast({
-        title: "Filtered Export Ready",
-        description: `Exported ${filtered.length} evaluation records to Excel.`,
-      })
+      const fileName = `RHHS-Evaluations-${startDate}-to-${endDate}.xlsx`
+      await exportSheets([sheet], fileName)
     } catch (err: any) {
       console.error("Custom export error:", err)
       toast({
@@ -342,12 +273,12 @@ export function ExportManagement() {
           <CardContent className="pt-0">
             <Button
               onClick={handleExportMasterExcel}
-              disabled={exportingExcel}
+              disabled={exportingExcel || isWorkerExporting}
               className="w-full rounded-xl gap-2 font-semibold shadow-xs cursor-pointer"
             >
-              {exportingExcel ? (
+              {exportingExcel || isWorkerExporting ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin" /> Compiling Sheets...
+                  <Loader2 className="h-4 w-4 animate-spin" /> {exportProgress || "Compiling Sheets..."}
                 </>
               ) : (
                 <>
@@ -396,7 +327,7 @@ export function ExportManagement() {
 
       {/* Filtered Evaluations Export Section */}
       <Card className="border-border/60 bg-card/60 backdrop-blur-md shadow-xs">
-        <CardHeader className="border-b border-border/40 pb-4">
+        <CardHeader className="border-b border-border/40 p-4 sm:p-5">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-xl bg-primary/10 text-primary">
               <Filter className="h-5 w-5" />
@@ -487,12 +418,12 @@ export function ExportManagement() {
             </p>
             <Button
               onClick={handleExportCustomEvaluations}
-              disabled={exportingCustom}
+              disabled={exportingCustom || isWorkerExporting}
               className="w-full sm:w-auto rounded-xl gap-2 font-semibold shadow-xs cursor-pointer"
             >
-              {exportingCustom ? (
+              {exportingCustom || isWorkerExporting ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin" /> Exporting...
+                  <Loader2 className="h-4 w-4 animate-spin" /> {exportProgress || "Exporting..."}
                 </>
               ) : (
                 <>

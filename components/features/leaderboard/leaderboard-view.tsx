@@ -24,15 +24,15 @@ export function LeaderboardView({ leaderboard, calculationMode, winnerRevealMode
         <div className="container mx-auto px-4 py-12 relative overflow-hidden">
           <m.div
             className="text-center mb-16 relative z-10"
-            initial={{ opacity: 0, y: -20 }}
+            initial={false}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
+            transition={{ duration: 0.5, ease: "easeOut" }}
           >
             <m.div
               className="inline-flex items-center justify-center gap-3 mb-6"
-              initial={{ scale: 0.8 }}
+              initial={false}
               animate={{ scale: 1 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
+              transition={{ duration: 0.3 }}
             >
               <LeafIcon className="h-16 w-16 text-primary drop-shadow-lg" />
               <h1 className="text-5xl md:text-6xl font-bold bg-linear-to-r from-primary via-green-600 to-primary bg-clip-text text-transparent">
@@ -42,9 +42,9 @@ export function LeaderboardView({ leaderboard, calculationMode, winnerRevealMode
 
             <m.p
               className="text-xl text-muted-foreground max-w-2xl mx-auto"
-              initial={{ opacity: 0 }}
+              initial={false}
               animate={{ opacity: 1 }}
-              transition={{ delay: 0.4, duration: 0.6 }}
+              transition={{ duration: 0.4 }}
             >
               Celebrating environmental excellence across our school community
             </m.p>

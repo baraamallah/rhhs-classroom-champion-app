@@ -14,7 +14,7 @@ interface LeaderboardSettingsToggleProps {
 
 export function LeaderboardSettingsToggle({ initialShowMonthly }: LeaderboardSettingsToggleProps) {
   const { toast } = useToast()
-  const [showMonthly, setShowMonthly] = useState<boolean>(initialShowMonthly ?? true)
+  const [showMonthly, setShowMonthly] = useState<boolean>(initialShowMonthly ?? false)
   const [loading, setLoading] = useState(initialShowMonthly === undefined)
   const [saving, setSaving] = useState(false)
 
@@ -30,7 +30,7 @@ export function LeaderboardSettingsToggle({ initialShowMonthly }: LeaderboardSet
     setLoading(true)
     try {
       const result = await getLeaderboardPointsSetting()
-      if (result.success) setShowMonthly(result.showMonthly ?? true)
+      if (result.success) setShowMonthly(result.showMonthly ?? false)
     } finally {
       setLoading(false)
     }
@@ -42,9 +42,18 @@ export function LeaderboardSettingsToggle({ initialShowMonthly }: LeaderboardSet
       const result = await setLeaderboardPointsSetting(checked)
       if (result.success) {
         setShowMonthly(checked)
-        toast({ title: "Setting Updated", description: checked ? "The public leaderboard is now set to show points accumulated this month." : "The public leaderboard is now set to show total (all-time) points." })
+        toast({
+          title: "Setting Updated",
+          description: checked
+            ? "Leaderboard will now show points for the current month only."
+            : "Leaderboard will now show all-time accumulated points.",
+        })
       } else {
-        toast({ title: "Error updating setting", description: result.error || "Failed to update leaderboard configuration.", variant: "destructive" })
+        toast({
+          title: "Error updating setting",
+          description: result.error || "Failed to update leaderboard setting.",
+          variant: "destructive",
+        })
       }
     } finally {
       setSaving(false)
@@ -53,7 +62,7 @@ export function LeaderboardSettingsToggle({ initialShowMonthly }: LeaderboardSet
 
   return (
     <Card className="overflow-hidden border-border/80 shadow-sm transition-shadow duration-300 hover:shadow-md">
-      <CardHeader className="bg-muted/30 pb-4">
+      <CardHeader className="bg-muted/30 p-5 sm:p-6 border-b border-border/60">
         <CardTitle className="flex items-center gap-2 text-lg font-bold text-foreground">
           <BarChart3 className="h-5 w-5 text-primary" />
           Leaderboard Points Mode
@@ -62,24 +71,27 @@ export function LeaderboardSettingsToggle({ initialShowMonthly }: LeaderboardSet
           Toggle how scores are computed and displayed on the public homepage leaderboard.
         </CardDescription>
       </CardHeader>
-      <CardContent className="pt-6">
+      <CardContent className="p-5 sm:p-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-1">
             <Label htmlFor="leaderboard-points-mode" className="text-sm font-semibold text-foreground">
               Points Aggregation Mode
             </Label>
             <p className="text-xs sm:text-sm text-muted-foreground">
-              {loading 
-                ? "Loading configuration..." 
-                : showMonthly 
-                  ? "Showing evaluations for the current calendar month only." 
-                  : "Showing all unarchived evaluations across all-time."
-              }
+              {loading
+                ? "Loading configuration..."
+                : showMonthly
+                ? "Showing evaluations for the current calendar month only."
+                : "Showing all-time accumulated points for the entire academic term."}
             </p>
           </div>
-          
+
           <div className="flex items-center gap-3 self-end sm:self-center shrink-0">
-            <span className={`text-xs font-semibold transition-colors duration-200 ${!showMonthly ? "text-primary" : "text-muted-foreground"}`}>
+            <span
+              className={`text-xs font-semibold transition-colors duration-200 ${
+                !showMonthly ? "text-primary" : "text-muted-foreground"
+              }`}
+            >
               All-Time
             </span>
             <Switch
@@ -89,7 +101,11 @@ export function LeaderboardSettingsToggle({ initialShowMonthly }: LeaderboardSet
               disabled={loading || saving}
               className="data-[state=checked]:bg-green-600"
             />
-            <span className={`text-xs font-semibold transition-colors duration-200 ${showMonthly ? "text-primary" : "text-muted-foreground"}`}>
+            <span
+              className={`text-xs font-semibold transition-colors duration-200 ${
+                showMonthly ? "text-primary" : "text-muted-foreground"
+              }`}
+            >
               Monthly
             </span>
           </div>
@@ -101,11 +117,11 @@ export function LeaderboardSettingsToggle({ initialShowMonthly }: LeaderboardSet
             <p className="text-xs text-muted-foreground leading-relaxed">
               {showMonthly ? (
                 <span>
-                  <strong>Monthly Mode:</strong> Resets visually on the first of each month. Great for regular classroom challenges and monthly winner announcements.
+                  <strong>Monthly Mode:</strong> Classrooms start fresh every 1st of the month.
                 </span>
               ) : (
                 <span>
-                  <strong>All-Time Mode:</strong> Displays cumulative points across the entire school year (all unarchived evaluations). Ideal for long-term competition tracking.
+                  <strong>All-Time Mode:</strong> Points accumulate across the entire academic year.
                 </span>
               )}
             </p>

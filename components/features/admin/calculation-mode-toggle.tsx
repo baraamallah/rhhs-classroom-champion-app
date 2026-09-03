@@ -42,9 +42,18 @@ export function CalculationModeToggle({ initialEnabled }: CalculationModeToggleP
       const result = await setCalculationMode(checked)
       if (result.success) {
         setEnabled(checked)
-        toast({ title: "Calculation Mode Updated", description: checked ? "The homepage will now show the calculation animation instead of the leaderboard." : "The homepage will now show the normal leaderboard." })
+        toast({
+          title: "Calculation Mode Updated",
+          description: checked
+            ? "The homepage will now show the calculation animation instead of the leaderboard."
+            : "The homepage will now show the normal leaderboard.",
+        })
       } else {
-        toast({ title: "Error updating setting", description: result.error || "Failed to update calculation mode.", variant: "destructive" })
+        toast({
+          title: "Error updating setting",
+          description: result.error || "Failed to update calculation mode.",
+          variant: "destructive",
+        })
       }
     } finally {
       setSaving(false)
@@ -53,7 +62,7 @@ export function CalculationModeToggle({ initialEnabled }: CalculationModeToggleP
 
   return (
     <Card className="overflow-hidden border-border/80 shadow-sm transition-shadow duration-300 hover:shadow-md">
-      <CardHeader className="bg-muted/30 pb-4">
+      <CardHeader className="bg-muted/30 p-5 sm:p-6 border-b border-border/60">
         <CardTitle className="flex items-center gap-2 text-lg font-bold text-foreground">
           <Calculator className="h-5 w-5 text-primary" />
           Calculation Mode
@@ -62,7 +71,7 @@ export function CalculationModeToggle({ initialEnabled }: CalculationModeToggleP
           Hide the leaderboard and show a "calculating" animation on the homepage.
         </CardDescription>
       </CardHeader>
-      <CardContent className="pt-6">
+      <CardContent className="p-5 sm:p-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-1">
             <Label htmlFor="calculation-mode" className="text-sm font-semibold text-foreground">
@@ -72,14 +81,17 @@ export function CalculationModeToggle({ initialEnabled }: CalculationModeToggleP
               {loading
                 ? "Loading configuration..."
                 : enabled
-                  ? "Leaderboard is currently hidden for all users."
-                  : "Leaderboard is currently visible."
-              }
+                ? "Leaderboard is currently hidden for all users."
+                : "Leaderboard is currently visible."}
             </p>
           </div>
 
           <div className="flex items-center gap-3 self-end sm:self-center shrink-0">
-            <span className={`text-xs font-semibold transition-colors duration-200 ${!enabled ? "text-primary" : "text-muted-foreground"}`}>
+            <span
+              className={`text-xs font-semibold transition-colors duration-200 ${
+                !enabled ? "text-primary" : "text-muted-foreground"
+              }`}
+            >
               Disabled
             </span>
             <Switch
@@ -89,7 +101,11 @@ export function CalculationModeToggle({ initialEnabled }: CalculationModeToggleP
               disabled={loading || saving}
               className="data-[state=checked]:bg-green-600"
             />
-            <span className={`text-xs font-semibold transition-colors duration-200 ${enabled ? "text-primary" : "text-muted-foreground"}`}>
+            <span
+              className={`text-xs font-semibold transition-colors duration-200 ${
+                enabled ? "text-primary" : "text-muted-foreground"
+              }`}
+            >
               Enabled
             </span>
           </div>

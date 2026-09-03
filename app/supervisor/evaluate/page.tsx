@@ -64,6 +64,8 @@ function SupervisorEvaluateContent({ currentUser }: SupervisorEvaluateContentPro
     }
   }, [searchParams, classrooms, viewState])
 
+  const targetDateParam = searchParams.get("date") || undefined
+
   const handleClassroomSelect = (classroom: Classroom) => {
     setSelectedClassroom(classroom)
     setViewState("evaluate")
@@ -79,7 +81,8 @@ function SupervisorEvaluateContent({ currentUser }: SupervisorEvaluateContentPro
   }
 
   const handleCancel = () => {
-    router.push("/supervisor")
+    setSelectedClassroom(null)
+    setViewState("select")
   }
 
   const handleBackToDashboard = () => {
@@ -92,29 +95,29 @@ function SupervisorEvaluateContent({ currentUser }: SupervisorEvaluateContentPro
     <div className="min-h-screen bg-background">
       <DashboardHeader user={currentUser} />
 
-      <main className="container mx-auto px-4 py-6 sm:py-12 max-w-6xl">
-        <div className="mb-6 sm:mb-8">
-          <div className="flex items-center gap-2 sm:gap-4 mb-4">
+      <main className="container mx-auto px-4 py-6 sm:py-10 max-w-5xl">
+        <div className="mb-6">
+          <div className="flex items-center gap-2 sm:gap-4 mb-3">
             <Button 
               variant="outline" 
               onClick={handleBackToDashboard}
-              className="text-sm sm:text-base h-9 sm:h-auto"
+              className="text-xs sm:text-sm h-9 rounded-xl"
             >
-              ← Back
+              ← Dashboard
             </Button>
           </div>
-          <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">Classroom Evaluation</h2>
-          <p className="text-sm sm:text-base text-muted-foreground">Evaluate classroom eco-friendly practices</p>
+          <h2 className="text-2xl sm:text-3xl font-black text-foreground">Classroom Evaluation</h2>
+          <p className="text-xs sm:text-sm text-muted-foreground">Record daily eco-friendly practices and points</p>
         </div>
 
         {loading ? (
           <div className="flex items-center justify-center py-12">
-            <p className="text-muted-foreground">Loading...</p>
+            <p className="text-muted-foreground text-sm">Loading...</p>
           </div>
         ) : (
           <>
             {viewState === "closed" && (
-              <Card className="border-destructive/50 bg-destructive/5">
+              <Card className="border-destructive/50 bg-destructive/5 rounded-2xl">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-destructive">
                     <AlertCircle className="h-5 w-5" />
@@ -128,7 +131,7 @@ function SupervisorEvaluateContent({ currentUser }: SupervisorEvaluateContentPro
                   <p className="text-sm text-muted-foreground">
                     Please check back later or contact an administrator if you believe this is an error.
                   </p>
-                  <Button onClick={handleBackToDashboard} className="mt-6">
+                  <Button onClick={handleBackToDashboard} className="mt-6 rounded-xl">
                     Return to Dashboard
                   </Button>
                 </CardContent>
@@ -136,10 +139,10 @@ function SupervisorEvaluateContent({ currentUser }: SupervisorEvaluateContentPro
             )}
 
             {viewState === "select" && (
-              <Card>
+              <Card className="rounded-2xl border-border shadow-xs">
                 <CardHeader>
                   <CardTitle>Select a Classroom to Evaluate</CardTitle>
-                  <CardDescription>Choose the classroom you want to evaluate today</CardDescription>
+                  <CardDescription>Choose the classroom you want to evaluate</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <ClassroomSelector onSelect={handleClassroomSelect} />
@@ -148,24 +151,17 @@ function SupervisorEvaluateContent({ currentUser }: SupervisorEvaluateContentPro
             )}
 
             {viewState === "evaluate" && selectedClassroom && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Evaluating Classroom</CardTitle>
-                  <CardDescription>{selectedClassroom.name} - Grade {selectedClassroom.grade}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <EvaluationForm
-                    classroom={selectedClassroom}
-                    user={currentUser}
-                    onComplete={handleEvaluationComplete}
-                    onCancel={handleCancel}
-                  />
-                </CardContent>
-              </Card>
+              <EvaluationForm
+                classroom={selectedClassroom}
+                user={currentUser}
+                initialDate={targetDateParam}
+                onComplete={handleEvaluationComplete}
+                onCancel={handleCancel}
+              />
             )}
 
             {viewState === "success" && (
-              <Card>
+              <Card className="rounded-2xl border-border shadow-xs">
                 <CardContent className="py-8">
                   <EvaluationSuccess onNewEvaluation={handleNewEvaluation} />
                 </CardContent>

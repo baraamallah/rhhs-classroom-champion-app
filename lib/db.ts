@@ -1,14 +1,13 @@
 import { Pool, type QueryResult, type QueryResultRow } from "pg"
 
-const connectionString = process.env.DATABASE_URL
+const connectionString = process.env.DATABASE_PRIMARY_URL || process.env.DATABASE_URL
+const replicaConnectionString = process.env.DATABASE_READ_REPLICA_URL || null
 
 if (!connectionString) {
-  console.warn("⚠️  DATABASE_URL is not set. Some features may not work.")
-  console.warn("📖 See GET_DATABASE_CONNECTION.md for instructions on how to get your connection string.")
+  console.warn("⚠️  DATABASE_PRIMARY_URL / DATABASE_URL is not set. Some features may not work.")
 }
 
 declare global {
-  // eslint-disable-next-line no-var
   var pgPool: Pool | undefined
 }
 

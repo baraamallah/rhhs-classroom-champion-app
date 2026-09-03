@@ -64,6 +64,10 @@ const AcademicArchiveManager = dynamic(
   () => import("@/components/features/admin/academic-archive-manager").then((m) => m.AcademicArchiveManager),
   { loading: () => <AdminTabSkeleton /> }
 )
+const CalendarManager = dynamic(
+  () => import("@/components/features/admin/calendar-manager").then((m) => m.CalendarManager),
+  { loading: () => <AdminTabSkeleton /> }
+)
 const DataManagementPanel = dynamic(
   () => import("@/components/features/admin/data-management-panel").then((m) => m.DataManagementPanel),
   { loading: () => <AdminTabSkeleton /> }
@@ -75,6 +79,7 @@ const VALID_TABS = [
   "checklist",
   "evaluations",
   "tracking",
+  "calendar",
   "statistics",
   "exports",
   "academic-archives",
@@ -89,6 +94,7 @@ const normalizeTab = (raw?: string): AdminTab => {
   if (lower === "settings") return "system"
   if (lower === "export") return "exports"
   if (lower === "archive" || lower === "archives") return "academic-archives"
+  if (lower === "holidays" || lower === "schedule") return "calendar"
   if (VALID_TABS.includes(lower as AdminTab)) return lower as AdminTab
   return "classrooms"
 }
@@ -216,6 +222,12 @@ function AdminDashboardInner({ currentUser, tabParam }: AdminDashboardInnerProps
             {visitedTabs.has("tracking") && (
               <div className={activeTab === "tracking" ? "block" : "hidden"}>
                 <SubmissionTracking currentUser={currentUser} />
+              </div>
+            )}
+
+            {visitedTabs.has("calendar") && (
+              <div className={activeTab === "calendar" ? "block" : "hidden"}>
+                <CalendarManager />
               </div>
             )}
 

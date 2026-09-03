@@ -258,7 +258,7 @@ export function ChecklistManager({ currentUser }: ChecklistManagerProps) {
       />
 
       <Card className="border-border/60 shadow-sm overflow-hidden">
-        <CardHeader className="bg-muted/30 pb-6 border-b">
+        <CardHeader className="bg-muted/30 p-5 sm:p-6 border-b">
           <div className="space-y-1">
             <CardTitle className="flex items-center gap-2 text-xl">
               <LayoutList className="h-5 w-5 text-primary" />

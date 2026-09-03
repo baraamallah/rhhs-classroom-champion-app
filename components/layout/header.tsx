@@ -44,9 +44,9 @@ export function Header() {
     <LazyMotionProvider>
       <m.header
         className="border-b border-border bg-white dark:bg-card/80 backdrop-blur-sm sticky top-0 z-50"
-        initial={{ y: -100 }}
+        initial={false}
         animate={{ y: 0 }}
-        transition={{ duration: 0.5, ease: "easeOut" }}
+        transition={{ duration: 0.3, ease: "easeOut" }}
       >
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between gap-2">

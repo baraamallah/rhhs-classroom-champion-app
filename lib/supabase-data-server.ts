@@ -1,14 +1,19 @@
 import { createClient } from "@supabase/supabase-js"
+import { unstable_cache } from "next/cache"
 import type { Classroom, Evaluation, ClassroomScore } from "./types"
 import { calculateLeaderboard } from "./utils-leaderboard"
+import { hasRecentMutation, getSupabaseServerUrl } from "./db-router"
 
-// Create a server-side Supabase client for data queries
-// This works perfectly for SELECT queries - no auth needed
-const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
+// Helper to get a server-side Supabase client routing to primary or replica
+function getServerSupabase(forcePrimary = false) {
+  const url = getSupabaseServerUrl(forcePrimary)
+  return createClient(url, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
+}
 
 // Admin client for queries requiring service role access
-function getAdminSupabase() {
-  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
+function getAdminSupabase(forcePrimary = false) {
+  const url = getSupabaseServerUrl(forcePrimary)
+  return createClient(url, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 }
 
 interface EvaluationRow {
@@ -53,8 +58,9 @@ function mapEvaluationRows(data: any[]): Evaluation[] {
   }))
 }
 
-export async function getEvaluationsServer(): Promise<Evaluation[]> {
+export async function getEvaluationsServer(forcePrimary = false): Promise<Evaluation[]> {
   try {
+    const supabase = getServerSupabase(forcePrimary)
     const { data, error } = await supabase
       .from("evaluations")
       .select(`
@@ -79,19 +85,24 @@ export async function getEvaluationsServer(): Promise<Evaluation[]> {
       .order("evaluation_date", { ascending: false })
 
     if (error) {
-      console.error("Error fetching evaluations:", error)
+      console.error("[supabase-data-server] Error fetching evaluations:", error)
       return []
     }
 
     return data ? mapEvaluationRows(data) : []
   } catch (err) {
-    console.error("Unexpected error fetching evaluations:", err)
+    console.error("[supabase-data-server] Unexpected error fetching evaluations:", err)
     return []
   }
 }
 
-export async function getEvaluationsByDateRangeServer(startDate: string, endDate: string): Promise<Evaluation[]> {
+export async function getEvaluationsByDateRangeServer(
+  startDate: string,
+  endDate: string,
+  forcePrimary = false
+): Promise<Evaluation[]> {
   try {
+    const supabase = getServerSupabase(forcePrimary)
     const { data, error } = await supabase
       .from("evaluations")
       .select(`
@@ -117,19 +128,20 @@ export async function getEvaluationsByDateRangeServer(startDate: string, endDate
       .order("evaluation_date", { ascending: false })
 
     if (error) {
-      console.error("Error fetching evaluations by date range:", error)
+      console.error("[supabase-data-server] Error fetching evaluations by date range:", error)
       return []
     }
 
     return data ? mapEvaluationRows(data) : []
   } catch (err) {
-    console.error("Unexpected error fetching evaluations by date range:", err)
+    console.error("[supabase-data-server] Unexpected error fetching evaluations by date range:", err)
     return []
   }
 }
 
-export async function getClassroomsServer(): Promise<Classroom[]> {
+export async function getClassroomsServer(forcePrimary = false): Promise<Classroom[]> {
   try {
+    const supabase = getServerSupabase(forcePrimary)
     const { data, error } = await supabase
       .from("classrooms")
       .select("id, name, grade, division, is_active")
@@ -137,13 +149,13 @@ export async function getClassroomsServer(): Promise<Classroom[]> {
       .order("name")
 
     if (error) {
-      console.error("Error fetching classrooms:", error)
+      console.error("[supabase-data-server] Error fetching classrooms:", error)
       return []
     }
 
     return (data || []) as Classroom[]
   } catch (err) {
-    console.error("Unexpected error fetching classrooms:", err)
+    console.error("[supabase-data-server] Unexpected error fetching classrooms:", err)
     return []
   }
 }
@@ -155,15 +167,15 @@ interface AdminSettings {
   leaderboardMonth: { year: number; month: number } | null
 }
 
-async function getAdminSettingsServer(): Promise<AdminSettings> {
+async function getAdminSettingsServer(forcePrimary = false): Promise<AdminSettings> {
   try {
-    const adminSupabase = getAdminSupabase()
+    const adminSupabase = getAdminSupabase(forcePrimary)
     const { data, error } = await adminSupabase
       .from("system_settings")
       .select("key, value")
 
     if (error) {
-      console.error("Error fetching admin settings:", error)
+      console.error("[supabase-data-server] Error fetching admin settings:", error)
       return { showMonthly: true, calculationMode: false, winnerRevealMode: false, leaderboardMonth: null }
     }
 
@@ -181,7 +193,7 @@ async function getAdminSettingsServer(): Promise<AdminSettings> {
       leaderboardMonth: (map.get("leaderboard_display_month") as { year: number; month: number } | null) || null,
     }
   } catch (err) {
-    console.error("Unexpected error fetching admin settings:", err)
+    console.error("[supabase-data-server] Unexpected error fetching admin settings:", err)
     return { showMonthly: true, calculationMode: false, winnerRevealMode: false, leaderboardMonth: null }
   }
 }
@@ -194,18 +206,16 @@ export interface HomepageData {
 }
 
 /**
- * Consolidated server-side data loader for the homepage.
- * Fetches admin settings + classrooms in parallel, then evaluations
- * (which depend on the settings for the date range), and computes
- * the leaderboard — all on the server.
+ * Pure data loader from the database.
+ * Does NOT access request-specific sources (cookies/headers) so it can be safely cached.
  */
-export async function getHomepageData(): Promise<HomepageData> {
+async function fetchHomepageDataFromDB(forcePrimary: boolean): Promise<HomepageData> {
   const { format, startOfMonth, endOfMonth } = await import("date-fns")
 
-  // Phase 1: settings + classrooms in parallel (no dependency between them)
+  // Phase 1: settings + classrooms in parallel
   const [settings, classrooms] = await Promise.all([
-    getAdminSettingsServer(),
-    getClassroomsServer(),
+    getAdminSettingsServer(forcePrimary),
+    getClassroomsServer(forcePrimary),
   ])
 
   // Phase 2: evaluations depend on settings (monthly mode + frozen month)
@@ -224,9 +234,9 @@ export async function getHomepageData(): Promise<HomepageData> {
       endDate = format(endOfMonth(now), "yyyy-MM-dd")
     }
 
-    evaluations = await getEvaluationsByDateRangeServer(startDate, endDate)
+    evaluations = await getEvaluationsByDateRangeServer(startDate, endDate, forcePrimary)
   } else {
-    evaluations = await getEvaluationsServer()
+    evaluations = await getEvaluationsServer(forcePrimary)
   }
 
   const leaderboard = calculateLeaderboard(evaluations, classrooms)
@@ -239,3 +249,33 @@ export async function getHomepageData(): Promise<HomepageData> {
   }
 }
 
+/**
+ * Shared cached data path with Next.js unstable_cache.
+ * Pure cached scope: strictly NO cookies() or headers() inside.
+ */
+const getCachedHomepageData = unstable_cache(
+  async () => fetchHomepageDataFromDB(false),
+  ["homepage-leaderboard-data"],
+  {
+    revalidate: 60, // 60s background revalidation window
+    tags: ["leaderboard", "classrooms", "settings"],
+  }
+)
+
+/**
+ * Public caller for the homepage data.
+ * Request-specific inspection (`hasRecentMutation`) happens OUTSIDE the cached scope.
+ * If a write occurred within the last 5 seconds, bypasses shared cache to provide
+ * strict read-your-own-writes consistency.
+ */
+export async function getHomepageData(): Promise<HomepageData> {
+  const recentlyMutated = await hasRecentMutation()
+
+  if (recentlyMutated) {
+    // Bypasses shared cache, queries authoritative Primary DB directly
+    return fetchHomepageDataFromDB(true)
+  }
+
+  // Standard public read path via shared tagged cache
+  return getCachedHomepageData()
+}

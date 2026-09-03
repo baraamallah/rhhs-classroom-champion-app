@@ -14,6 +14,7 @@ import {
   Home,
   MoreHorizontal,
   Download,
+  Calendar,
 } from "lucide-react"
 import Link from "next/link"
 
@@ -31,6 +32,7 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
   { id: "checklist", label: "Checklist Rubrics", icon: ClipboardList },
   { id: "evaluations", label: "Evaluations Log", icon: FileText },
   { id: "tracking", label: "Submission Tracking", icon: BarChart3 },
+  { id: "calendar", label: "School Calendar", icon: Calendar, badge: "Daily" },
   { id: "statistics", label: "Score Analytics", icon: BarChart3 },
   { id: "exports", label: "Data Exports", icon: Download, badge: "Hub" },
   { id: "academic-archives", label: "New Year Archive", icon: Archive, badge: "New" },
