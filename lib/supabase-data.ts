@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/client"
 import { getEvaluationsStatus } from "@/app/actions/evaluation-settings-actions"
+import { submitEvaluation as submitEvaluationAction } from "@/app/actions/evaluation-actions"
 import type { Classroom, ChecklistItem, Evaluation, User } from "./types"
 
 // Client-side data functions
@@ -388,41 +389,13 @@ export async function submitEvaluation(
   totalScore: number,
   maxScore: number
 ): Promise<{ success: boolean; error?: string }> {
-  try {
-    const supabase = createClient()
-
-    // Check if evaluations are enabled
-    const statusResult = await getEvaluationsStatus()
-    const enabled = statusResult.success ? statusResult.enabled !== false : true
-
-    if (!enabled) {
-      return { success: false, error: "System is closed and not accepting evaluations anymore." }
-    }
-
-    const itemsMap = checkedItemIds.reduce((acc, id) => {
-      acc[id] = true
-      return acc
-    }, {} as Record<string, boolean>)
-
-    const { error } = await supabase.from("evaluations").insert({
-      classroom_id: classroomId,
-      supervisor_id: supervisorId,
-      items: itemsMap,
-      total_score: totalScore,
-      max_score: maxScore,
-      evaluation_date: new Date().toISOString().split("T")[0],
-    })
-
-    if (error) {
-      console.error("[Database] Error submitting evaluation:", error)
-      return { success: false, error: error.message }
-    }
-
-    return { success: true }
-  } catch (error) {
-    console.error("[Database] Exception submitting evaluation:", error)
-    return { success: false, error: "Failed to submit evaluation" }
-  }
+  return await submitEvaluationAction(
+    classroomId,
+    supervisorId,
+    checkedItemIds,
+    totalScore,
+    maxScore
+  )
 }
 
 export async function getEvaluations(): Promise<Evaluation[]> {

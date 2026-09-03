@@ -33,22 +33,22 @@ export function SimpleClassroomCard({ classroom, rank }: SimpleClassroomCardProp
       <Card className={cn(
         "group transition-[background-color,border-color,color,box-shadow,opacity,transform] duration-300 hover:shadow-2xl border-2 cursor-pointer",
         "border-l-4 hover:border-l-primary",
-        isChampion && "border-l-yellow-400 bg-gradient-to-r from-yellow-50/40 to-transparent dark:from-yellow-950/30 shadow-lg shadow-yellow-200/50 dark:shadow-yellow-950/30",
-        isRunnerUp && "border-l-gray-400 bg-gradient-to-r from-gray-50/40 to-transparent dark:from-gray-950/30 shadow-lg shadow-gray-200/50 dark:shadow-gray-950/30",
-        isThirdPlace && "border-l-orange-400 bg-gradient-to-r from-orange-50/40 to-transparent dark:from-orange-950/30 shadow-lg shadow-orange-200/50 dark:shadow-orange-950/30",
+        isChampion && "border-l-yellow-400 bg-linear-to-r from-yellow-50/40 to-transparent dark:from-yellow-950/30 shadow-lg shadow-yellow-200/50 dark:shadow-yellow-950/30",
+        isRunnerUp && "border-l-gray-400 bg-linear-to-r from-gray-50/40 to-transparent dark:from-gray-950/30 shadow-lg shadow-gray-200/50 dark:shadow-gray-950/30",
+        isThirdPlace && "border-l-orange-400 bg-linear-to-r from-orange-50/40 to-transparent dark:from-orange-950/30 shadow-lg shadow-orange-200/50 dark:shadow-orange-950/30",
         "hover:bg-muted/40 hover:border-primary/50"
       )}>
         <CardContent className="p-3 sm:p-5">
           <div className="flex items-center gap-3 sm:gap-4">
             {/* Clean Rank Badge */}
-            <div className="flex-shrink-0">
+            <div className="shrink-0">
               <div
                 className={cn(
                   "w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center text-base sm:text-xl font-bold shadow-lg",
-                  isChampion ? "bg-gradient-to-br from-yellow-300 via-yellow-400 to-yellow-500 text-yellow-900 dark:from-yellow-600 dark:via-yellow-700 dark:to-yellow-800 dark:text-yellow-100 ring-2 ring-yellow-300/50" :
-                    isRunnerUp ? "bg-gradient-to-br from-gray-300 via-gray-400 to-gray-500 text-gray-900 dark:from-gray-600 dark:via-gray-700 dark:to-gray-800 dark:text-gray-100 ring-2 ring-gray-300/50" :
-                      isThirdPlace ? "bg-gradient-to-br from-orange-300 via-orange-400 to-orange-500 text-orange-900 dark:from-orange-600 dark:via-orange-700 dark:to-orange-800 dark:text-orange-100 ring-2 ring-orange-300/50" :
-                        "bg-gradient-to-br from-muted to-muted/80 text-muted-foreground"
+                  isChampion ? "bg-linear-to-br from-yellow-300 via-yellow-400 to-yellow-500 text-yellow-900 dark:from-yellow-600 dark:via-yellow-700 dark:to-yellow-800 dark:text-yellow-100 ring-2 ring-yellow-300/50" :
+                    isRunnerUp ? "bg-linear-to-br from-gray-300 via-gray-400 to-gray-500 text-gray-900 dark:from-gray-600 dark:via-gray-700 dark:to-gray-800 dark:text-gray-100 ring-2 ring-gray-300/50" :
+                      isThirdPlace ? "bg-linear-to-br from-orange-300 via-orange-400 to-orange-500 text-orange-900 dark:from-orange-600 dark:via-orange-700 dark:to-orange-800 dark:text-orange-100 ring-2 ring-orange-300/50" :
+                        "bg-linear-to-br from-muted to-muted/80 text-muted-foreground"
                 )}
               >
                 {isTopThree && rank === 1 ? (
@@ -88,15 +88,15 @@ export function SimpleClassroomCard({ classroom, rank }: SimpleClassroomCardProp
             </div>
 
             {/* Clean Score Display */}
-            <div className="flex-shrink-0 text-right">
+            <div className="shrink-0 text-right">
               <div className="flex items-center gap-2 sm:gap-3">
                 <div
                   className={cn(
                     "w-10 h-10 sm:w-14 sm:h-14 rounded-full flex items-center justify-center shadow-xl ring-2 ring-primary/20",
-                    scoreColor.includes("yellow") ? "bg-gradient-to-br from-yellow-200 via-yellow-300 to-yellow-400 dark:from-yellow-800/60 dark:via-yellow-700/60 dark:to-yellow-600/60" :
-                      scoreColor.includes("green") ? "bg-gradient-to-br from-green-200 via-green-300 to-green-400 dark:from-green-800/60 dark:via-green-700/60 dark:to-green-600/60" :
-                        scoreColor.includes("blue") ? "bg-gradient-to-br from-blue-200 via-blue-300 to-blue-400 dark:from-blue-800/60 dark:via-blue-700/60 dark:to-blue-600/60" :
-                          "bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-800 dark:to-gray-700"
+                    scoreColor.includes("yellow") ? "bg-linear-to-br from-yellow-200 via-yellow-300 to-yellow-400 dark:from-yellow-800/60 dark:via-yellow-700/60 dark:to-yellow-600/60" :
+                      scoreColor.includes("green") ? "bg-linear-to-br from-green-200 via-green-300 to-green-400 dark:from-green-800/60 dark:via-green-700/60 dark:to-green-600/60" :
+                        scoreColor.includes("blue") ? "bg-linear-to-br from-blue-200 via-blue-300 to-blue-400 dark:from-blue-800/60 dark:via-blue-700/60 dark:to-blue-600/60" :
+                          "bg-linear-to-br from-gray-200 to-gray-300 dark:from-gray-800 dark:to-gray-700"
                   )}
                 >
                   <StarIcon className={cn("h-4 w-4 sm:h-6 sm:w-6", scoreColor)} />

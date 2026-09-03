@@ -437,7 +437,7 @@ export async function createAcademicYearArchive(
   name: string,
   description?: string,
   academicYear?: string
-): Promise<{ success: boolean; archiveId?: string; message?: string; error?: string }> {
+): Promise<{ success: boolean; archiveId?: string; tableName?: string; message?: string; error?: string }> {
   const { currentUser, error } = await requireSuperAdmin()
   if (error || !currentUser) {
     return { success: false, error }
@@ -451,10 +451,9 @@ export async function createAcademicYearArchive(
 
   try {
     // 1. Fetch all active classrooms and all current evaluations
-    const [{ data: classrooms, error: classError }, { data: evaluations, error: evalError }, { data: users }] = await Promise.all([
+    const [{ data: classrooms, error: classError }, { data: evaluations, error: evalError }] = await Promise.all([
       supabase.from("classrooms").select("*").eq("is_active", true),
       supabase.from("evaluations").select("*"),
-      supabase.from("users").select("id, name"),
     ])
 
     if (classError) throw new Error(`Classroom fetch failed: ${classError.message}`)
@@ -483,74 +482,35 @@ export async function createAcademicYearArchive(
       }
     }
 
-    // 3. Create Master Archive Record
-    const archivePayload = {
-      name: name.trim(),
-      academic_year: academicYear?.trim() || name.trim(),
-      description: description?.trim() || null,
-      total_evaluations: evals.length,
-      total_classrooms: rooms.length,
-      leaderboard_snapshot: fullLeaderboard,
-      division_champions: divisionChampions,
-      created_by: currentUser.id,
-      archived_at: new Date().toISOString(),
-    }
+    // 3. Execute single atomic PostgreSQL RPC (creates dedicated table, copies evaluations, sets RLS, wipes live)
+    const { data: rpcResult, error: rpcError } = await supabase.rpc("create_named_academic_archive", {
+      p_name: name.trim(),
+      p_academic_year: academicYear?.trim() || name.trim(),
+      p_description: description?.trim() || null,
+      p_leaderboard_snapshot: fullLeaderboard,
+      p_division_champions: divisionChampions,
+      p_created_by: currentUser.id,
+    })
 
-    const { data: createdArchive, error: archiveInsertError } = await supabase
-      .from("academic_archives")
-      .insert(archivePayload)
-      .select("id")
-      .single()
-
-    if (archiveInsertError) {
-      throw new Error(`Failed to create academic archive: ${archiveInsertError.message}`)
-    }
-
-    const archiveId = createdArchive.id
-
-    // 4. Save evaluation detail records into academic_archive_evaluations (in safe 40-item chunks)
-    if (evals.length > 0) {
-      const userMap = new Map((users || []).map((u) => [u.id, u.name]))
-      const classMap = new Map(rooms.map((c) => [c.id, c]))
-
-      const archiveEvalRecords = evals.map((e) => {
-        const cls = classMap.get(e.classroom_id)
+    if (rpcError) {
+      // Check for collision or missing migration function
+      if (rpcError.message.includes("Archive table collision") || rpcError.message.includes("Archive collision")) {
         return {
-          id: e.id,
-          archive_id: archiveId,
-          classroom_id: e.classroom_id,
-          classroom_name: cls?.name || "Unknown",
-          classroom_grade: cls?.grade || "",
-          classroom_division: cls?.division || "",
-          supervisor_id: e.supervisor_id,
-          supervisor_name: userMap.get(e.supervisor_id) || "Unknown",
-          evaluation_date: e.evaluation_date,
-          items: e.items,
-          total_score: e.total_score,
-          max_score: e.max_score,
-          notes: e.notes,
-          created_at: e.created_at,
-          archived_at: new Date().toISOString(),
-        }
-      })
-
-      const evalChunks = chunkArray(archiveEvalRecords, 40)
-      for (const chunk of evalChunks) {
-        const { error: chunkError } = await supabase
-          .from("academic_archive_evaluations")
-          .upsert(chunk, { onConflict: "id" })
-
-        if (chunkError) {
-          console.error("[createAcademicYearArchive] Detail insert error:", chunkError)
+          success: false,
+          error: `An archive table for "${name}" already exists. Please choose a different archive title to avoid naming collisions.`,
         }
       }
-
-      // 5. Safely wipe live evaluations to reset the leaderboard for the new academic year
-      const idChunks = chunkArray(evals.map((e) => e.id), 40)
-      for (const idChunk of idChunks) {
-        await supabase.from("evaluations").delete().in("id", idChunk)
+      if (rpcError.code === "42883" || (rpcError.message.includes("function") && rpcError.message.includes("does not exist"))) {
+        return {
+          success: false,
+          error: "Database migration missing: Please run 'scripts/21_create_named_academic_archive.sql' in your Supabase SQL Editor.",
+        }
       }
+      throw new Error(`Transactional archive creation failed: ${rpcError.message}`)
     }
+
+    const archiveId = rpcResult?.archive_id
+    const tableName = rpcResult?.table_name
 
     revalidatePath("/", "layout")
     revalidatePath("/admin")
@@ -559,7 +519,8 @@ export async function createAcademicYearArchive(
     return {
       success: true,
       archiveId,
-      message: `Successfully created "${name}" archive with ${evals.length} evaluations and final standings preserved!`,
+      tableName,
+      message: `Successfully created "${name}" archive in dedicated table "${tableName}" with ${evals.length} evaluations and final standings preserved!`,
     }
   } catch (err: any) {
     console.error("[createAcademicYearArchive] Error:", err)

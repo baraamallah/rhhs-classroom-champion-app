@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Building2, Plus, Pencil, Trash2, Users, MoreVertical, Filter, CheckSquare, Square, Info, Layers, GraduationCap } from "lucide-react"
+import { Building2, Plus, Pencil, Trash2, Users, MoreVertical, Filter, CheckSquare, Square, Info, Layers, GraduationCap, Search, X } from "lucide-react"
 import { createClassroom, updateClassroom, deleteClassroom, bulkUpdateClassroomDivisions } from "@/lib/supabase-data"
 import { getAllUsers } from "@/app/actions/user-actions"
 import { createClient } from "@/lib/supabase/client"
@@ -38,6 +38,7 @@ export function ClassroomManagement({ currentUser }: ClassroomManagementProps) {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [isAdding, setIsAdding] = useState(false)
   const [selectedDivision, setSelectedDivision] = useState<string>("all")
+  const [searchQuery, setSearchQuery] = useState<string>("")
   const [selectedClassrooms, setSelectedClassrooms] = useState<Set<string>>(new Set())
   const [bulkUpdating, setBulkUpdating] = useState(false)
   const { toast } = useToast()
@@ -294,15 +295,27 @@ export function ClassroomManagement({ currentUser }: ClassroomManagementProps) {
     setFormData({ name: "", grade: "", division: "", description: "", supervisorIds: [] })
   }
 
-  // Filter classrooms by division
-  const filteredClassrooms = selectedDivision === "all"
-    ? classrooms
-    : classrooms.filter(classroom => classroom.division === selectedDivision)
+  // Filter classrooms by division and normalized search query across name, grade, and all supervisors
+  const filteredClassrooms = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase()
+    return classrooms.filter((classroom) => {
+      const matchesDivision = selectedDivision === "all" || classroom.division === selectedDivision
+      if (!matchesDivision) return false
+      if (!query) return true
 
-  // Clear selection when filter changes
+      const matchesName = classroom.name.toLowerCase().includes(query)
+      const matchesGrade = classroom.grade.toLowerCase().includes(query)
+      const matchesSupervisor = classroom.supervisors?.some((supervisor) =>
+        supervisor.name.toLowerCase().includes(query)
+      )
+      return matchesName || matchesGrade || Boolean(matchesSupervisor)
+    })
+  }, [classrooms, selectedDivision, searchQuery])
+
+  // Clear selection when filter or search changes
   useEffect(() => {
     setSelectedClassrooms(new Set())
-  }, [selectedDivision])
+  }, [selectedDivision, searchQuery])
 
   return (
     <div className="space-y-6">
@@ -339,22 +352,44 @@ export function ClassroomManagement({ currentUser }: ClassroomManagementProps) {
       <CardContent className="p-0 sm:p-6 space-y-6">
         {/* Division Filter and Bulk Actions */}
         <div className="px-4 sm:px-0 space-y-4 pt-4 sm:pt-0">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 bg-muted/20 rounded-xl border border-border/40 shadow-inner">
+          <div className="flex flex-col md:flex-row md:items-center gap-4 p-4 bg-muted/20 rounded-xl border border-border/40 shadow-inner">
+            {/* Live Search Input */}
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
+              <Input
+                placeholder="Search by classroom name, grade, or supervisor..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 pr-8 bg-background h-10 text-xs sm:text-sm"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-2.5 top-3 text-muted-foreground hover:text-foreground cursor-pointer"
+                  aria-label="Clear search"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+
+            {/* Division Selector */}
             <div className="flex items-center gap-2 text-muted-foreground min-w-max">
               <Filter className="h-4 w-4" />
-              <Label className="text-sm font-bold uppercase tracking-wider">Filter Division</Label>
+              <Label className="text-sm font-bold uppercase tracking-wider">Division</Label>
+              <Select value={selectedDivision} onValueChange={setSelectedDivision}>
+                <SelectTrigger className="w-full sm:w-56 bg-background h-10 text-xs sm:text-sm">
+                  <SelectValue placeholder="Select division" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All School Divisions</SelectItem>
+                  {DIVISION_OPTIONS.map(option => (
+                    <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <Select value={selectedDivision} onValueChange={setSelectedDivision}>
-              <SelectTrigger className="w-full sm:w-60 bg-background">
-                <SelectValue placeholder="Select division" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All School Divisions</SelectItem>
-                {DIVISION_OPTIONS.map(option => (
-                  <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
 
           {/* Bulk Action Bar */}
@@ -518,12 +553,16 @@ export function ClassroomManagement({ currentUser }: ClassroomManagementProps) {
             <div className="py-20 text-center px-6">
               <Info className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
               <p className="text-lg font-bold text-muted-foreground mb-1">No classrooms found</p>
-              <p className="text-sm text-muted-foreground/70 mb-6 max-w-xs mx-auto">
-                {selectedDivision === "all"
+              <p className="text-sm text-muted-foreground/70 mb-6 max-w-sm mx-auto">
+                {searchQuery.trim()
+                  ? `No classrooms match "${searchQuery.trim()}"${selectedDivision !== "all" ? ` in the ${getDivisionDisplayName(selectedDivision)} division` : ""}.`
+                  : selectedDivision === "all"
                   ? "Your school directory is currently empty. Start by adding a classroom."
                   : `There are no classrooms currently assigned to the ${getDivisionDisplayName(selectedDivision)} division.`}
               </p>
-              {selectedDivision !== "all" ? (
+              {searchQuery.trim() ? (
+                <Button onClick={() => setSearchQuery("")} variant="outline" size="sm">Clear Search</Button>
+              ) : selectedDivision !== "all" ? (
                 <Button onClick={() => setSelectedDivision("all")} variant="outline" size="sm">Show All Divisions</Button>
               ) : (
                 <Button onClick={handleAddNew} size="sm">Add First Classroom</Button>

@@ -207,8 +207,15 @@ export function AcademicArchiveManager() {
                     {selectedArchive.description || "Academic year historical snapshot."}
                   </CardDescription>
                 </div>
-                <div className="text-xs text-muted-foreground">
-                  Archived on: {new Date(selectedArchive.archived_at).toLocaleDateString()}
+                <div className="text-left sm:text-right">
+                  <div className="text-xs text-muted-foreground">
+                    Archived on: {new Date(selectedArchive.archived_at).toLocaleDateString()}
+                  </div>
+                  {selectedArchive.table_name && (
+                    <Badge variant="outline" className="mt-1 font-mono text-[10px] bg-primary/5 text-primary border-primary/20">
+                      Table: {selectedArchive.table_name}
+                    </Badge>
+                  )}
                 </div>
               </div>
 
@@ -365,6 +372,11 @@ export function AcademicArchiveManager() {
                     <CardTitle className="text-lg font-bold group-hover:text-primary transition-colors mt-2">
                       {archive.name}
                     </CardTitle>
+                    {archive.table_name && (
+                      <span className="inline-block text-[10px] font-mono text-muted-foreground bg-muted px-1.5 py-0.5 rounded mt-1 mb-1">
+                        Table: {archive.table_name}
+                      </span>
+                    )}
                     <CardDescription className="text-xs line-clamp-2">
                       {archive.description || "Preserved final standings and evaluations."}
                     </CardDescription>

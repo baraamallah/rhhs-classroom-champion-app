@@ -23,7 +23,6 @@ import {
   Database,
   Loader2,
   FileText,
-  ShieldCheck,
   Sparkles,
 } from "lucide-react"
 
@@ -324,7 +323,7 @@ export function ExportManagement() {
       />
 
       {/* Quick Overview KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="border-border/60 bg-card/60 backdrop-blur-md shadow-xs hover:border-primary/40 transition-colors">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
@@ -391,35 +390,6 @@ export function ExportManagement() {
                 </>
               )}
             </Button>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border/60 bg-card/60 backdrop-blur-md shadow-xs hover:border-primary/40 transition-colors">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <div className="p-2.5 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400">
-                <ShieldCheck className="h-5 w-5" />
-              </div>
-              <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400">
-                Privacy
-              </span>
-            </div>
-            <CardTitle className="text-base font-bold mt-2">Export Standards</CardTitle>
-            <CardDescription className="text-xs">
-              All exports exclude sensitive credentials and password hashes. Date formats follow school calendar standards.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="text-xs text-muted-foreground space-y-1.5 pt-1">
-              <div className="flex items-center gap-2 text-foreground font-medium">
-                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
-                <span>Zero-client lag (lazy script loading)</span>
-              </div>
-              <div className="flex items-center gap-2 text-foreground font-medium">
-                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
-                <span>Compatible with Excel & Google Sheets</span>
-              </div>
-            </div>
           </CardContent>
         </Card>
       </div>

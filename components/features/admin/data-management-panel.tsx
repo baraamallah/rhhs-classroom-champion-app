@@ -16,15 +16,12 @@ import {
 } from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast"
 import {
-  deleteEvaluation,
-  deleteClassroom,
   archiveEvaluations,
   getAllEvaluationsForManagement,
   getArchivedEvaluations,
   restoreEvaluations,
-  archiveAndReset
 } from "@/app/actions/data-management-actions"
-import { Loader2, Trash2, Archive, Search, History, RotateCcw, Download, FileSpreadsheet, Settings, Trophy } from "lucide-react"
+import { Loader2, Archive, Search, History, RotateCcw, FileSpreadsheet, Trophy } from "lucide-react"
 import { MonthlyWinnersManager } from "@/components/features/leaderboard/monthly-winners-manager"
 import { GlobalSystemControls } from "@/components/features/admin/global-system-controls"
 import { DefaultMonthSettings } from "@/components/features/admin/default-month-settings"
@@ -46,11 +43,6 @@ interface EvaluationData {
 export function DataManagementPanel() {
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
-  const [deleteDialog, setDeleteDialog] = useState<{
-    open: boolean
-    type: "evaluation" | "classroom" | null
-    id: string
-  }>({ open: false, type: null, id: "" })
 
   const [archiveDialog, setArchiveDialog] = useState<{
     open: boolean
@@ -62,10 +54,6 @@ export function DataManagementPanel() {
     count: number
   }>({ open: false, count: 0 })
 
-  const [archiveResetDialog, setArchiveResetDialog] = useState<boolean>(false)
-
-  const [evaluationId, setEvaluationId] = useState("")
-  const [classroomId, setClassroomId] = useState("")
   const [evaluations, setEvaluations] = useState<EvaluationData[]>([])
   const [archivedEvaluations, setArchivedEvaluations] = useState<any[]>([])
   const [searchTerm, setSearchTerm] = useState("")
@@ -229,112 +217,6 @@ export function DataManagementPanel() {
     }
   }
 
-  const handleArchiveAndReset = async () => {
-    setLoading(true)
-    const result = await archiveAndReset()
-    setLoading(false)
-    setArchiveResetDialog(false)
-
-    if (result.success) {
-      toast({
-        title: "Success",
-        description: result.message,
-      })
-      loadEvaluations()
-      loadArchivedEvaluations()
-    } else {
-      toast({
-        title: "Error",
-        description: result.error || "Failed to archive and reset data",
-        variant: "destructive",
-      })
-    }
-  }
-
-  const handleDeleteEvaluation = async () => {
-    if (!evaluationId.trim()) {
-      toast({
-        title: "Error",
-        description: "Please enter an evaluation ID",
-        variant: "destructive",
-      })
-      return
-    }
-
-    // Basic UUID validation
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-    if (!uuidRegex.test(evaluationId.trim())) {
-      toast({
-        title: "Invalid ID",
-        description: "Please enter a valid UUID format",
-        variant: "destructive",
-      })
-      return
-    }
-
-    setLoading(true)
-    const result = await deleteEvaluation(evaluationId.trim())
-    setLoading(false)
-    setDeleteDialog({ open: false, type: null, id: "" })
-
-    if (result.success) {
-      toast({
-        title: "Success",
-        description: result.message,
-      })
-      setEvaluationId("")
-      loadEvaluations()
-    } else {
-      toast({
-        title: "Error",
-        description: result.error || "Failed to delete evaluation",
-        variant: "destructive",
-      })
-    }
-  }
-
-  const handleDeleteClassroom = async () => {
-    if (!classroomId.trim()) {
-      toast({
-        title: "Error",
-        description: "Please enter a classroom ID",
-        variant: "destructive",
-      })
-      return
-    }
-
-    // Basic UUID validation
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-    if (!uuidRegex.test(classroomId.trim())) {
-      toast({
-        title: "Invalid ID",
-        description: "Please enter a valid UUID format",
-        variant: "destructive",
-      })
-      return
-    }
-
-    setLoading(true)
-    const result = await deleteClassroom(classroomId.trim())
-    setLoading(false)
-    setDeleteDialog({ open: false, type: null, id: "" })
-
-    if (result.success) {
-      toast({
-        title: "Success",
-        description: result.message,
-      })
-      setClassroomId("")
-      loadEvaluations()
-    } else {
-      toast({
-        title: "Error",
-        description: result.error || "Failed to delete classroom",
-        variant: "destructive",
-      })
-    }
-  }
-
   return (
     <div className="space-y-6">
       <AdminPageHeader
@@ -358,7 +240,7 @@ export function DataManagementPanel() {
         <TabsList className="bg-muted p-1 rounded-xl h-auto w-full sm:w-auto">
           <TabsTrigger value="archive" className="rounded-lg py-2.5 px-8 data-[state=active]:bg-background data-[state=active]:shadow-md font-bold">
             <Archive className="h-4 w-4 mr-2" />
-            Archive & Reset
+            Archive Management
           </TabsTrigger>
           <TabsTrigger value="winners" className="rounded-lg py-2.5 px-8 data-[state=active]:bg-background data-[state=active]:shadow-md font-bold">
             <Trophy className="h-4 w-4 mr-2 text-amber-500" />
@@ -592,62 +474,6 @@ export function DataManagementPanel() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Trash2 className="h-5 w-5" />
-              Delete Evaluation
-            </CardTitle>
-            <CardDescription>Permanently delete a specific evaluation by its ID.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Input
-              placeholder="Enter evaluation ID (UUID)"
-              value={evaluationId}
-              onChange={(e) => setEvaluationId(e.target.value)}
-              disabled={loading}
-            />
-            <Button
-              variant="outline"
-              onClick={() => setDeleteDialog({ open: true, type: "evaluation", id: evaluationId })}
-              disabled={loading || !evaluationId.trim()}
-            >
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Delete Evaluation
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Trash2 className="h-5 w-5" />
-              Delete Classroom
-            </CardTitle>
-            <CardDescription>
-              Delete a specific classroom and all its associated evaluations.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Input
-              placeholder="Enter classroom ID (UUID)"
-              value={classroomId}
-              onChange={(e) => setClassroomId(e.target.value)}
-              disabled={loading}
-            />
-            <Button
-              variant="outline"
-              onClick={() => setDeleteDialog({ open: true, type: "classroom", id: classroomId })}
-              disabled={loading || !classroomId.trim()}
-            >
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Delete Classroom
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-
       <Card className="border-primary/20 bg-primary/5">
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
@@ -663,35 +489,6 @@ export function DataManagementPanel() {
             System database backups, multi-sheet Master Excel reports, and custom filtered evaluation queries are now housed in the dedicated <strong>Data Exports</strong> tab in the navigation sidebar.
           </CardDescription>
         </CardHeader>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Archive className="h-5 w-5" />
-            Archive and Reset
-          </CardTitle>
-          <CardDescription>
-            Archive all current evaluations and reset the system for a new evaluation period.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              This will archive all current evaluations, moving them to the archive table.
-              Classrooms are preserved to maintain monthly winners tracking.
-              After archiving, evaluations will be reset to start fresh for the next evaluation period.
-            </p>
-            <Button
-              variant="destructive"
-              onClick={() => setArchiveResetDialog(true)}
-              disabled={loading}
-            >
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Archive and Reset All Data
-            </Button>
-          </div>
-        </CardContent>
       </Card>
 
       <AlertDialog open={archiveDialog.open} onOpenChange={(open) => setArchiveDialog({ ...archiveDialog, open })}>
@@ -732,52 +529,6 @@ export function DataManagementPanel() {
           >
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Restore Selected
-          </AlertDialogAction>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={archiveResetDialog} onOpenChange={setArchiveResetDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Archive and Reset All Data?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will archive all current evaluations and classrooms, moving them to the archive tables.
-              After archiving, all current tables will be emptied to start fresh for the next evaluation period.
-              This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction
-            onClick={handleArchiveAndReset}
-            disabled={loading}
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-          >
-            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Archive and Reset
-          </AlertDialogAction>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={deleteDialog.open} onOpenChange={(open) => setDeleteDialog({ ...deleteDialog, open })}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              Delete {deleteDialog.type === "evaluation" ? "Evaluation" : "Classroom"}?
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {deleteDialog.type === "evaluation"
-                ? "This will permanently delete the specific evaluation. This action cannot be undone."
-                : "This will delete the classroom and all its associated evaluations. This action cannot be undone."}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction
-            onClick={deleteDialog.type === "evaluation" ? handleDeleteEvaluation : handleDeleteClassroom}
-            disabled={loading}
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-          >
-            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Delete
           </AlertDialogAction>
         </AlertDialogContent>
       </AlertDialog>
