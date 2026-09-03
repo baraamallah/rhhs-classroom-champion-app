@@ -165,6 +165,7 @@ interface AdminSettings {
   calculationMode: boolean
   winnerRevealMode: boolean
   leaderboardMonth: { year: number; month: number } | null
+  winnersPageVisible: boolean
 }
 
 async function getAdminSettingsServer(forcePrimary = false): Promise<AdminSettings> {
@@ -176,7 +177,7 @@ async function getAdminSettingsServer(forcePrimary = false): Promise<AdminSettin
 
     if (error) {
       console.error("[supabase-data-server] Error fetching admin settings:", error)
-      return { showMonthly: true, calculationMode: false, winnerRevealMode: false, leaderboardMonth: null }
+      return { showMonthly: true, calculationMode: false, winnerRevealMode: false, leaderboardMonth: null, winnersPageVisible: true }
     }
 
     const map = new Map(data?.map(s => [s.key, s.value]) || [])
@@ -191,10 +192,11 @@ async function getAdminSettingsServer(forcePrimary = false): Promise<AdminSettin
       calculationMode: parseBool("calculation_mode", false),
       winnerRevealMode: parseBool("winner_reveal_mode", false),
       leaderboardMonth: (map.get("leaderboard_display_month") as { year: number; month: number } | null) || null,
+      winnersPageVisible: parseBool("winners_page_visible", true),
     }
   } catch (err) {
     console.error("[supabase-data-server] Unexpected error fetching admin settings:", err)
-    return { showMonthly: true, calculationMode: false, winnerRevealMode: false, leaderboardMonth: null }
+    return { showMonthly: true, calculationMode: false, winnerRevealMode: false, leaderboardMonth: null, winnersPageVisible: true }
   }
 }
 
@@ -203,6 +205,7 @@ export interface HomepageData {
   showMonthly: boolean
   calculationMode: boolean
   winnerRevealMode: boolean
+  winnersPageVisible: boolean
 }
 
 /**
@@ -246,6 +249,7 @@ async function fetchHomepageDataFromDB(forcePrimary: boolean): Promise<HomepageD
     showMonthly: settings.showMonthly,
     calculationMode: settings.calculationMode,
     winnerRevealMode: settings.winnerRevealMode,
+    winnersPageVisible: settings.winnersPageVisible,
   }
 }
 

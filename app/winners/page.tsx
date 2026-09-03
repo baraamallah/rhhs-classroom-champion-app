@@ -11,9 +11,10 @@ import { getPublicMonthlyWinners } from "@/app/actions/public-winners-actions"
 import { getWinnersPageVisibility, getDefaultMonthSettings } from "@/app/actions/winners-page-actions"
 import { getClassroomWinCounts } from "@/app/actions/win-count-actions"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Calendar, RefreshCw, Eye } from "lucide-react"
+import { Calendar, RefreshCw, Eye, ArrowLeft, Award, Sparkles } from "lucide-react"
 import { WinnerCertificateModal } from "@/components/features/leaderboard/winner-certificate-modal"
 import { DIVISION_OPTIONS, getDivisionDisplayName } from "@/lib/division-display"
 
@@ -177,13 +178,13 @@ export default function WinnersPage() {
 
   return (
     <LazyMotionProvider>
-      <div className="min-h-screen bg-linear-to-b from-background via-background to-primary/5">
+      <div className="min-h-screen bg-linear-to-b from-background via-background to-primary/5 pb-16">
         <Header />
         <Confetti active={showConfetti} />
         <CelebrationAnimation show={celebratingDivision !== null} title={`${celebratingDivision} Winner!`} subtitle="Congratulations!" />
         <WinnerCertificateModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} winner={selectedWinner} />
 
-        <main id="main-content" className="container mx-auto px-4 py-12">
+        <main id="main-content" className="container mx-auto px-4 pt-8 pb-12">
           <WinnersHero
             loading={loading}
             selectedMonth={selectedMonth}
@@ -229,41 +230,77 @@ function WinnersHero({
   onRefresh: () => void
 }) {
   return (
-    <m.div className="text-center mb-12" initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}>
-      <m.div className="inline-flex items-center justify-center gap-3 mb-6" initial={{ scale: 0.8 }} animate={{ scale: 1 }} transition={{ duration: 0.5, delay: 0.2 }}>
-        <m.div animate={{ rotate: [0, 10, -10, 0] }} transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}>
-          <TrophyIcon className="h-20 w-20 text-yellow-500 drop-shadow-lg" />
+    <m.div className="text-center mb-10" initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
+      {/* Top Transfer Bar: Return to Leaderboard */}
+      <div className="flex items-center justify-start mb-6">
+        <Button
+          asChild
+          variant="outline"
+          size="sm"
+          className="rounded-full gap-2 bg-card/70 backdrop-blur-md border-border/80 hover:border-primary/50 text-xs sm:text-sm font-semibold shadow-2xs hover:shadow-xs transition-all active:scale-95"
+        >
+          <Link href="/">
+            <ArrowLeft className="h-4 w-4 text-primary" />
+            <span>Back to Live Leaderboard</span>
+          </Link>
+        </Button>
+      </div>
+
+      <m.div className="inline-flex items-center justify-center gap-3 mb-4" initial={{ scale: 0.8 }} animate={{ scale: 1 }} transition={{ duration: 0.5, delay: 0.1 }}>
+        <m.div animate={{ rotate: [0, 8, -8, 0] }} transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}>
+          <TrophyIcon className="h-14 w-14 sm:h-18 sm:w-18 text-amber-500 drop-shadow-md" />
         </m.div>
-        <h1 className="text-5xl md:text-6xl font-bold bg-linear-to-r from-yellow-500 via-primary to-yellow-500 bg-clip-text text-transparent">
+        <h1 className="text-4xl sm:text-5xl md:text-6xl font-black tracking-tight bg-linear-to-r from-amber-500 via-primary to-amber-500 bg-clip-text text-transparent">
           Monthly Champions
         </h1>
       </m.div>
-      <m.p className="text-xl text-muted-foreground max-w-2xl mx-auto" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}>
-        Celebrating our eco-friendly classroom champions
+
+      <m.p className="text-base sm:text-lg text-muted-foreground max-w-xl mx-auto font-medium" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
+        Honoring our highest-achieving green classrooms and environmental champions.
       </m.p>
 
-      <m.div className="flex items-center justify-center gap-4 mt-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }}>
-        <div className="flex items-center gap-2 bg-card/80 backdrop-blur-sm border border-border rounded-lg px-4 py-2">
-          <Calendar className="h-4 w-4 text-muted-foreground" />
-          <select aria-label="Winner month" value={selectedMonth} onChange={(e) => onMonthChange(Number(e.target.value))} className="bg-transparent border-none outline-none text-foreground font-medium">
+      {/* Filter & Controls Bar */}
+      <m.div className="flex flex-wrap items-center justify-center gap-3 mt-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}>
+        <div className="flex items-center gap-2 bg-card/80 backdrop-blur-md border border-border/80 rounded-full px-4 py-2 shadow-xs">
+          <Calendar className="h-4 w-4 text-primary shrink-0" />
+          <select
+            aria-label="Winner month"
+            value={selectedMonth}
+            onChange={(e) => onMonthChange(Number(e.target.value))}
+            className="bg-transparent border-none outline-hidden text-foreground font-semibold text-xs sm:text-sm cursor-pointer"
+          >
             {MONTHS.map((month, index) => (
               <option key={month} value={index + 1}>{month}</option>
             ))}
           </select>
-          <select aria-label="Winner year" value={selectedYear} onChange={(e) => onYearChange(Number(e.target.value))} className="bg-transparent border-none outline-none text-foreground font-medium">
+          <div className="w-px h-4 bg-border/80" />
+          <select
+            aria-label="Winner year"
+            value={selectedYear}
+            onChange={(e) => onYearChange(Number(e.target.value))}
+            className="bg-transparent border-none outline-hidden text-foreground font-semibold text-xs sm:text-sm cursor-pointer"
+          >
             {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map((year) => (
               <option key={year} value={year}>{year}</option>
             ))}
           </select>
         </div>
-        <Button variant="outline" size="sm" onClick={onRefresh} disabled={loading} className="bg-card/80 backdrop-blur-sm">
-          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onRefresh}
+          disabled={loading}
+          className="rounded-full bg-card/80 backdrop-blur-md border-border/80 hover:border-primary/50 text-xs sm:text-sm font-semibold shadow-xs"
+        >
+          <RefreshCw className={`h-3.5 w-3.5 mr-1.5 text-primary ${loading ? "animate-spin" : ""}`} />
           Refresh
         </Button>
       </m.div>
 
-      <m.p className="text-sm text-muted-foreground mt-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }}>
-        Click on any winner to view their certificate
+      <m.p className="text-xs sm:text-sm text-muted-foreground mt-3 flex items-center justify-center gap-1.5" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }}>
+        <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+        <span>Click on any classroom champion to view & download their official certificate</span>
       </m.p>
     </m.div>
   )
@@ -313,14 +350,17 @@ function DivisionWinnerCard({
   onWinnerClick: (classroomName: string, grade: string, division: string, rank: number, totalScore: number, averageScore: number, evaluationCount: number, classroomId?: string) => void
 }) {
   return (
-    <m.div key={division} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: animationIndex * 0.1 }}>
-      <Card className={`relative overflow-hidden ${winner ? "border-2 border-yellow-500 shadow-lg shadow-yellow-500/20" : ""}`}>
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-xl font-bold text-foreground">{getDivisionDisplayName(division)}</h3>
+    <m.div key={division} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: animationIndex * 0.08 }}>
+      <Card className={`relative overflow-hidden rounded-2xl transition-all duration-300 ${winner ? "border-amber-400/80 dark:border-amber-500/70 shadow-lg shadow-amber-500/10 bg-linear-to-b from-amber-500/5 via-card to-card" : "border-border/70 bg-card/60"}`}>
+        <CardContent className="p-5 sm:p-6">
+          <div className="flex items-center justify-between mb-4 pb-3 border-b border-border/50">
+            <div className="flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-primary" />
+              <h3 className="text-lg font-black tracking-tight text-foreground">{getDivisionDisplayName(division)}</h3>
+            </div>
             {winner && (
-              <m.div animate={{ rotate: [0, 10, -10, 0] }} transition={{ duration: 2, repeat: Infinity }}>
-                <CrownIcon className="h-6 w-6 text-yellow-500" />
+              <m.div animate={{ rotate: [0, 8, -8, 0] }} transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}>
+                <CrownIcon className="h-6 w-6 text-amber-500" />
               </m.div>
             )}
           </div>
@@ -328,12 +368,12 @@ function DivisionWinnerCard({
           {winner && winner.classrooms ? (
             <WinnerCardBody winner={winner} division={division} winCounts={winCounts} onWinnerClick={onWinnerClick} />
           ) : (
-            <div className="text-center py-12 text-muted-foreground">
-              <m.div animate={{ scale: [1, 1.1, 1] }} transition={{ duration: 2, repeat: Infinity }}>
-                <TrophyIcon className="h-12 w-12 mx-auto mb-4 opacity-30" />
+            <div className="text-center py-10 text-muted-foreground">
+              <m.div animate={{ scale: [1, 1.06, 1] }} transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}>
+                <TrophyIcon className="h-10 w-10 mx-auto mb-3 opacity-30 text-amber-500" />
               </m.div>
-              <p className="text-sm font-medium">Be here later</p>
-              <p className="text-xs mt-1">Check back soon for {MONTHS[selectedMonth - 1]} winners</p>
+              <p className="text-sm font-semibold text-foreground">Results Pending</p>
+              <p className="text-xs text-muted-foreground mt-1">Check back soon for {MONTHS[selectedMonth - 1]} winners</p>
             </div>
           )}
         </CardContent>
@@ -357,53 +397,62 @@ function WinnerCardBody({
 
   return (
     <div className="space-y-4">
-      <div className="space-y-3">
-        <m.div
-          key={classroom.id}
-          className="relative p-4 rounded-lg border-2 cursor-pointer transition-transform hover:scale-[1.02] bg-linear-to-br from-yellow-500/20 to-amber-500/10 border-yellow-500/50 shadow-lg shadow-yellow-500/10"
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.2 }}
-          onClick={() => onWinnerClick(classroom.name, classroom.grade, division, 1, winner.total_score, winner.average_score, winner.evaluation_count, classroom.id)}
-        >
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-yellow-500/30">
-                <TrophyIcon className="h-5 w-5 text-yellow-500" />
-              </div>
-              <div>
-                <span className="text-xs font-bold uppercase tracking-wider text-yellow-600 dark:text-yellow-400">Champion</span>
-                <p className="font-bold text-lg text-foreground">{classroom.name}</p>
-                <p className="text-sm text-muted-foreground">Grade {classroom.grade}</p>
-              </div>
+      <m.div
+        key={classroom.id}
+        className="relative p-4 rounded-xl border border-amber-500/40 cursor-pointer transition-all duration-300 hover:scale-[1.015] hover:shadow-md hover:shadow-amber-500/15 bg-linear-to-br from-amber-500/15 via-yellow-500/10 to-transparent shadow-xs"
+        initial={{ opacity: 0, x: -10 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ delay: 0.15 }}
+        onClick={() => onWinnerClick(classroom.name, classroom.grade, division, 1, winner.total_score, winner.average_score, winner.evaluation_count, classroom.id)}
+      >
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center justify-center w-11 h-11 rounded-full bg-amber-500/25 border border-amber-500/40 shadow-xs shrink-0">
+              <TrophyIcon className="h-6 w-6 text-amber-500" />
             </div>
-            <div className="text-right">
-              <p className="text-2xl font-bold text-foreground">{winner.total_score}</p>
-              <p className="text-xs text-muted-foreground">points</p>
+            <div>
+              <span className="text-[10px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                Monthly Champion
+              </span>
+              <p className="font-extrabold text-lg text-foreground tracking-tight">{classroom.name}</p>
+              <p className="text-xs text-muted-foreground font-medium">Grade {classroom.grade}</p>
             </div>
           </div>
+          <div className="text-right shrink-0">
+            <p className="text-2xl font-black text-amber-600 dark:text-amber-400">{winner.total_score}</p>
+            <p className="text-[10px] uppercase font-bold text-muted-foreground">points</p>
+          </div>
+        </div>
 
-          <div className="mt-3 pt-3 border-t border-border/50 grid grid-cols-3 gap-2 text-xs">
-            <StatCell label="Avg Score" value={Number(winner.average_score).toFixed(1)} />
-            <StatCell label="Evaluations" value={winner.evaluation_count} />
-            <div className="text-center">
-              {winCounts[classroom.id] > 0 && (
-                <>
-                  <span className="text-muted-foreground">Total Wins</span>
-                  <p className="font-semibold text-yellow-600 dark:text-yellow-400 flex items-center justify-center gap-1">
-                    <TrophyIcon className="h-3 w-3" />
-                    {winCounts[classroom.id]}
-                  </p>
-                </>
-              )}
-            </div>
+        <div className="mt-3 pt-3 border-t border-border/60 grid grid-cols-3 gap-2 text-xs">
+          <StatCell label="Avg Score" value={Number(winner.average_score).toFixed(1)} />
+          <StatCell label="Evaluations" value={winner.evaluation_count} />
+          <div className="text-center">
+            {winCounts[classroom.id] > 0 ? (
+              <>
+                <span className="text-[10px] text-muted-foreground font-medium">Total Wins</span>
+                <p className="font-bold text-amber-600 dark:text-amber-400 flex items-center justify-center gap-1">
+                  <TrophyIcon className="h-3 w-3" />
+                  {winCounts[classroom.id]}
+                </p>
+              </>
+            ) : (
+              <>
+                <span className="text-[10px] text-muted-foreground font-medium">Rank</span>
+                <p className="font-bold text-foreground">#1</p>
+              </>
+            )}
           </div>
+        </div>
 
-          <div className="absolute top-2 right-2 opacity-50 hover:opacity-100 transition-opacity">
-            <Eye className="h-4 w-4 text-muted-foreground" />
+        {/* View Certificate CTA Button */}
+        <div className="mt-3 pt-2">
+          <div className="w-full py-2 px-3 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors">
+            <Award className="h-3.5 w-3.5" />
+            <span>View Certificate</span>
           </div>
-        </m.div>
-      </div>
+        </div>
+      </m.div>
     </div>
   )
 }

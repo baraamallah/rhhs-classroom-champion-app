@@ -2,7 +2,8 @@
 
 import type { ClassroomScore } from "@/lib/types"
 import { Card, CardContent } from "@/components/ui/card"
-import { StarIcon, LeafIcon, CrownIcon, MedalIcon } from "@/components/common/icons"
+import { LeafIcon, TrophyIcon } from "@/components/common/icons"
+import { FirstPlaceLogo, SecondPlaceLogo, ThirdPlaceLogo } from "@/components/common/podium-logos"
 import { getScoreColor, getScoreRange } from "@/lib/utils-leaderboard"
 import { cn } from "@/lib/utils"
 import { m } from "framer-motion"
@@ -18,95 +19,120 @@ export function SimpleClassroomCard({ classroom, rank }: SimpleClassroomCardProp
   const isChampion = rank === 1
   const isRunnerUp = rank === 2
   const isThirdPlace = rank === 3
-  const isTopThree = rank <= 3
 
   return (
     <m.div
-      whileHover={{ scale: 1.03, y: -6 }}
-      whileTap={{ scale: 0.98 }}
+      whileHover={{ y: -3, scale: 1.008 }}
+      whileTap={{ scale: 0.99 }}
       transition={{ 
         type: "spring", 
-        stiffness: 300, 
-        damping: 25
+        stiffness: 350, 
+        damping: 24
       }}
     >
-      <Card className={cn(
-        "group transition-[background-color,border-color,color,box-shadow,opacity,transform] duration-300 hover:shadow-2xl border-2 cursor-pointer",
-        "border-l-4 hover:border-l-primary",
-        isChampion && "border-l-yellow-400 bg-linear-to-r from-yellow-50/40 to-transparent dark:from-yellow-950/30 shadow-lg shadow-yellow-200/50 dark:shadow-yellow-950/30",
-        isRunnerUp && "border-l-gray-400 bg-linear-to-r from-gray-50/40 to-transparent dark:from-gray-950/30 shadow-lg shadow-gray-200/50 dark:shadow-gray-950/30",
-        isThirdPlace && "border-l-orange-400 bg-linear-to-r from-orange-50/40 to-transparent dark:from-orange-950/30 shadow-lg shadow-orange-200/50 dark:shadow-orange-950/30",
-        "hover:bg-muted/40 hover:border-primary/50"
-      )}>
-        <CardContent className="p-3 sm:p-5">
+      <Card
+        className={cn(
+          "group relative overflow-hidden transition-all duration-300 border rounded-2xl cursor-pointer",
+          isChampion
+            ? "border-amber-400/80 dark:border-amber-500/70 bg-linear-to-r from-amber-500/10 via-yellow-500/5 to-card shadow-md shadow-amber-500/10 hover:shadow-xl hover:shadow-amber-500/20"
+            : isRunnerUp
+            ? "border-slate-300 dark:border-slate-600/80 bg-linear-to-r from-slate-200/40 via-transparent to-card dark:from-slate-800/30 shadow-xs hover:shadow-md hover:border-slate-400 dark:hover:border-slate-500"
+            : isThirdPlace
+            ? "border-amber-600/40 dark:border-amber-700/60 bg-linear-to-r from-amber-700/10 via-transparent to-card dark:from-amber-950/30 shadow-xs hover:shadow-md hover:border-amber-600/60"
+            : "border-border/70 bg-card/90 hover:border-primary/40 hover:bg-muted/30 shadow-2xs hover:shadow-sm"
+        )}
+      >
+        {/* Subtle decorative glow for champion */}
+        {isChampion && (
+          <div className="absolute top-0 right-0 -mr-12 -mt-12 w-32 h-32 bg-amber-400/15 rounded-full blur-2xl pointer-events-none" />
+        )}
+
+        <CardContent className="p-3.5 sm:p-4.5">
           <div className="flex items-center gap-3 sm:gap-4">
-            {/* Clean Rank Badge */}
-            <div className="shrink-0">
-              <div
-                className={cn(
-                  "w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center text-base sm:text-xl font-bold shadow-lg",
-                  isChampion ? "bg-linear-to-br from-yellow-300 via-yellow-400 to-yellow-500 text-yellow-900 dark:from-yellow-600 dark:via-yellow-700 dark:to-yellow-800 dark:text-yellow-100 ring-2 ring-yellow-300/50" :
-                    isRunnerUp ? "bg-linear-to-br from-gray-300 via-gray-400 to-gray-500 text-gray-900 dark:from-gray-600 dark:via-gray-700 dark:to-gray-800 dark:text-gray-100 ring-2 ring-gray-300/50" :
-                      isThirdPlace ? "bg-linear-to-br from-orange-300 via-orange-400 to-orange-500 text-orange-900 dark:from-orange-600 dark:via-orange-700 dark:to-orange-800 dark:text-orange-100 ring-2 ring-orange-300/50" :
-                        "bg-linear-to-br from-muted to-muted/80 text-muted-foreground"
-                )}
-              >
-                {isTopThree && rank === 1 ? (
-                  <CrownIcon className="h-6 w-6 sm:h-8 sm:w-8 text-yellow-600 dark:text-yellow-400" />
-                ) : isTopThree && rank === 2 ? (
-                  <MedalIcon className="h-6 w-6 sm:h-8 sm:w-8 text-gray-400 dark:text-gray-300" />
-                ) : isTopThree && rank === 3 ? (
-                  <MedalIcon className="h-6 w-6 sm:h-8 sm:w-8 text-orange-500 dark:text-orange-400" />
-                ) : (
-                  <span className="text-base sm:text-xl">{rank}</span>
-                )}
-              </div>
+            {/* Rank Badge / New Custom Podium Logos for 1st, 2nd, 3rd */}
+            <div className="shrink-0 flex items-center justify-center">
+              {isChampion ? (
+                <div className="relative group-hover:scale-110 transition-transform duration-300 drop-shadow-md">
+                  <FirstPlaceLogo className="w-12 h-12 sm:w-15 sm:h-15" />
+                </div>
+              ) : isRunnerUp ? (
+                <div className="relative group-hover:scale-110 transition-transform duration-300 drop-shadow-md">
+                  <SecondPlaceLogo className="w-12 h-12 sm:w-15 sm:h-15" />
+                </div>
+              ) : isThirdPlace ? (
+                <div className="relative group-hover:scale-110 transition-transform duration-300 drop-shadow-md">
+                  <ThirdPlaceLogo className="w-12 h-12 sm:w-15 sm:h-15" />
+                </div>
+              ) : (
+                <div className="w-11 h-11 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center font-black shadow-inner bg-muted/80 text-muted-foreground border border-border/60">
+                  <span className="text-sm sm:text-base font-bold">#{rank}</span>
+                </div>
+              )}
             </div>
 
             {/* Classroom Info */}
             <div className="flex-1 min-w-0">
-              <h3 className="text-base sm:text-lg font-semibold text-foreground mb-0.5 sm:mb-1 truncate">
-                {classroom.classroom.name}
-              </h3>
-              <p className="text-xs sm:text-sm text-muted-foreground mb-1 sm:mb-2">
+              <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                <h3 className="text-base sm:text-lg font-bold text-foreground truncate tracking-tight">
+                  {classroom.classroom.name}
+                </h3>
+                {isChampion && (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30 shrink-0">
+                    <TrophyIcon className="h-3 w-3" />
+                    Champion
+                  </span>
+                )}
+                {isRunnerUp && (
+                  <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-slate-500/15 text-slate-600 dark:text-slate-300 border border-slate-500/20 shrink-0">
+                    2nd Place
+                  </span>
+                )}
+                {isThirdPlace && (
+                  <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-amber-700/15 text-amber-700 dark:text-amber-400 border border-amber-700/20 shrink-0">
+                    3rd Place
+                  </span>
+                )}
+              </div>
+
+              <p className="text-xs sm:text-sm text-muted-foreground mb-1.5">
                 Grade {classroom.classroom.grade}
               </p>
 
               {/* Bottom Info Row */}
-              <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-[10px] sm:text-xs text-muted-foreground">
-                <div className="flex items-center gap-1">
-                  <LeafIcon className="h-3 w-3" />
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-[11px] sm:text-xs">
+                <div className="inline-flex items-center gap-1 text-muted-foreground bg-muted/60 dark:bg-muted/30 px-2 py-0.5 rounded-md">
+                  <LeafIcon className="h-3 w-3 text-primary" />
                   <span>{classroom.evaluationCount} eval{classroom.evaluationCount !== 1 ? "s" : ""}</span>
                 </div>
+
                 <span className={cn(
-                  "px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-full font-medium",
+                  "px-2 py-0.5 rounded-md font-semibold text-[10px] sm:text-[11px]",
                   scoreRange.color
                 )}>
                   {scoreRange.label}
                 </span>
+
+                <span className="text-muted-foreground/70 hidden md:inline">
+                  Avg: <strong className="text-foreground">{Number(classroom.averageScore).toFixed(1)}</strong>
+                </span>
               </div>
             </div>
 
-            {/* Clean Score Display */}
+            {/* Score Display */}
             <div className="shrink-0 text-right">
-              <div className="flex items-center gap-2 sm:gap-3">
-                <div
-                  className={cn(
-                    "w-10 h-10 sm:w-14 sm:h-14 rounded-full flex items-center justify-center shadow-xl ring-2 ring-primary/20",
-                    scoreColor.includes("yellow") ? "bg-linear-to-br from-yellow-200 via-yellow-300 to-yellow-400 dark:from-yellow-800/60 dark:via-yellow-700/60 dark:to-yellow-600/60" :
-                      scoreColor.includes("green") ? "bg-linear-to-br from-green-200 via-green-300 to-green-400 dark:from-green-800/60 dark:via-green-700/60 dark:to-green-600/60" :
-                        scoreColor.includes("blue") ? "bg-linear-to-br from-blue-200 via-blue-300 to-blue-400 dark:from-blue-800/60 dark:via-blue-700/60 dark:to-blue-600/60" :
-                          "bg-linear-to-br from-gray-200 to-gray-300 dark:from-gray-800 dark:to-gray-700"
-                  )}
-                >
-                  <StarIcon className={cn("h-4 w-4 sm:h-6 sm:w-6", scoreColor)} />
-                </div>
-                <div>
-                  <span className={cn("text-xl sm:text-3xl font-extrabold", scoreColor)}>
+              <div className="flex flex-col items-end">
+                <div className="flex items-baseline gap-1">
+                  <span className={cn(
+                    "text-2xl sm:text-3xl font-black tracking-tight",
+                    isChampion ? "text-amber-600 dark:text-amber-400" : scoreColor
+                  )}>
                     {classroom.totalScore}
                   </span>
-                  <div className="text-[10px] sm:text-xs text-muted-foreground hidden sm:block font-medium">Total Points</div>
+                  <span className="text-[11px] font-semibold text-muted-foreground uppercase">pts</span>
                 </div>
+                <span className="text-[10px] sm:text-[11px] text-muted-foreground font-medium">
+                  Total Score
+                </span>
               </div>
             </div>
           </div>
@@ -115,3 +141,4 @@ export function SimpleClassroomCard({ classroom, rank }: SimpleClassroomCardProp
     </m.div>
   )
 }
+

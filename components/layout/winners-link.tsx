@@ -3,45 +3,70 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { getWinnersPageVisibility } from "@/app/actions/winners-page-actions"
-// TODO: Refactor to avoid using cookies for static rendering or switch to dynamic rendering.
+import { TrophyIcon } from "@/components/common/icons"
 import { cn } from "@/lib/utils"
 
 export function WinnersLink({
   className,
-  showOnMobile = false
+  showOnMobile = false,
+  variant = "pill",
 }: {
-  className?: string,
+  className?: string
   showOnMobile?: boolean
+  variant?: "pill" | "text"
 }) {
-  const [visible, setVisible] = useState(true) // Default to true to match server-side default
+  const [visible, setVisible] = useState(true)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    checkVisibility()
-  }, [])
-
-  const checkVisibility = async () => {
-    const result = await getWinnersPageVisibility()
-    if (result.success) {
-      setVisible(result.visible ?? true)
+    let isMounted = true
+    async function checkVisibility() {
+      const result = await getWinnersPageVisibility()
+      if (isMounted) {
+        if (result.success) {
+          setVisible(result.visible ?? true)
+        }
+        setLoading(false)
+      }
     }
-    setLoading(false)
-  }
+    void checkVisibility()
+    return () => {
+      isMounted = false
+    }
+  }, [])
 
   if (loading || !visible) {
     return null
+  }
+
+  if (variant === "text") {
+    return (
+      <Link
+        href="/winners"
+        className={cn(
+          "text-sm font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5",
+          !showOnMobile && "hidden sm:inline-flex",
+          className
+        )}
+      >
+        <TrophyIcon className="h-4 w-4 text-amber-500" />
+        <span>Winners</span>
+      </Link>
+    )
   }
 
   return (
     <Link
       href="/winners"
       className={cn(
-        "text-sm font-medium text-muted-foreground hover:text-foreground transition-colors mr-2",
-        !showOnMobile && "hidden sm:block",
+        "group relative inline-flex items-center gap-1.5 px-3 py-1.5 text-xs sm:text-sm font-semibold rounded-full border border-amber-500/30 bg-linear-to-r from-amber-500/10 via-yellow-500/10 to-amber-500/10 hover:from-amber-500/20 hover:to-yellow-500/20 text-amber-700 dark:text-amber-300 shadow-xs hover:shadow-sm hover:border-amber-500/50 transition-all duration-200 active:scale-95 shrink-0",
+        !showOnMobile && "hidden sm:inline-flex",
         className
       )}
     >
-      Winners
+      <TrophyIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-amber-500 group-hover:scale-110 transition-transform duration-200" />
+      <span>Winners</span>
+      <span className="flex h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
     </Link>
   )
 }

@@ -605,11 +605,17 @@ export async function getArchivedEvaluationsList(): Promise<Evaluation[]> {
 
     const [{ data: activeRooms }, { data: archiveRooms }, { data: users }] = await Promise.all([
       supabase.from("classrooms").select("id, name, grade, division"),
-      supabase.from("archive_classrooms").select("id, name, grade, division"),
+      supabase.from("archive_classrooms").select("id, name, grade"),
       supabase.from("users").select("id, name, email"),
     ])
 
-    const allRooms = [...(activeRooms || []), ...(archiveRooms || [])]
+    const allRooms = [
+      ...(activeRooms || []),
+      ...(archiveRooms || []).map((r: any) => ({
+        ...r,
+        division: r.division || undefined,
+      })),
+    ]
     const userMap = new Map<string, { id: string; name: string; email?: string }>((users || []).map((u: any) => [u.id, u]))
     const roomMap = new Map<string, { id: string; name: string; grade?: string; division?: any }>(allRooms.map((r: any) => [r.id, r]))
 

@@ -5,7 +5,7 @@ import { getHomepageData } from "@/lib/supabase-data-server"
 export const dynamic = "force-dynamic"
 
 export default async function HomePage() {
-  const { leaderboard, calculationMode, winnerRevealMode } = await getHomepageData()
+  const { leaderboard, calculationMode, winnerRevealMode, winnersPageVisible } = await getHomepageData()
 
   return (
     <>
@@ -15,6 +15,7 @@ export default async function HomePage() {
           leaderboard={leaderboard}
           calculationMode={calculationMode}
           winnerRevealMode={winnerRevealMode}
+          winnersPageVisible={winnersPageVisible}
         />
       </main>
     </>

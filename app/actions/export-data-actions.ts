@@ -5,7 +5,7 @@ import { getSessionFromCookies, clearSessionCookie } from "@/lib/auth/session"
 import { calculateLeaderboard } from "@/lib/utils-leaderboard"
 import { DIVISION_OPTIONS, getDivisionDisplayName } from "@/lib/division-display"
 
-type UserRole = "super_admin" | "admin" | "supervisor" | "viewer"
+type UserRole = "super_admin" | "admin" | "supervisor" | "viewer" | "stats"
 
 interface CurrentUser {
   id: string
@@ -36,7 +36,7 @@ async function requireAdmin(): Promise<{ currentUser?: CurrentUser; error?: stri
     return { error: "Not authenticated" }
   }
 
-  if (userData.role !== "super_admin" && userData.role !== "admin") {
+  if (userData.role !== "super_admin" && userData.role !== "admin" && userData.role !== "stats") {
     return { error: "Unauthorized: Admin access required" }
   }
 

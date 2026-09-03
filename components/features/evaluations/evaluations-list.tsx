@@ -23,7 +23,6 @@ import {
   CheckCircle2,
   Loader2,
   Building2,
-  Zap,
 } from "lucide-react"
 
 const formatDate = (dateString: string) => {
@@ -41,7 +40,6 @@ export function EvaluationsList() {
   const [viewScope, setViewScope] = useState<"all" | "active" | "archived">("all")
   const [divisionFilter, setDivisionFilter] = useState("all")
   const [restoringId, setRestoringId] = useState<string | null>(null)
-  const [syntheticEnabled, setSyntheticEnabled] = useState(false)
 
   // React 19 Concurrent Filtering: keeps typing immediately responsive
   const deferredSearch = useDeferredValue(searchTerm)
@@ -88,47 +86,16 @@ export function EvaluationsList() {
     }
   }
 
-  // Base list composition
-  const baseActive = useMemo(() => {
-    if (!syntheticEnabled) return activeEvaluations
-
-    // Generate 2,000 synthetic records for virtualization verification
-    const synthetic: Evaluation[] = []
-    const divisions = ["Pre-School", "Elementary", "Middle School", "High School", "Technical Institute"]
-    for (let i = 1; i <= 2000; i++) {
-      const div = divisions[i % divisions.length]
-      synthetic.push({
-        id: `synthetic-${i}`,
-        classroom_id: `room-${(i % 50) + 1}`,
-        supervisor_id: `sup-${(i % 10) + 1}`,
-        evaluation_date: new Date(Date.now() - (i % 180) * 86400000).toISOString(),
-        items: {},
-        total_score: 80 + (i % 21),
-        max_score: 100,
-        classroom: {
-          name: `Synthetic Room ${(i % 50) + 1}`,
-          grade: `${(i % 12) + 1}`,
-          division: div,
-        },
-        supervisor: {
-          name: `Supervisor ${(i % 10) + 1}`,
-          email: `supervisor${(i % 10) + 1}@rhhs.edu.lb`,
-        },
-      })
-    }
-    return [...activeEvaluations, ...synthetic]
-  }, [activeEvaluations, syntheticEnabled])
-
   const combinedEvaluations = useMemo(() => [
-    ...baseActive.map((e) => ({ ...e, is_archived: false })),
+    ...activeEvaluations.map((e) => ({ ...e, is_archived: false })),
     ...archivedEvaluations.map((e) => ({ ...e, is_archived: true })),
-  ], [baseActive, archivedEvaluations])
+  ], [activeEvaluations, archivedEvaluations])
 
   const scopedList = useMemo(() => {
-    if (viewScope === "active") return baseActive.map((e) => ({ ...e, is_archived: false }))
+    if (viewScope === "active") return activeEvaluations.map((e) => ({ ...e, is_archived: false }))
     if (viewScope === "archived") return archivedEvaluations.map((e) => ({ ...e, is_archived: true }))
     return combinedEvaluations
-  }, [viewScope, baseActive, archivedEvaluations, combinedEvaluations])
+  }, [viewScope, activeEvaluations, archivedEvaluations, combinedEvaluations])
 
   // Deferred filtered evaluations list
   const filteredEvaluations = useMemo(() => {
@@ -175,45 +142,25 @@ export function EvaluationsList() {
                   Score Submissions
                 </Badge>
                 <span className="text-xs text-muted-foreground font-mono">
-                  {baseActive.length} Active &bull; {archivedEvaluations.length} Archived
+                  {activeEvaluations.length} Active &bull; {archivedEvaluations.length} Archived
                 </span>
-                {syntheticEnabled && (
-                  <Badge variant="secondary" className="text-[10px] bg-purple-500/10 text-purple-600 border-purple-500/20">
-                    ⚡ 2,000 Synthetic Stress-Test Active
-                  </Badge>
-                )}
               </div>
               <CardTitle className="text-xl sm:text-2xl font-bold tracking-tight">
                 Evaluation History & Scores
               </CardTitle>
               <CardDescription className="text-xs sm:text-sm">
                 Showing {filteredEvaluations.length} {filteredEvaluations.length === 1 ? "record" : "records"}
-                {rowVirtualizer && ` (Windowed: ${virtualItems.length} mounted in DOM)`}
               </CardDescription>
             </div>
 
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              <div className="relative flex-1 sm:w-64">
-                <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search classroom or supervisor..."
-                  className="pl-9 h-9 text-xs rounded-xl bg-background"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-
-              {/* Synthetic Stress Test Toggle */}
-              <Button
-                size="sm"
-                variant={syntheticEnabled ? "secondary" : "outline"}
-                onClick={() => setSyntheticEnabled((prev) => !prev)}
-                className="h-9 px-2.5 text-xs shrink-0 rounded-xl"
-                title="Toggle 2,000 synthetic records to test virtualization smoothness"
-              >
-                <Zap className={`h-3.5 w-3.5 mr-1 ${syntheticEnabled ? "text-purple-600 fill-purple-600" : ""}`} />
-                {syntheticEnabled ? "2K Active" : "Test 2K"}
-              </Button>
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search classroom or supervisor..."
+                className="pl-9 h-9 text-xs rounded-xl bg-background"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
             </div>
           </div>
 
@@ -241,7 +188,7 @@ export function EvaluationsList() {
                     : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                🟢 Live Active ({baseActive.length})
+                🟢 Live Active ({activeEvaluations.length})
               </button>
               <button
                 type="button"
@@ -294,7 +241,7 @@ export function EvaluationsList() {
               <p className="text-xs text-muted-foreground mt-1">
                 {searchTerm || divisionFilter !== "all"
                   ? "Try adjusting your search query or division filter."
-                  : baseActive.length === 0 && archivedEvaluations.length > 0
+                  : activeEvaluations.length === 0 && archivedEvaluations.length > 0
                   ? "All evaluations are currently in the Archive. Click 'Archived' above to view them or restore them to the live board."
                   : "No evaluations have been submitted yet."}
               </p>

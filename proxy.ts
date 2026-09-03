@@ -27,6 +27,8 @@ export async function proxy(request: NextRequest) {
       url.pathname = "/admin"
     } else if (session.role === "supervisor") {
       url.pathname = "/supervisor"
+    } else if (session.role === "stats") {
+      url.pathname = "/admin/tracking"
     } else {
       url.pathname = "/"
     }

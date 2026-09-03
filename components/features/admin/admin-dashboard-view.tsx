@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import dynamic from "next/dynamic"
 import { ProtectedRoute } from "@/components/providers/protected-route"
 import { DashboardHeader } from "@/components/layout/dashboard-header"
-import { AdminSidebar } from "@/components/features/admin/admin-sidebar"
+import { AdminSidebar, STATS_ALLOWED_TAB_IDS } from "@/components/features/admin/admin-sidebar"
 import type { User } from "@/lib/types"
 
 function AdminTabSkeleton() {
@@ -110,7 +110,9 @@ interface AdminDashboardInnerProps {
 
 function AdminDashboardInner({ currentUser, tabParam }: AdminDashboardInnerProps) {
   const router = useRouter()
-  const initialTab = normalizeTab(tabParam)
+  const isStats = currentUser?.role === "stats"
+  const rawTab = normalizeTab(tabParam)
+  const initialTab = isStats && !STATS_ALLOWED_TAB_IDS.includes(rawTab) ? "tracking" : rawTab
   const [activeTab, setActiveTab] = useState<string>(initialTab)
   const [visitedTabs, setVisitedTabs] = useState<Set<string>>(() => new Set([initialTab]))
 
@@ -118,15 +120,16 @@ function AdminDashboardInner({ currentUser, tabParam }: AdminDashboardInnerProps
   useEffect(() => {
     if (tabParam) {
       const normalized = normalizeTab(tabParam)
-      setActiveTab(normalized)
+      const tab = isStats && !STATS_ALLOWED_TAB_IDS.includes(normalized) ? "tracking" : normalized
+      setActiveTab(tab)
       setVisitedTabs((prev) => {
-        if (prev.has(normalized)) return prev
+        if (prev.has(tab)) return prev
         const next = new Set(prev)
-        next.add(normalized)
+        next.add(tab)
         return next
       })
     }
-  }, [tabParam])
+  }, [tabParam, isStats])
 
   // Support browser back / forward navigation seamlessly
   useEffect(() => {
@@ -134,26 +137,27 @@ function AdminDashboardInner({ currentUser, tabParam }: AdminDashboardInnerProps
       const parts = window.location.pathname.split("/").filter(Boolean)
       if (parts[0] === "admin" && parts[1]) {
         const tab = normalizeTab(parts[1])
-        setActiveTab(tab)
+        const resolvedTab = isStats && !STATS_ALLOWED_TAB_IDS.includes(tab) ? "tracking" : tab
+        setActiveTab(resolvedTab)
         setVisitedTabs((prev) => {
-          if (prev.has(tab)) return prev
+          if (prev.has(resolvedTab)) return prev
           const next = new Set(prev)
-          next.add(tab)
+          next.add(resolvedTab)
           return next
         })
       } else if (parts[0] === "admin") {
-        setActiveTab("classrooms")
+        setActiveTab(isStats ? "tracking" : "classrooms")
       }
     }
     window.addEventListener("popstate", handlePopState)
     return () => window.removeEventListener("popstate", handlePopState)
-  }, [])
+  }, [isStats])
 
   useEffect(() => {
-    if (currentUser?.role === "stats") {
-      router.push("/admin/tracking")
+    if (isStats && !STATS_ALLOWED_TAB_IDS.includes(activeTab)) {
+      router.replace("/admin/tracking")
     }
-  }, [currentUser, router])
+  }, [isStats, activeTab, router])
 
   useEffect(() => {
     window.requestAnimationFrame(() => {
@@ -165,18 +169,19 @@ function AdminDashboardInner({ currentUser, tabParam }: AdminDashboardInnerProps
   }, [activeTab])
 
   const handleSelectTab = (tabId: string) => {
-    setActiveTab(tabId)
+    const resolvedTab = isStats && !STATS_ALLOWED_TAB_IDS.includes(tabId) ? "tracking" : tabId
+    setActiveTab(resolvedTab)
     setVisitedTabs((prev) => {
-      if (prev.has(tabId)) return prev
+      if (prev.has(resolvedTab)) return prev
       const next = new Set(prev)
-      next.add(tabId)
+      next.add(resolvedTab)
       return next
     })
     // Client-side URL sync without triggering unneeded Next.js route reload
-    window.history.pushState(null, "", `/admin/${tabId}`)
+    window.history.pushState(null, "", `/admin/${resolvedTab}`)
   }
 
-  if (!currentUser || currentUser.role === "stats") {
+  if (!currentUser) {
     return null
   }
 
