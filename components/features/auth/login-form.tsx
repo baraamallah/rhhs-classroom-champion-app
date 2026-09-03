@@ -3,6 +3,7 @@
 import type React from "react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { useAuth } from "@/components/providers/auth-provider"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -12,6 +13,7 @@ import { Eye, EyeOff } from "lucide-react"
 
 export function LoginForm() {
   const router = useRouter()
+  const { refresh } = useAuth()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
@@ -37,19 +39,21 @@ export function LoginForm() {
       }
 
       const data = (await response.json()) as { role: string }
-      console.log("Login successful, redirecting to:", data.role)
 
-      // Reset loading state before navigation
+      // Re-fetch the user so AuthProvider's cached state is updated
+      // before navigating — ProtectedRoute reads from this state
+      await refresh()
+
       setLoading(false)
 
       if (data.role === "super_admin" || data.role === "admin") {
-        router.push("/admin")
+        router.replace("/admin")
       } else if (data.role === "stats") {
-        router.push("/admin/tracking")
+        router.replace("/admin/tracking")
       } else if (data.role === "supervisor") {
-        router.push("/supervisor")
+        router.replace("/supervisor")
       } else {
-        router.push("/")
+        router.replace("/")
       }
     } catch (err: any) {
       console.error("Login error:", err)
@@ -76,6 +80,7 @@ export function LoginForm() {
             <Input
               id="email"
               type="email"
+              autoComplete="email"
               placeholder="your.email@school.edu"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -89,6 +94,7 @@ export function LoginForm() {
               <Input
                 id="password"
                 type={showPassword ? "text" : "password"}
+                autoComplete="current-password"
                 placeholder="Enter your password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
