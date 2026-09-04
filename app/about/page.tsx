@@ -4,6 +4,7 @@ import { m } from "framer-motion"
 import { Header } from "@/components/layout/header"
 import { LazyMotionProvider } from "@/components/providers/lazy-motion-provider"
 import { LeafIcon, TrophyIcon, StarIcon, CalculatorIcon, PodiumIcon, AwardBadgeIcon } from "@/components/common/icons"
+import { FirstPlaceLogo, SecondPlaceLogo, ThirdPlaceLogo } from "@/components/common/podium-logos"
 import { Mail, Code2, Sparkles, ShieldCheck, Award, Users, Laptop } from "lucide-react"
 
 const appSteps = [
@@ -51,6 +52,7 @@ export default function AboutPage() {
           <MissionSection />
           <HowItWorksSection />
           <ScoringRulesSection />
+          <EcoBadgesSection />
           <TeamSection />
         </main>
       </div>
@@ -351,6 +353,135 @@ function TierRow({ className, label, value }: { className: string; label: string
     <div className={`flex items-center justify-between p-2 rounded-xl border ${className}`}>
       <span className="text-xs font-bold">{label}</span>
       <span className="text-xs font-bold font-mono">{value}</span>
+    </div>
+  )
+}
+
+function EcoBadgesSection() {
+  return (
+    <div className="mb-20 sm:mb-24 max-w-5xl mx-auto">
+      <m.div
+        className="text-center mb-10 sm:mb-12"
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.5 }}
+      >
+        <div className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 mb-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 shadow-2xs">
+          <AwardBadgeIcon className="h-3.5 w-3.5" />
+          <span>Podium Accolades</span>
+        </div>
+        <h2 className="text-2xl xs:text-3xl sm:text-4xl font-black tracking-tight text-foreground">
+          Creative Eco Badges &amp; Honors
+        </h2>
+        <p className="text-xs sm:text-sm text-muted-foreground max-w-xl mx-auto mt-2 leading-relaxed">
+          Classrooms earn bespoke botanical eco badges celebrating sustainable leadership, waste segregation excellence, and energy stewardship across each academic division.
+        </p>
+      </m.div>
+
+      <div className="grid md:grid-cols-3 gap-6">
+        {/* 1st Place Card: Grand Eco Champion */}
+        <m.div
+          className="bg-card/80 dark:bg-card/50 border border-amber-500/30 hover:border-amber-500/60 p-5 sm:p-6 rounded-2xl xs:rounded-3xl shadow-xs hover:shadow-xl hover:shadow-amber-500/10 transition-all duration-300 flex flex-col items-center text-center group relative overflow-hidden"
+          initial={{ opacity: 0, y: 15 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ delay: 0.1, duration: 0.4 }}
+        >
+          <div className="absolute top-0 right-0 -mr-8 -mt-8 w-24 h-24 bg-amber-500/15 rounded-full blur-xl pointer-events-none" />
+          <div className="mb-4 transform group-hover:scale-110 transition-transform duration-300 drop-shadow-md">
+            <FirstPlaceLogo className="w-16 h-16 sm:w-20 sm:h-20" />
+          </div>
+          <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30 mb-2">
+            1st Place Champion
+          </span>
+          <h3 className="text-lg font-black text-foreground mb-1">Grand Eco Champion</h3>
+          <p className="text-xs text-amber-600 dark:text-amber-400 font-semibold mb-3">
+            Gold &amp; Emerald Crown Emblem
+          </p>
+          <p className="text-xs text-muted-foreground leading-relaxed mb-4">
+            Awarded to the highest-scoring classroom in each division. Represents zero waste lapses, flawless lighting management, and an inspiring culture of daily ecological habits.
+          </p>
+          <div className="w-full mt-auto pt-3 border-t border-border/50 text-[11px] text-muted-foreground space-y-1.5 text-left">
+            <div className="flex items-center gap-1.5 font-medium text-foreground">
+              <Sparkles className="h-3 w-3 text-amber-500 shrink-0" />
+              <span>Division Winner Certificate</span>
+            </div>
+            <div className="flex items-center gap-1.5 font-medium text-foreground">
+              <TrophyIcon className="h-3 w-3 text-amber-500 shrink-0" />
+              <span>Monthly Rotating Eco Trophy</span>
+            </div>
+          </div>
+        </m.div>
+
+        {/* 2nd Place Card: Eco Vanguard */}
+        <m.div
+          className="bg-card/80 dark:bg-card/50 border border-teal-500/30 hover:border-teal-500/60 p-5 sm:p-6 rounded-2xl xs:rounded-3xl shadow-xs hover:shadow-xl hover:shadow-teal-500/10 transition-all duration-300 flex flex-col items-center text-center group relative overflow-hidden"
+          initial={{ opacity: 0, y: 15 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ delay: 0.2, duration: 0.4 }}
+        >
+          <div className="absolute top-0 right-0 -mr-8 -mt-8 w-24 h-24 bg-teal-500/15 rounded-full blur-xl pointer-events-none" />
+          <div className="mb-4 transform group-hover:scale-110 transition-transform duration-300 drop-shadow-md">
+            <SecondPlaceLogo className="w-16 h-16 sm:w-20 sm:h-20" />
+          </div>
+          <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-teal-500/20 text-teal-700 dark:text-teal-300 border border-teal-500/30 mb-2">
+            2nd Place Runner-Up
+          </span>
+          <h3 className="text-lg font-black text-foreground mb-1">Eco Vanguard</h3>
+          <p className="text-xs text-teal-600 dark:text-teal-400 font-semibold mb-3">
+            Jade &amp; Platinum Sprout Emblem
+          </p>
+          <p className="text-xs text-muted-foreground leading-relaxed mb-4">
+            Recognizes the division runner-up for sustained recycling adherence, pristine classroom cleanliness, and consistent teamwork throughout the monthly audit cycle.
+          </p>
+          <div className="w-full mt-auto pt-3 border-t border-border/50 text-[11px] text-muted-foreground space-y-1.5 text-left">
+            <div className="flex items-center gap-1.5 font-medium text-foreground">
+              <Sparkles className="h-3 w-3 text-teal-500 shrink-0" />
+              <span>Silver Division Distinction</span>
+            </div>
+            <div className="flex items-center gap-1.5 font-medium text-foreground">
+              <Award className="h-3 w-3 text-teal-500 shrink-0" />
+              <span>Podium Rank #2 Honors</span>
+            </div>
+          </div>
+        </m.div>
+
+        {/* 3rd Place Card: Eco Pioneer */}
+        <m.div
+          className="bg-card/80 dark:bg-card/50 border border-orange-500/30 hover:border-orange-500/60 p-5 sm:p-6 rounded-2xl xs:rounded-3xl shadow-xs hover:shadow-xl hover:shadow-orange-500/10 transition-all duration-300 flex flex-col items-center text-center group relative overflow-hidden"
+          initial={{ opacity: 0, y: 15 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ delay: 0.3, duration: 0.4 }}
+        >
+          <div className="absolute top-0 right-0 -mr-8 -mt-8 w-24 h-24 bg-orange-500/15 rounded-full blur-xl pointer-events-none" />
+          <div className="mb-4 transform group-hover:scale-110 transition-transform duration-300 drop-shadow-md">
+            <ThirdPlaceLogo className="w-16 h-16 sm:w-20 sm:h-20" />
+          </div>
+          <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-700 dark:text-orange-300 border border-orange-500/30 mb-2">
+            3rd Place Honorable
+          </span>
+          <h3 className="text-lg font-black text-foreground mb-1">Eco Pioneer</h3>
+          <p className="text-xs text-orange-600 dark:text-orange-400 font-semibold mb-3">
+            Earth &amp; Oak Acorn Emblem
+          </p>
+          <p className="text-xs text-muted-foreground leading-relaxed mb-4">
+            Honors classrooms displaying proactive energy reduction, continuous score growth, and outstanding personal commitment to the school’s ecological mission.
+          </p>
+          <div className="w-full mt-auto pt-3 border-t border-border/50 text-[11px] text-muted-foreground space-y-1.5 text-left">
+            <div className="flex items-center gap-1.5 font-medium text-foreground">
+              <Sparkles className="h-3 w-3 text-orange-500 shrink-0" />
+              <span>Bronze Division Honor</span>
+            </div>
+            <div className="flex items-center gap-1.5 font-medium text-foreground">
+              <Award className="h-3 w-3 text-orange-500 shrink-0" />
+              <span>Podium Rank #3 Honors</span>
+            </div>
+          </div>
+        </m.div>
+      </div>
     </div>
   )
 }

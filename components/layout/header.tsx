@@ -73,17 +73,17 @@ export function Header() {
         animate={{ y: 0 }}
         transition={{ duration: 0.3, ease: "easeOut" }}
       >
-        <div className="container mx-auto px-2.5 xs:px-3 sm:px-6 w-full">
-          <div className="flex items-center justify-between gap-1.5 xs:gap-2 sm:gap-4">
-            {/* Brand Logo & Title */}
+        <div className="container mx-auto px-2 xs:px-3 sm:px-6 w-full">
+          <div className="flex items-center justify-between gap-1 xs:gap-2 sm:gap-4 relative">
+            {/* Left: Brand Logo & Title */}
             <Link
               href="/"
-              className="flex items-center gap-1.5 xs:gap-2 sm:gap-3 group shrink-0 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary rounded-lg p-0.5"
+              className="flex items-center gap-1.5 xs:gap-2 sm:gap-3 group shrink-0 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary rounded-lg p-0.5 z-10"
               aria-label="RHHS ECO Club Home"
             >
-              <div className="relative">
+              <div className="relative shrink-0">
                 <m.div
-                  className="h-8 w-8 xs:h-9 xs:w-9 sm:h-11 sm:w-11 rounded-full p-1 bg-white dark:bg-muted/40 shadow-sm border border-emerald-500/20 group-hover:border-emerald-500/50 flex items-center justify-center transition-all duration-300 group-hover:shadow-emerald-500/20 group-hover:shadow-md"
+                  className="h-8 w-8 xs:h-9 xs:w-9 sm:h-11 sm:w-11 rounded-full p-1 bg-white dark:bg-muted/40 shadow-xs border border-emerald-500/20 group-hover:border-emerald-500/50 flex items-center justify-center transition-all duration-300 group-hover:shadow-emerald-500/20 group-hover:shadow-md"
                   whileHover={{ scale: 1.08 }}
                   transition={{ type: "spring", stiffness: 350, damping: 20 }}
                 >
@@ -98,30 +98,31 @@ export function Header() {
                 </m.div>
               </div>
 
-              <div className="flex flex-col">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-sm xs:text-base sm:text-xl font-black tracking-tight bg-linear-to-r from-emerald-600 via-primary to-green-600 bg-clip-text text-transparent leading-none">
-                    RHHS ECO Club
-                  </span>
-                </div>
+              <div className="flex flex-col min-w-0">
+                <span className="text-xs xs:text-sm sm:text-lg md:text-xl font-black tracking-tight bg-linear-to-r from-emerald-600 via-primary to-green-600 bg-clip-text text-transparent leading-none whitespace-nowrap">
+                  RHHS ECO Club
+                </span>
                 <div className="flex items-center gap-1 mt-0.5">
-                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="text-[10px] xs:text-[11px] sm:text-xs font-medium text-muted-foreground truncate max-w-22.5 xs:max-w-none">
+                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                  <span className="text-[9px] xs:text-[10px] sm:text-xs font-medium text-muted-foreground whitespace-nowrap">
                     Classroom Champion
                   </span>
                 </div>
               </div>
             </Link>
 
-            {/* Main Navigation & User Actions */}
-            <nav className="flex items-center gap-1 xs:gap-1.5 sm:gap-3 shrink-0" aria-label="Main Navigation">
+            {/* Navigation: Leaderboard, Winners, About Us (Same on phone and desktop!) */}
+            <nav
+              className="flex items-center justify-center gap-1 xs:gap-1.5 sm:gap-2 md:gap-3 md:absolute md:left-1/2 md:-translate-x-1/2 z-10"
+              aria-label="Primary Navigation"
+            >
               {/* Leaderboard Link */}
               <Link
                 href="/"
                 className={cn(
-                  "px-2.5 py-1.5 min-h-10 rounded-lg text-xs sm:text-sm font-medium transition-colors hidden sm:inline-flex items-center gap-1",
+                  "px-2 xs:px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[11px] xs:text-xs sm:text-sm font-semibold transition-colors inline-flex items-center whitespace-nowrap",
                   pathname === "/"
-                    ? "bg-primary/10 text-primary font-semibold"
+                    ? "bg-primary/10 text-primary font-bold"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                 )}
               >
@@ -134,22 +135,21 @@ export function Header() {
               {/* About Us Link */}
               <Link
                 href="/about"
-                aria-label="About Us"
                 className={cn(
-                  "px-2 xs:px-2.5 py-1.5 min-h-10 min-w-10 rounded-lg text-xs sm:text-sm font-medium transition-colors inline-flex items-center justify-center gap-1",
+                  "px-2 xs:px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[11px] xs:text-xs sm:text-sm font-semibold transition-colors inline-flex items-center whitespace-nowrap",
                   pathname === "/about"
-                    ? "bg-primary/10 text-primary font-semibold"
+                    ? "bg-primary/10 text-primary font-bold"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                 )}
               >
-                <Info className="h-4 w-4 sm:hidden" />
-                <span className="hidden sm:inline">About Us</span>
+                About Us
               </Link>
+            </nav>
 
-              {/* Direct Theme Toggle */}
-              <div className="hidden sm:block">
-                <ThemeToggle />
-              </div>
+            {/* Right: Actions (Theme Toggle + User / Auth Menu, Login HIDDEN on phone) */}
+            <div className="flex items-center gap-1 xs:gap-1.5 sm:gap-2.5 shrink-0 z-10 ml-auto md:ml-0">
+              {/* Theme Toggle: Visible on all devices */}
+              <ThemeToggle />
 
               {/* User / Auth Menu */}
               {!loading && (
@@ -160,7 +160,7 @@ export function Header() {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="h-9 px-2 xs:px-2.5 sm:px-3 rounded-full border-border/80 hover:border-primary/50 gap-1.5 bg-card/60 shadow-2xs text-xs sm:text-sm font-medium"
+                          className="h-8 sm:h-9 px-2 xs:px-2.5 sm:px-3 rounded-full border-border/80 hover:border-primary/50 gap-1.5 bg-card/60 shadow-2xs text-xs sm:text-sm font-medium"
                           aria-label="User menu"
                         >
                           <div className="h-5 w-5 rounded-full bg-primary/15 text-primary flex items-center justify-center font-bold text-xs">
@@ -210,7 +210,8 @@ export function Header() {
                       </DropdownMenuContent>
                     </DropdownMenu>
                   ) : (
-                    <div className="flex items-center gap-1.5">
+                    /* Login button: HIDDEN ON PHONE! Only visible on sm+ */
+                    <div className="hidden sm:flex items-center gap-1.5">
                       <Button
                         asChild
                         variant="outline"
@@ -222,14 +223,11 @@ export function Header() {
                           <span>Login</span>
                         </Link>
                       </Button>
-                      <div className="sm:hidden">
-                        <ThemeToggle />
-                      </div>
                     </div>
                   )}
                 </>
               )}
-            </nav>
+            </div>
           </div>
         </div>
       </m.header>
