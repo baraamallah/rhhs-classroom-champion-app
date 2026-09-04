@@ -431,13 +431,13 @@ export function UserManagement({ currentUser }: { currentUser?: User }) {
             placeholder="Search by staff name or email..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="rounded-xl"
+            className="rounded-xl min-h-11"
           />
         </div>
 
         <div className="w-full sm:w-48">
           <Select value={roleFilter} onValueChange={setRoleFilter}>
-            <SelectTrigger className="rounded-xl">
+            <SelectTrigger className="rounded-xl min-h-11">
               <SelectValue placeholder="All Roles" />
             </SelectTrigger>
             <SelectContent>
@@ -513,7 +513,7 @@ export function UserManagement({ currentUser }: { currentUser?: User }) {
                       size="sm"
                       variant="outline"
                       onClick={() => handleAssignClassrooms(user)}
-                      className="rounded-xl text-xs h-8 hover:bg-primary/10 hover:text-primary hover:border-primary/40"
+                      className="rounded-xl text-xs min-h-11 px-3.5 hover:bg-primary/10 hover:text-primary hover:border-primary/40 cursor-pointer"
                     >
                       <Building2 className="mr-1.5 h-3.5 w-3.5" />
                       Assign Rooms ({assignedRooms.length})
@@ -522,7 +522,7 @@ export function UserManagement({ currentUser }: { currentUser?: User }) {
 
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg">
+                      <Button variant="ghost" size="icon" className="min-h-11 min-w-11 rounded-xl flex items-center justify-center cursor-pointer">
                         <MoreVertical className="h-4 w-4 text-muted-foreground" />
                       </Button>
                     </DropdownMenuTrigger>

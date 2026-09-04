@@ -375,11 +375,11 @@ export function ClassroomManagement({ currentUser }: ClassroomManagementProps) {
             </div>
 
             {/* Division Selector */}
-            <div className="flex items-center gap-2 text-muted-foreground min-w-max">
-              <Filter className="h-4 w-4" />
-              <Label className="text-sm font-bold uppercase tracking-wider">Division</Label>
+            <div className="flex items-center gap-2 text-muted-foreground w-full sm:w-auto">
+              <Filter className="h-4 w-4 shrink-0" />
+              <Label className="text-sm font-bold uppercase tracking-wider shrink-0">Division</Label>
               <Select value={selectedDivision} onValueChange={setSelectedDivision}>
-                <SelectTrigger className="w-full sm:w-56 bg-background h-10 text-xs sm:text-sm">
+                <SelectTrigger className="w-full sm:w-45 bg-background min-h-11 text-xs sm:text-sm">
                   <SelectValue placeholder="Select division" />
                 </SelectTrigger>
                 <SelectContent>
@@ -410,7 +410,7 @@ export function ClassroomManagement({ currentUser }: ClassroomManagementProps) {
                     onValueChange={handleBulkUpdateDivision}
                     disabled={bulkUpdating}
                   >
-                    <SelectTrigger className="w-45 bg-background h-9 text-xs">
+                    <SelectTrigger className="w-40 sm:w-45 bg-background min-h-11 text-xs">
                       <SelectValue placeholder="Choose division..." />
                     </SelectTrigger>
                     <SelectContent>
@@ -773,7 +773,7 @@ export function ClassroomManagement({ currentUser }: ClassroomManagementProps) {
                               onValueChange={(value) => handleQuickDivisionChange(classroom.id, value)}
                               disabled={bulkUpdating}
                             >
-                              <SelectTrigger className="h-9 w-32.5 sm:w-37.5 bg-background border-border/60 text-xs font-semibold shadow-sm">
+                              <SelectTrigger className="min-h-11 w-35 sm:w-42.5 bg-background border-border/60 text-xs font-semibold shadow-xs">
                                 <SelectValue placeholder="Set division" />
                               </SelectTrigger>
                               <SelectContent>
@@ -788,7 +788,7 @@ export function ClassroomManagement({ currentUser }: ClassroomManagementProps) {
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="h-9 w-9 rounded-full hover:bg-muted transition-colors"
+                                  className="min-h-11 min-w-11 rounded-full hover:bg-muted transition-colors flex items-center justify-center cursor-pointer"
                                 >
                                   <MoreVertical className="h-5 w-5 text-muted-foreground" />
                                 </Button>

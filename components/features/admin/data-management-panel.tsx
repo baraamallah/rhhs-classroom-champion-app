@@ -153,32 +153,32 @@ export function DataManagementPanel() {
       />
 
       <Tabs defaultValue="archive" className="space-y-6">
-        <TabsList className="bg-muted p-1 rounded-xl h-auto w-full sm:w-auto">
+        <TabsList className="bg-muted p-1 rounded-xl h-auto grid grid-cols-2 w-full sm:w-auto sm:inline-flex">
           <TabsTrigger
             value="archive"
-            className="rounded-lg py-2.5 px-8 data-[state=active]:bg-background data-[state=active]:shadow-md font-bold"
+            className="rounded-lg py-2.5 px-3 sm:px-8 min-h-11 data-[state=active]:bg-background data-[state=active]:shadow-md font-bold text-xs sm:text-sm"
           >
-            <Archive className="h-4 w-4 mr-2" />
-            Archive Operations
+            <Archive className="h-4 w-4 mr-1.5 sm:mr-2 shrink-0" />
+            <span className="truncate">Archive Operations</span>
           </TabsTrigger>
           <TabsTrigger
             value="winners"
-            className="rounded-lg py-2.5 px-8 data-[state=active]:bg-background data-[state=active]:shadow-md font-bold"
+            className="rounded-lg py-2.5 px-3 sm:px-8 min-h-11 data-[state=active]:bg-background data-[state=active]:shadow-md font-bold text-xs sm:text-sm"
           >
-            <Trophy className="h-4 w-4 mr-2 text-amber-500" />
-            Monthly Winners
+            <Trophy className="h-4 w-4 mr-1.5 sm:mr-2 shrink-0 text-amber-500" />
+            <span className="truncate">Monthly Winners</span>
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="archive" className="space-y-6 mt-6">
           <Card className="rounded-2xl border-border shadow-xs overflow-hidden">
             <CardHeader className="p-4 sm:p-5 border-b border-border/60 bg-muted/20">
-              <CardTitle className="flex items-center justify-between">
+              <CardTitle className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <Archive className="h-5 w-5 text-primary" />
                   Archive Active Evaluations
                 </div>
-                <span className="text-sm font-normal text-muted-foreground">
+                <span className="text-xs sm:text-sm font-normal text-muted-foreground">
                   {evaluations.length} evaluation{evaluations.length !== 1 ? "s" : ""}
                 </span>
               </CardTitle>
@@ -187,21 +187,22 @@ export function DataManagementPanel() {
               </CardDescription>
             </CardHeader>
             <CardContent className="p-4 sm:p-6 space-y-4">
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col xs:flex-row items-stretch xs:items-center gap-2.5">
                 <div className="relative flex-1">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Search className="absolute left-3 top-3.5 h-4 w-4 text-muted-foreground pointer-events-none" />
                   <Input
-                    placeholder="Search by classroom, grade, supervisor, or date..."
+                    placeholder="Search classroom, grade, supervisor, date..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     disabled={loading}
-                    className="pl-10"
+                    className="pl-10 min-h-11 text-xs sm:text-sm"
                   />
                 </div>
                 <Button
                   variant={selectedEvaluations.length > 0 ? "default" : "outline"}
                   onClick={() => setArchiveDialog({ open: true, count: selectedEvaluations.length })}
                   disabled={loading || selectedEvaluations.length === 0}
+                  className="min-h-11 shrink-0 font-bold"
                 >
                   <Archive className="mr-2 h-4 w-4" />
                   Archive ({selectedEvaluations.length})
@@ -209,7 +210,7 @@ export function DataManagementPanel() {
               </div>
 
               <div className="border border-border/70 rounded-xl overflow-hidden">
-                <div className="flex items-center p-3 border-b bg-muted/40">
+                <div className="flex items-center p-3 border-b bg-muted/40 min-h-11">
                   <Checkbox
                     checked={
                       selectedEvaluations.length === filteredEvaluations.length &&
@@ -217,6 +218,8 @@ export function DataManagementPanel() {
                     }
                     onCheckedChange={handleSelectAll}
                     disabled={loading || filteredEvaluations.length === 0}
+                    className="h-5 w-5 rounded"
+                    aria-label="Select all evaluations"
                   />
                   <span className="ml-3 text-sm font-medium text-muted-foreground">
                     {selectedEvaluations.length} selected
@@ -242,27 +245,29 @@ export function DataManagementPanel() {
                           checked={selectedEvaluations.includes(evaluation.id)}
                           onCheckedChange={() => toggleSelection(evaluation.id)}
                           disabled={loading}
+                          className="h-5 w-5 rounded shrink-0"
+                          aria-label={`Select evaluation for ${evaluation.classrooms?.name || "Unknown"}`}
                         />
-                        <div className="ml-3 flex-1 grid grid-cols-1 md:grid-cols-2 gap-2">
-                          <div>
-                            <p className="font-medium text-sm text-foreground">
+                        <div className="ml-3 flex-1 grid grid-cols-1 md:grid-cols-2 gap-2 min-w-0">
+                          <div className="min-w-0">
+                            <p className="font-medium text-sm text-foreground truncate">
                               {evaluation.classrooms?.name || "Unknown"}
                               <span className="text-muted-foreground font-normal ml-1">
                                 ({evaluation.classrooms?.grade || "N/A"})
                               </span>
                             </p>
-                            <p className="text-xs text-muted-foreground">
+                            <p className="text-xs text-muted-foreground truncate">
                               Supervisor: {evaluation.users?.name || "Unknown"}
                             </p>
                           </div>
-                          <div className="text-right md:text-left">
+                          <div className="text-left md:text-right">
                             <p className="text-sm font-semibold text-foreground">
                               Score: {evaluation.total_score}/{evaluation.max_score}
                             </p>
                             <p className="text-xs text-muted-foreground">
                               {new Date(evaluation.evaluation_date).toLocaleDateString()}
                             </p>
-                            <p className="text-[10px] text-muted-foreground/70 font-mono">
+                            <p className="text-[10px] text-muted-foreground/70 font-mono truncate">
                               {evaluation.id}
                             </p>
                           </div>
@@ -273,7 +278,7 @@ export function DataManagementPanel() {
                 </div>
               </div>
               <div className="mt-4">
-                <Button variant="outline" onClick={loadEvaluations} disabled={loading} size="sm">
+                <Button variant="outline" onClick={loadEvaluations} disabled={loading} size="sm" className="min-h-11">
                   {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Archive className="mr-2 h-4 w-4" />}
                   Refresh
                 </Button>
@@ -308,7 +313,7 @@ export function DataManagementPanel() {
         open={archiveDialog.open}
         onOpenChange={(open) => setArchiveDialog({ ...archiveDialog, open })}
       >
-        <AlertDialogContent>
+        <AlertDialogContent className="w-[calc(100vw-2rem)] sm:w-full max-w-md max-h-[90dvh] overflow-y-auto">
           <AlertDialogHeader>
             <AlertDialogTitle>Archive {archiveDialog.count} Evaluations?</AlertDialogTitle>
             <AlertDialogDescription>
@@ -316,15 +321,17 @@ export function DataManagementPanel() {
               This action preserves the data for history.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction
-            onClick={handleArchiveSelected}
-            disabled={loading}
-            className="bg-primary text-primary-foreground hover:bg-primary/90"
-          >
-            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Archive Selected
-          </AlertDialogAction>
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 mt-4">
+            <AlertDialogCancel className="min-h-11">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleArchiveSelected}
+              disabled={loading}
+              className="min-h-11 bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Archive Selected
+            </AlertDialogAction>
+          </div>
         </AlertDialogContent>
       </AlertDialog>
     </div>

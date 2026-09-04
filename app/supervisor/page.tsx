@@ -293,45 +293,45 @@ function SupervisorDashboardContent({ currentUser }: SupervisorDashboardContentP
         )}
 
         {/* 2. KPI OVERVIEW METRICS */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <Card className="p-4 rounded-2xl border-border bg-card shadow-xs">
-            <span className="text-[11px] font-semibold text-muted-foreground uppercase block">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
+          <Card className="p-3 xs:p-4 rounded-2xl border-border bg-card shadow-xs">
+            <span className="text-[10px] xs:text-[11px] font-semibold text-muted-foreground uppercase block">
               Assigned Classrooms
             </span>
-            <p className="text-2xl font-black text-foreground mt-0.5">{totalAssignedCount}</p>
-            <span className="text-[10px] text-muted-foreground mt-0.5 block">In your division</span>
+            <p className="text-xl xs:text-2xl font-black text-foreground mt-0.5">{totalAssignedCount}</p>
+            <span className="text-[10px] text-muted-foreground mt-0.5 block truncate">In your division</span>
           </Card>
 
-          <Card className="p-4 rounded-2xl border-border bg-card shadow-xs">
-            <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 uppercase block">
+          <Card className="p-3 xs:p-4 rounded-2xl border-border bg-card shadow-xs">
+            <span className="text-[10px] xs:text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 uppercase block">
               Today&apos;s Done
             </span>
-            <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-0.5">
+            <p className="text-xl xs:text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-0.5">
               {todayCompletedCount}
             </p>
-            <span className="text-[10px] text-muted-foreground mt-0.5 block">
+            <span className="text-[10px] text-muted-foreground mt-0.5 block truncate">
               {todayCompletedCount === totalAssignedCount && totalAssignedCount > 0
                 ? "All rooms locked ✓"
                 : `${todayPendingCount} awaiting`}
             </span>
           </Card>
 
-          <Card className="p-4 rounded-2xl border-border bg-card shadow-xs">
-            <span className="text-[11px] font-semibold text-amber-600 dark:text-amber-400 uppercase block">
+          <Card className="p-3 xs:p-4 rounded-2xl border-border bg-card shadow-xs">
+            <span className="text-[10px] xs:text-[11px] font-semibold text-amber-600 dark:text-amber-400 uppercase block">
               Missed Past Days
             </span>
-            <p className="text-2xl font-black text-amber-600 dark:text-amber-400 mt-0.5">
+            <p className="text-xl xs:text-2xl font-black text-amber-600 dark:text-amber-400 mt-0.5">
               {missedDays.length}
             </p>
-            <span className="text-[10px] text-muted-foreground mt-0.5 block">Eligible to backfill</span>
+            <span className="text-[10px] text-muted-foreground mt-0.5 block truncate">Eligible to backfill</span>
           </Card>
 
-          <Card className="p-4 rounded-2xl border-border bg-card shadow-xs">
-            <span className="text-[11px] font-semibold text-primary uppercase block">
+          <Card className="p-3 xs:p-4 rounded-2xl border-border bg-card shadow-xs">
+            <span className="text-[10px] xs:text-[11px] font-semibold text-primary uppercase block">
               Inspection Rule
             </span>
-            <p className="text-lg sm:text-xl font-bold text-foreground mt-1">1 / Day</p>
-            <span className="text-[10px] text-muted-foreground mt-0.5 block">Locks once submitted</span>
+            <p className="text-base xs:text-lg sm:text-xl font-bold text-foreground mt-1">1 / Day</p>
+            <span className="text-[10px] text-muted-foreground mt-0.5 block truncate">Locks once submitted</span>
           </Card>
         </div>
 
@@ -414,7 +414,7 @@ function SupervisorDashboardContent({ currentUser }: SupervisorDashboardContentP
                           size="sm"
                           variant="ghost"
                           onClick={() => handleStartTodayEvaluation(room.id)}
-                          className="h-8 text-xs rounded-xl text-muted-foreground hover:text-foreground"
+                          className="min-h-11 px-3 text-xs rounded-xl text-muted-foreground hover:text-foreground cursor-pointer"
                         >
                           View Record
                         </Button>
@@ -423,7 +423,7 @@ function SupervisorDashboardContent({ currentUser }: SupervisorDashboardContentP
                           size="sm"
                           onClick={() => handleStartTodayEvaluation(room.id)}
                           disabled={!isTodayWorkingDay}
-                          className="h-8 text-xs rounded-xl font-bold bg-primary hover:bg-primary/90 text-primary-foreground"
+                          className="min-h-11 px-3.5 text-xs rounded-xl font-bold bg-primary hover:bg-primary/90 text-primary-foreground cursor-pointer"
                         >
                           Inspect Room <ArrowRight className="ml-1 h-3 w-3" />
                         </Button>
@@ -454,7 +454,7 @@ function SupervisorDashboardContent({ currentUser }: SupervisorDashboardContentP
                   variant="outline"
                   size="icon"
                   onClick={handlePrevMonth}
-                  className="h-8 w-8 rounded-lg"
+                  className="min-h-11 min-w-11 rounded-lg cursor-pointer"
                   aria-label="Previous month"
                 >
                   <ChevronLeft className="h-4 w-4" />
@@ -463,7 +463,7 @@ function SupervisorDashboardContent({ currentUser }: SupervisorDashboardContentP
                   variant="outline"
                   size="sm"
                   onClick={handleCurrentMonth}
-                  className="h-8 px-2.5 rounded-lg text-xs"
+                  className="min-h-11 px-3 rounded-lg text-xs font-semibold cursor-pointer"
                 >
                   Today
                 </Button>
@@ -471,7 +471,7 @@ function SupervisorDashboardContent({ currentUser }: SupervisorDashboardContentP
                   variant="outline"
                   size="icon"
                   onClick={handleNextMonth}
-                  className="h-8 w-8 rounded-lg"
+                  className="min-h-11 min-w-11 rounded-lg cursor-pointer"
                   aria-label="Next month"
                 >
                   <ChevronRight className="h-4 w-4" />
@@ -506,7 +506,7 @@ function SupervisorDashboardContent({ currentUser }: SupervisorDashboardContentP
                     disabled={!isClickable}
                     type="button"
                     className={cn(
-                      "min-h-21.25 sm:min-h-26.25 p-1.5 sm:p-2.5 text-left transition-all flex flex-col justify-between select-none relative group",
+                      "min-h-16 sm:min-h-25 p-1.5 sm:p-2.5 text-left transition-all flex flex-col justify-between select-none relative group",
                       !day.isCurrentMonth
                         ? "bg-muted/15 text-muted-foreground/30 cursor-default"
                         : day.status === "outside_term"
@@ -530,7 +530,7 @@ function SupervisorDashboardContent({ currentUser }: SupervisorDashboardContentP
                         className={cn(
                           "text-xs sm:text-sm font-bold tracking-tight",
                           !day.isCurrentMonth && "text-muted-foreground/30 font-medium",
-                          day.isToday && day.isCurrentMonth && "w-6 h-6 sm:w-6.5 sm:h-6.5 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[10px] sm:text-xs font-black shadow-xs"
+                          day.isToday && day.isCurrentMonth && "w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[10px] sm:text-xs font-black shadow-xs"
                         )}
                       >
                         {day.dayNumber}
@@ -542,6 +542,7 @@ function SupervisorDashboardContent({ currentUser }: SupervisorDashboardContentP
                           {day.status === "completed" && (
                             <span className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
                               <Check className="h-3 w-3 stroke-3" />
+                              <span className="sr-only">All inspections complete</span>
                             </span>
                           )}
                           {(day.status === "missing" || day.status === "partial") && (
@@ -661,7 +662,7 @@ function SupervisorDashboardContent({ currentUser }: SupervisorDashboardContentP
                         selectedCalendarDay?.date &&
                         handleStartBackfillEvaluation(room.id, selectedCalendarDay.date)
                       }
-                      className="h-8 text-xs rounded-xl font-semibold bg-primary hover:bg-primary/90 text-primary-foreground shrink-0"
+                      className="min-h-11 px-3.5 text-xs rounded-xl font-semibold bg-primary hover:bg-primary/90 text-primary-foreground shrink-0 cursor-pointer"
                     >
                       Inspect <ArrowRight className="ml-1 h-3 w-3" />
                     </Button>

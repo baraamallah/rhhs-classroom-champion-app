@@ -61,21 +61,21 @@ export default function AboutPage() {
 function AboutHero() {
   return (
     <m.div
-      className="text-center mb-14 max-w-3xl mx-auto"
+      className="text-center mb-10 sm:mb-14 max-w-3xl mx-auto"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
     >
       <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-primary/30 bg-primary/10 text-primary text-xs font-semibold mb-4 shadow-2xs">
-        <Sparkles className="h-3.5 w-3.5" />
-        <span>Rafic Hariri High School • Green Classrooms Initiative</span>
+        <Sparkles className="h-3.5 w-3.5 shrink-0" />
+        <span className="text-center">Rafic Hariri High School • Green Classrooms Initiative</span>
       </div>
 
-      <h1 className="text-4xl sm:text-5xl md:text-6xl font-black tracking-tight mb-4 bg-linear-to-r from-emerald-600 via-primary to-green-600 bg-clip-text text-transparent">
+      <h1 className="text-3xl xs:text-4xl sm:text-5xl md:text-6xl font-black tracking-tight mb-4 bg-linear-to-r from-emerald-600 via-primary to-green-600 bg-clip-text text-transparent">
         Pioneering Sustainability Through Code & Conscience
       </h1>
 
-      <p className="text-base sm:text-lg text-muted-foreground font-medium max-w-2xl mx-auto leading-relaxed">
+      <p className="text-sm xs:text-base sm:text-lg text-muted-foreground font-medium max-w-2xl mx-auto leading-relaxed px-2">
         A student-engineered environmental governance platform inspiring daily eco-friendly habits and collaborative school spirit across all academic divisions.
       </p>
     </m.div>
@@ -85,34 +85,34 @@ function AboutHero() {
 function MilestonesBanner() {
   return (
     <m.div
-      className="max-w-5xl mx-auto mb-20 grid grid-cols-2 sm:grid-cols-4 gap-4"
+      className="max-w-5xl mx-auto mb-16 sm:mb-20 grid grid-cols-2 md:grid-cols-4 gap-2.5 xs:gap-3 sm:gap-4"
       initial={{ opacity: 0, y: 15 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.4 }}
     >
-      <div className="p-5 rounded-2xl bg-card/80 dark:bg-card/50 backdrop-blur-md border border-border/70 shadow-xs text-center">
-        <p className="text-3xl sm:text-4xl font-black text-primary">5</p>
+      <div className="p-3.5 xs:p-4 sm:p-5 rounded-2xl bg-card/80 dark:bg-card/50 backdrop-blur-md border border-border/70 shadow-xs text-center">
+        <p className="text-2xl xs:text-3xl sm:text-4xl font-black text-primary">5</p>
         <p className="text-xs font-bold text-foreground mt-1">Divisions</p>
-        <p className="text-[11px] text-muted-foreground">Pre-School to Technical Institute</p>
+        <p className="text-[10px] xs:text-[11px] text-muted-foreground">Pre-School to Technical</p>
       </div>
 
-      <div className="p-5 rounded-2xl bg-card/80 dark:bg-card/50 backdrop-blur-md border border-border/70 shadow-xs text-center">
-        <p className="text-3xl sm:text-4xl font-black text-emerald-600 dark:text-emerald-400">100%</p>
+      <div className="p-3.5 xs:p-4 sm:p-5 rounded-2xl bg-card/80 dark:bg-card/50 backdrop-blur-md border border-border/70 shadow-xs text-center">
+        <p className="text-2xl xs:text-3xl sm:text-4xl font-black text-emerald-600 dark:text-emerald-400">100%</p>
         <p className="text-xs font-bold text-foreground mt-1">Student Built</p>
-        <p className="text-[11px] text-muted-foreground">Software & Design</p>
+        <p className="text-[10px] xs:text-[11px] text-muted-foreground">Software & Design</p>
       </div>
 
-      <div className="p-5 rounded-2xl bg-card/80 dark:bg-card/50 backdrop-blur-md border border-border/70 shadow-xs text-center">
-        <p className="text-3xl sm:text-4xl font-black text-amber-500">Live</p>
+      <div className="p-3.5 xs:p-4 sm:p-5 rounded-2xl bg-card/80 dark:bg-card/50 backdrop-blur-md border border-border/70 shadow-xs text-center">
+        <p className="text-2xl xs:text-3xl sm:text-4xl font-black text-amber-500">Live</p>
         <p className="text-xs font-bold text-foreground mt-1">Real-Time Data</p>
-        <p className="text-[11px] text-muted-foreground">Transparent Audits</p>
+        <p className="text-[10px] xs:text-[11px] text-muted-foreground">Transparent Audits</p>
       </div>
 
-      <div className="p-5 rounded-2xl bg-card/80 dark:bg-card/50 backdrop-blur-md border border-border/70 shadow-xs text-center">
-        <p className="text-3xl sm:text-4xl font-black text-blue-500">Monthly</p>
+      <div className="p-3.5 xs:p-4 sm:p-5 rounded-2xl bg-card/80 dark:bg-card/50 backdrop-blur-md border border-border/70 shadow-xs text-center">
+        <p className="text-2xl xs:text-3xl sm:text-4xl font-black text-blue-500">Monthly</p>
         <p className="text-xs font-bold text-foreground mt-1">Recognition</p>
-        <p className="text-[11px] text-muted-foreground">Certificates & Trophies</p>
+        <p className="text-[10px] xs:text-[11px] text-muted-foreground">Certificates & Trophies</p>
       </div>
     </m.div>
   )
@@ -121,10 +121,10 @@ function MilestonesBanner() {
 
 function MissionSection() {
   return (
-    <div className="mb-24 max-w-5xl mx-auto">
+    <div className="mb-16 sm:mb-24 max-w-5xl mx-auto">
       {/* Tech × Eco Partnership Card */}
       <m.div
-        className="flex flex-col justify-between p-7 sm:p-9 rounded-3xl bg-linear-to-br from-primary/10 via-card/80 to-emerald-500/10 backdrop-blur-md border border-border/70 shadow-sm"
+        className="flex flex-col justify-between p-5 xs:p-7 sm:p-9 rounded-2xl xs:rounded-3xl bg-linear-to-br from-primary/10 via-card/80 to-emerald-500/10 backdrop-blur-md border border-border/70 shadow-sm"
         initial={{ opacity: 0, y: 20 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
@@ -166,7 +166,7 @@ function HowItWorksSection() {
             <ShieldCheck className="h-3.5 w-3.5" />
             <span>Operational Process</span>
           </div>
-          <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-foreground">
+          <h2 className="text-2xl xs:text-3xl sm:text-4xl font-black tracking-tight text-foreground">
             How The System Works
           </h2>
           <p className="text-xs sm:text-sm text-muted-foreground mt-1 max-w-md mx-auto">
@@ -178,7 +178,7 @@ function HowItWorksSection() {
           {appSteps.map((card, index) => (
             <m.div
               key={card.title}
-              className="relative bg-card/80 dark:bg-card/50 backdrop-blur-md border border-border/70 p-6 rounded-3xl shadow-xs hover:shadow-md hover:border-primary/50 transition-all duration-300 group"
+              className="relative bg-card/80 dark:bg-card/50 backdrop-blur-md border border-border/70 p-4 xs:p-5 sm:p-6 rounded-2xl xs:rounded-3xl shadow-xs hover:shadow-md hover:border-primary/50 transition-all duration-300 group"
               initial={{ opacity: 0, y: 15 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -215,7 +215,7 @@ function ScoringRulesSection() {
           <CalculatorIcon className="h-3.5 w-3.5" />
           <span>Evaluation Rubric</span>
         </div>
-        <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-foreground">
+        <h2 className="text-2xl xs:text-3xl sm:text-4xl font-black tracking-tight text-foreground">
           Scoring Standards & Benchmark Tiers
         </h2>
         <p className="text-xs sm:text-sm text-muted-foreground max-w-xl mx-auto mt-1">
@@ -235,7 +235,7 @@ function ScoringRulesSection() {
 function ScoringMechanicsCard() {
   return (
     <m.div
-      className="bg-card/80 dark:bg-card/50 border border-border/70 p-6 rounded-3xl shadow-xs hover:shadow-md hover:border-emerald-500/50 transition-all duration-300 flex flex-col justify-between group"
+      className="bg-card/80 dark:bg-card/50 border border-border/70 p-4 xs:p-5 sm:p-6 rounded-2xl xs:rounded-3xl shadow-xs hover:shadow-md hover:border-emerald-500/50 transition-all duration-300 flex flex-col justify-between group"
       initial={{ opacity: 0, y: 15 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
@@ -283,7 +283,7 @@ function ScoringMechanicsCard() {
 function LeaderboardRulesCard() {
   return (
     <m.div
-      className="bg-card/80 dark:bg-card/50 border border-border/70 p-6 rounded-3xl shadow-xs hover:shadow-md hover:border-blue-500/50 transition-all duration-300 flex flex-col justify-between group"
+      className="bg-card/80 dark:bg-card/50 border border-border/70 p-4 xs:p-5 sm:p-6 rounded-2xl xs:rounded-3xl shadow-xs hover:shadow-md hover:border-blue-500/50 transition-all duration-300 flex flex-col justify-between group"
       initial={{ opacity: 0, y: 15 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
@@ -318,7 +318,7 @@ function LeaderboardRulesCard() {
 function PerformanceTiersCard() {
   return (
     <m.div
-      className="bg-card/80 dark:bg-card/50 border border-border/70 p-6 rounded-3xl shadow-xs hover:shadow-md hover:border-amber-500/50 transition-all duration-300 flex flex-col justify-between group"
+      className="bg-card/80 dark:bg-card/50 border border-border/70 p-4 xs:p-5 sm:p-6 rounded-2xl xs:rounded-3xl shadow-xs hover:shadow-md hover:border-amber-500/50 transition-all duration-300 flex flex-col justify-between group"
       initial={{ opacity: 0, y: 15 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
@@ -363,7 +363,7 @@ function TeamSection() {
           <Users className="h-3.5 w-3.5" />
           <span>Project Leadership</span>
         </div>
-        <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-foreground">
+        <h2 className="text-2xl xs:text-3xl sm:text-4xl font-black tracking-tight text-foreground">
           Meet The Minds Behind The App
         </h2>
         <p className="text-xs sm:text-sm text-muted-foreground mt-1 max-w-md mx-auto">
@@ -427,7 +427,7 @@ function TeamList({
             <a
               href={`mailto:${member.email}`}
               aria-label={`Email ${member.name}`}
-              className="p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-full transition-colors"
+              className="min-h-11 min-w-11 flex items-center justify-center p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-full transition-colors cursor-pointer"
               title={`Email ${member.email}`}
             >
               <Mail className="h-4 w-4" />

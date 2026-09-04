@@ -1,14 +1,15 @@
 import type React from "react"
 import type { Metadata, Viewport } from "next"
 import { Poppins } from "next/font/google"
-import { SpeedInsights } from "@vercel/speed-insights/next"
-import { Analytics } from "@vercel/analytics/next"
-
 import { ThemeProvider } from "@/components/providers/theme-provider"
 import { AuthProvider } from "@/components/providers/auth-provider"
+import { ConsentProvider } from "@/components/providers/consent-provider"
 import { Footer } from "@/components/layout/footer"
 import { AutoArchiveChecker } from "@/components/features/system/auto-archive-checker"
 import { MotionProvider } from "@/components/providers/motion-provider"
+import { PrivacyConsentBanner } from "@/components/features/legal/privacy-consent-banner"
+import { PwaInstallBanner } from "@/components/features/pwa/pwa-install-banner"
+import { ConditionalTelemetry } from "@/components/features/analytics/conditional-telemetry"
 import "./globals.css"
 
 const poppins = Poppins({
@@ -177,21 +178,20 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <AuthProvider>
-            <AutoArchiveChecker />
-            <div className="min-h-screen flex flex-col">
-              <MotionProvider>
-                {children}
-              </MotionProvider>
-              <Footer />
-            </div>
+            <ConsentProvider>
+              <AutoArchiveChecker />
+              <div className="min-h-screen flex flex-col">
+                <MotionProvider>
+                  {children}
+                </MotionProvider>
+                <Footer />
+              </div>
+              <PrivacyConsentBanner />
+              <PwaInstallBanner />
+              {process.env.VERCEL && <ConditionalTelemetry />}
+            </ConsentProvider>
           </AuthProvider>
         </ThemeProvider>
-        {process.env.VERCEL && (
-          <>
-            <SpeedInsights />
-            <Analytics />
-          </>
-        )}
       </body>
     </html>
   )

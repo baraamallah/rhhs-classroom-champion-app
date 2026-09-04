@@ -73,7 +73,7 @@ export function LoginForm() {
         <CardTitle className="text-2xl font-bold">Welcome Back</CardTitle>
         <CardDescription>Sign in to access your dashboard</CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-4 xs:p-6">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
@@ -86,6 +86,7 @@ export function LoginForm() {
               onChange={(e) => setEmail(e.target.value)}
               required
               disabled={loading}
+              className="min-h-11"
             />
           </div>
           <div className="space-y-2">
@@ -100,15 +101,16 @@ export function LoginForm() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 disabled={loading}
-                className="pr-10"
+                className="pr-12 min-h-11"
               />
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                className="absolute right-0 top-0 h-full min-w-11 px-3 py-2 hover:bg-transparent flex items-center justify-center cursor-pointer"
                 onClick={() => setShowPassword(!showPassword)}
                 disabled={loading}
+                aria-label={showPassword ? "Hide password" : "Show password"}
               >
                 {showPassword ? (
                   <EyeOff className="h-4 w-4 text-muted-foreground" />
@@ -119,7 +121,7 @@ export function LoginForm() {
             </div>
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
-          <Button type="submit" className="w-full" disabled={loading}>
+          <Button type="submit" className="w-full min-h-11 cursor-pointer font-semibold" disabled={loading}>
             {loading ? "Signing in..." : "Sign In"}
           </Button>
         </form>

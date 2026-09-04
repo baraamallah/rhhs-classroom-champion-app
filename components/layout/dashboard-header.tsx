@@ -31,11 +31,11 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
   }
 
   return (
-    <header className="border-b border-border bg-white dark:bg-card/80 backdrop-blur-md sticky top-0 z-50 shadow-sm">
-      <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4">
+    <header className="border-b border-border bg-white/90 dark:bg-card/85 backdrop-blur-md sticky top-0 z-50 shadow-xs h-(--app-header-height) flex items-center">
+      <div className="container mx-auto px-2.5 xs:px-3 sm:px-4 w-full">
         <div className="flex items-center justify-between gap-2 sm:gap-4">
-          <Link href="/" className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-            <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full overflow-hidden flex items-center justify-center shrink-0">
+          <Link href="/" className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary rounded-lg">
+            <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full overflow-hidden flex items-center justify-center shrink-0 border border-emerald-500/20">
               <Image 
                 src="/Eco Champ.png" 
                 alt="Eco Champ Logo" 
@@ -45,7 +45,7 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
               />
             </div>
             <div className="min-w-0">
-              <h1 className="text-base sm:text-xl font-bold text-foreground truncate">RHHS ECO Club</h1>
+              <h1 className="text-sm xs:text-base sm:text-xl font-bold text-foreground truncate leading-tight">RHHS ECO Club</h1>
               <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
                 {user.role === "super_admin" || user.role === "admin" ? "Admin Dashboard" :
                  user.role === "stats" ? "Stats & Analytics Portal" : "Supervisor Dashboard"}
@@ -53,13 +53,13 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
             </div>
           </Link>
 
-          <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-4 shrink-0">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="text-xs sm:text-sm h-8 sm:h-auto px-2 sm:px-3">
-                  <UserIcon className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                  <span className="hidden sm:inline">{user.name || "User"}</span>
-                  <span className="sm:hidden truncate max-w-15">{user.name?.split(' ')[0] || "User"}</span>
+                <Button variant="outline" size="sm" className="text-xs sm:text-sm h-9 px-2.5 sm:px-3.5 rounded-xl border-border/80 hover:border-primary/50 gap-1.5 shadow-2xs">
+                  <UserIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary shrink-0" />
+                  <span className="hidden sm:inline font-medium">{user.name || "User"}</span>
+                  <span className="sm:hidden truncate max-w-17.5 xs:max-w-30 font-medium">{user.name?.split(' ')[0] || "User"}</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">

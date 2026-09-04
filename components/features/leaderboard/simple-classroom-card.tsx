@@ -47,72 +47,72 @@ export function SimpleClassroomCard({ classroom, rank }: SimpleClassroomCardProp
           <div className="absolute top-0 right-0 -mr-12 -mt-12 w-32 h-32 bg-amber-400/15 rounded-full blur-2xl pointer-events-none" />
         )}
 
-        <CardContent className="p-3.5 sm:p-4.5">
-          <div className="flex items-center gap-3 sm:gap-4">
+        <CardContent className="p-3 xs:p-3.5 sm:p-4.5">
+          <div className="flex items-center gap-2.5 xs:gap-3 sm:gap-4">
             {/* Rank Badge / New Custom Podium Logos for 1st, 2nd, 3rd */}
             <div className="shrink-0 flex items-center justify-center">
               {isChampion ? (
                 <div className="relative group-hover:scale-110 transition-transform duration-300 drop-shadow-md">
-                  <FirstPlaceLogo className="w-12 h-12 sm:w-15 sm:h-15" />
+                  <FirstPlaceLogo className="w-11 h-11 xs:w-12 xs:h-12 sm:w-14 sm:h-14" />
                 </div>
               ) : isRunnerUp ? (
                 <div className="relative group-hover:scale-110 transition-transform duration-300 drop-shadow-md">
-                  <SecondPlaceLogo className="w-12 h-12 sm:w-15 sm:h-15" />
+                  <SecondPlaceLogo className="w-11 h-11 xs:w-12 xs:h-12 sm:w-14 sm:h-14" />
                 </div>
               ) : isThirdPlace ? (
                 <div className="relative group-hover:scale-110 transition-transform duration-300 drop-shadow-md">
-                  <ThirdPlaceLogo className="w-12 h-12 sm:w-15 sm:h-15" />
+                  <ThirdPlaceLogo className="w-11 h-11 xs:w-12 xs:h-12 sm:w-14 sm:h-14" />
                 </div>
               ) : (
-                <div className="w-11 h-11 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center font-black shadow-inner bg-muted/80 text-muted-foreground border border-border/60">
-                  <span className="text-sm sm:text-base font-bold">#{rank}</span>
+                <div className="w-10 h-10 xs:w-11 xs:h-11 sm:w-14 sm:h-14 rounded-xl xs:rounded-2xl flex items-center justify-center font-black shadow-inner bg-muted/80 text-muted-foreground border border-border/60">
+                  <span className="text-xs xs:text-sm sm:text-base font-bold">#{rank}</span>
                 </div>
               )}
             </div>
 
             {/* Classroom Info */}
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap mb-0.5">
-                <h3 className="text-base sm:text-lg font-bold text-foreground truncate tracking-tight">
+              <div className="flex items-center gap-1.5 xs:gap-2 flex-wrap mb-0.5">
+                <h3 className="text-sm xs:text-base sm:text-lg font-bold text-foreground truncate tracking-tight" title={classroom.classroom.name}>
                   {classroom.classroom.name}
                 </h3>
                 {isChampion && (
-                  <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30 shrink-0">
-                    <TrophyIcon className="h-3 w-3" />
+                  <span className="inline-flex items-center gap-1 text-[9px] xs:text-[10px] font-extrabold uppercase tracking-wider px-1.5 xs:px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30 shrink-0">
+                    <TrophyIcon className="h-2.5 w-2.5 xs:h-3 xs:w-3" />
                     Champion
                   </span>
                 )}
                 {isRunnerUp && (
-                  <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-slate-500/15 text-slate-600 dark:text-slate-300 border border-slate-500/20 shrink-0">
+                  <span className="text-[9px] xs:text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-slate-500/15 text-slate-600 dark:text-slate-300 border border-slate-500/20 shrink-0">
                     2nd Place
                   </span>
                 )}
                 {isThirdPlace && (
-                  <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-amber-700/15 text-amber-700 dark:text-amber-400 border border-amber-700/20 shrink-0">
+                  <span className="text-[9px] xs:text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-amber-700/15 text-amber-700 dark:text-amber-400 border border-amber-700/20 shrink-0">
                     3rd Place
                   </span>
                 )}
               </div>
 
-              <p className="text-xs sm:text-sm text-muted-foreground mb-1.5">
+              <p className="text-xs sm:text-sm text-muted-foreground mb-1">
                 Grade {classroom.classroom.grade}
               </p>
 
               {/* Bottom Info Row */}
-              <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-[11px] sm:text-xs">
-                <div className="inline-flex items-center gap-1 text-muted-foreground bg-muted/60 dark:bg-muted/30 px-2 py-0.5 rounded-md">
-                  <LeafIcon className="h-3 w-3 text-primary" />
+              <div className="flex flex-wrap items-center gap-1.5 xs:gap-2 sm:gap-3 text-[10px] xs:text-[11px] sm:text-xs">
+                <div className="inline-flex items-center gap-1 text-muted-foreground bg-muted/60 dark:bg-muted/30 px-1.5 xs:px-2 py-0.5 rounded-md">
+                  <LeafIcon className="h-3 w-3 text-primary shrink-0" />
                   <span>{classroom.evaluationCount} eval{classroom.evaluationCount !== 1 ? "s" : ""}</span>
                 </div>
 
                 <span className={cn(
-                  "px-2 py-0.5 rounded-md font-semibold text-[10px] sm:text-[11px]",
+                  "px-1.5 xs:px-2 py-0.5 rounded-md font-semibold text-[9px] xs:text-[10px] sm:text-[11px]",
                   scoreRange.color
                 )}>
                   {scoreRange.label}
                 </span>
 
-                <span className="text-muted-foreground/70 hidden md:inline">
+                <span className="text-muted-foreground/70 hidden sm:inline">
                   Avg: <strong className="text-foreground">{Number(classroom.averageScore).toFixed(1)}</strong>
                 </span>
               </div>
@@ -121,16 +121,16 @@ export function SimpleClassroomCard({ classroom, rank }: SimpleClassroomCardProp
             {/* Score Display */}
             <div className="shrink-0 text-right">
               <div className="flex flex-col items-end">
-                <div className="flex items-baseline gap-1">
+                <div className="flex items-baseline gap-0.5 xs:gap-1">
                   <span className={cn(
-                    "text-2xl sm:text-3xl font-black tracking-tight",
+                    "text-xl xs:text-2xl sm:text-3xl font-black tracking-tight",
                     isChampion ? "text-amber-600 dark:text-amber-400" : scoreColor
                   )}>
                     {classroom.totalScore}
                   </span>
-                  <span className="text-[11px] font-semibold text-muted-foreground uppercase">pts</span>
+                  <span className="text-[10px] xs:text-[11px] font-semibold text-muted-foreground uppercase">pts</span>
                 </div>
-                <span className="text-[10px] sm:text-[11px] text-muted-foreground font-medium">
+                <span className="text-[9px] xs:text-[10px] sm:text-[11px] text-muted-foreground font-medium">
                   Total Score
                 </span>
               </div>

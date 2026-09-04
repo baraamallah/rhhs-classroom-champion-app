@@ -154,7 +154,7 @@ export function DefaultMonthSettings({ initialWinnersMonth, initialLeaderboardMo
                 value={tempWinners.year.toString()}
                 onValueChange={(v) => setTempWinners(prev => ({ ...prev, year: parseInt(v) }))}
               >
-                <SelectTrigger>
+                <SelectTrigger className="min-h-11">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -170,7 +170,7 @@ export function DefaultMonthSettings({ initialWinnersMonth, initialLeaderboardMo
                 value={tempWinners.month.toString()}
                 onValueChange={(v) => setTempWinners(prev => ({ ...prev, month: parseInt(v) }))}
               >
-                <SelectTrigger>
+                <SelectTrigger className="min-h-11">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -191,7 +191,7 @@ export function DefaultMonthSettings({ initialWinnersMonth, initialLeaderboardMo
             </div>
             <div className="flex gap-2 mt-2">
               <Button
-                className="flex-1"
+                className="flex-1 min-h-11"
                 onClick={() => handleSave("winners_display_month")}
                 disabled={saving !== null}
               >
@@ -199,6 +199,7 @@ export function DefaultMonthSettings({ initialWinnersMonth, initialLeaderboardMo
               </Button>
               <Button
                 variant="outline"
+                className="min-h-11"
                 onClick={() => handleReset("winners_display_month")}
                 disabled={saving !== null || !winnersSetting}
               >
@@ -228,7 +229,7 @@ export function DefaultMonthSettings({ initialWinnersMonth, initialLeaderboardMo
                 value={tempLeaderboard.year.toString()}
                 onValueChange={(v) => setTempLeaderboard(prev => ({ ...prev, year: parseInt(v) }))}
               >
-                <SelectTrigger>
+                <SelectTrigger className="min-h-11">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -244,7 +245,7 @@ export function DefaultMonthSettings({ initialWinnersMonth, initialLeaderboardMo
                 value={tempLeaderboard.month.toString()}
                 onValueChange={(v) => setTempLeaderboard(prev => ({ ...prev, month: parseInt(v) }))}
               >
-                <SelectTrigger>
+                <SelectTrigger className="min-h-11">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -265,7 +266,7 @@ export function DefaultMonthSettings({ initialWinnersMonth, initialLeaderboardMo
             </div>
             <div className="flex gap-2 mt-2">
               <Button
-                className="flex-1"
+                className="flex-1 min-h-11"
                 onClick={() => handleSave("leaderboard_display_month")}
                 disabled={saving !== null}
               >
@@ -273,6 +274,7 @@ export function DefaultMonthSettings({ initialWinnersMonth, initialLeaderboardMo
               </Button>
               <Button
                 variant="outline"
+                className="min-h-11"
                 onClick={() => handleReset("leaderboard_display_month")}
                 disabled={saving !== null || !leaderboardSetting}
               >

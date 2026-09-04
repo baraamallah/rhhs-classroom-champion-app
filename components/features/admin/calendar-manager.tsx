@@ -349,7 +349,7 @@ export function CalendarManager() {
                 variant="outline"
                 size="icon"
                 onClick={handlePrevMonth}
-                className="h-8 w-8 rounded-lg"
+                className="min-h-11 min-w-11 rounded-lg cursor-pointer"
                 aria-label="Previous month"
               >
                 <ChevronLeft className="h-4 w-4" />
@@ -358,7 +358,7 @@ export function CalendarManager() {
                 variant="outline"
                 size="icon"
                 onClick={handleNextMonth}
-                className="h-8 w-8 rounded-lg"
+                className="min-h-11 min-w-11 rounded-lg cursor-pointer"
                 aria-label="Next month"
               >
                 <ChevronRight className="h-4 w-4" />
@@ -404,8 +404,9 @@ export function CalendarManager() {
                   onClick={() => isCurrentMonth && handleDayClick(day)}
                   disabled={isDayDisabled}
                   type="button"
+                  aria-label={`${format(day, "EEEE, MMMM d, yyyy")}${isHoliday ? `: Holiday - ${exception?.reason}` : isOutsideTerm ? ": Outside School Term" : dayIsWeekend ? ": Weekend Off" : ": Regular School Day"}`}
                   className={cn(
-                    "min-h-25 sm:min-h-30 p-2 sm:p-2.5 text-left transition-all relative flex flex-col justify-between group",
+                    "min-h-16 sm:min-h-27.5 p-2 sm:p-2.5 text-left transition-all relative flex flex-col justify-between group",
                     !isCurrentMonth
                       ? "bg-muted/15 text-muted-foreground/30 cursor-default"
                       : isOutsideTerm

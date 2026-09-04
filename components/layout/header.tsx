@@ -68,22 +68,22 @@ export function Header() {
   return (
     <LazyMotionProvider>
       <m.header
-        className="sticky top-0 z-50 border-b border-border/60 bg-background/80 dark:bg-card/85 backdrop-blur-md transition-colors duration-200"
+        className="sticky top-0 z-50 h-(--app-header-height) border-b border-border/60 bg-background/80 dark:bg-card/85 backdrop-blur-md transition-colors duration-200 flex items-center"
         initial={false}
         animate={{ y: 0 }}
         transition={{ duration: 0.3, ease: "easeOut" }}
       >
-        <div className="container mx-auto px-3 sm:px-6 py-2.5 sm:py-3.5">
-          <div className="flex items-center justify-between gap-2 sm:gap-4">
+        <div className="container mx-auto px-2.5 xs:px-3 sm:px-6 w-full">
+          <div className="flex items-center justify-between gap-1.5 xs:gap-2 sm:gap-4">
             {/* Brand Logo & Title */}
             <Link
               href="/"
-              className="flex items-center gap-2 sm:gap-3 group shrink-0 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary rounded-lg p-0.5"
+              className="flex items-center gap-1.5 xs:gap-2 sm:gap-3 group shrink-0 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary rounded-lg p-0.5"
               aria-label="RHHS ECO Club Home"
             >
               <div className="relative">
                 <m.div
-                  className="h-9 w-9 sm:h-11 sm:w-11 rounded-full p-1 bg-white dark:bg-muted/40 shadow-sm border border-emerald-500/20 group-hover:border-emerald-500/50 flex items-center justify-center transition-all duration-300 group-hover:shadow-emerald-500/20 group-hover:shadow-md"
+                  className="h-8 w-8 xs:h-9 xs:w-9 sm:h-11 sm:w-11 rounded-full p-1 bg-white dark:bg-muted/40 shadow-sm border border-emerald-500/20 group-hover:border-emerald-500/50 flex items-center justify-center transition-all duration-300 group-hover:shadow-emerald-500/20 group-hover:shadow-md"
                   whileHover={{ scale: 1.08 }}
                   transition={{ type: "spring", stiffness: 350, damping: 20 }}
                 >
@@ -100,13 +100,13 @@ export function Header() {
 
               <div className="flex flex-col">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-base sm:text-xl font-black tracking-tight bg-linear-to-r from-emerald-600 via-primary to-green-600 bg-clip-text text-transparent leading-none">
+                  <span className="text-sm xs:text-base sm:text-xl font-black tracking-tight bg-linear-to-r from-emerald-600 via-primary to-green-600 bg-clip-text text-transparent leading-none">
                     RHHS ECO Club
                   </span>
                 </div>
-                <div className="flex items-center gap-1.5 mt-0.5">
+                <div className="flex items-center gap-1 mt-0.5">
                   <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="text-[11px] sm:text-xs font-medium text-muted-foreground">
+                  <span className="text-[10px] xs:text-[11px] sm:text-xs font-medium text-muted-foreground truncate max-w-22.5 xs:max-w-none">
                     Classroom Champion
                   </span>
                 </div>
@@ -114,12 +114,12 @@ export function Header() {
             </Link>
 
             {/* Main Navigation & User Actions */}
-            <nav className="flex items-center gap-1.5 sm:gap-3 shrink-0" aria-label="Main Navigation">
+            <nav className="flex items-center gap-1 xs:gap-1.5 sm:gap-3 shrink-0" aria-label="Main Navigation">
               {/* Leaderboard Link */}
               <Link
                 href="/"
                 className={cn(
-                  "px-2.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors hidden sm:inline-flex items-center gap-1",
+                  "px-2.5 py-1.5 min-h-10 rounded-lg text-xs sm:text-sm font-medium transition-colors hidden sm:inline-flex items-center gap-1",
                   pathname === "/"
                     ? "bg-primary/10 text-primary font-semibold"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
@@ -134,14 +134,15 @@ export function Header() {
               {/* About Us Link */}
               <Link
                 href="/about"
+                aria-label="About Us"
                 className={cn(
-                  "px-2.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors inline-flex items-center gap-1",
+                  "px-2 xs:px-2.5 py-1.5 min-h-10 min-w-10 rounded-lg text-xs sm:text-sm font-medium transition-colors inline-flex items-center justify-center gap-1",
                   pathname === "/about"
                     ? "bg-primary/10 text-primary font-semibold"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                 )}
               >
-                <Info className="h-3.5 w-3.5 sm:hidden" />
+                <Info className="h-4 w-4 sm:hidden" />
                 <span className="hidden sm:inline">About Us</span>
               </Link>
 
@@ -159,13 +160,13 @@ export function Header() {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="h-8 sm:h-9 px-2.5 sm:px-3 rounded-full border-border/80 hover:border-primary/50 gap-1.5 bg-card/60 shadow-2xs text-xs sm:text-sm font-medium"
+                          className="h-9 px-2 xs:px-2.5 sm:px-3 rounded-full border-border/80 hover:border-primary/50 gap-1.5 bg-card/60 shadow-2xs text-xs sm:text-sm font-medium"
                           aria-label="User menu"
                         >
                           <div className="h-5 w-5 rounded-full bg-primary/15 text-primary flex items-center justify-center font-bold text-xs">
                             {user.name ? user.name.charAt(0).toUpperCase() : "U"}
                           </div>
-                          <span className="max-w-[80px] sm:max-w-[120px] truncate hidden xs:inline-block">
+                          <span className="max-w-17.5 xs:max-w-25 sm:max-w-32.5 truncate hidden xs:inline-block">
                             {user.name || "User"}
                           </span>
                         </Button>

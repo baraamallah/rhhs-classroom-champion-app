@@ -84,8 +84,8 @@ export default function SignUpPage() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <header className="border-b border-border bg-white dark:bg-card/80 backdrop-blur-sm">
-        <div className="container mx-auto px-4 py-4">
+      <header className="border-b border-border bg-white dark:bg-card/80 backdrop-blur-sm h-(--app-header-height) flex items-center">
+        <div className="container mx-auto px-4">
           <div className="flex items-center justify-between">
             <Link href="/" className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-full overflow-hidden flex items-center justify-center">
@@ -133,7 +133,7 @@ export default function SignUpPage() {
                     : "Account creation is disabled. Please contact an administrator."}
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4 xs:p-6">
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">Full Name</Label>
@@ -145,6 +145,7 @@ export default function SignUpPage() {
                     onChange={(e) => setName(e.target.value)}
                     required
                     disabled={loading}
+                    className="min-h-11"
                   />
                 </div>
                 <div className="space-y-2">
@@ -157,6 +158,7 @@ export default function SignUpPage() {
                     onChange={(e) => setEmail(e.target.value)}
                     required
                     disabled={loading}
+                    className="min-h-11"
                   />
                 </div>
                 <div className="space-y-2">
@@ -169,6 +171,7 @@ export default function SignUpPage() {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     disabled={loading}
+                    className="min-h-11"
                   />
                 </div>
                 <div className="space-y-2">
@@ -181,6 +184,7 @@ export default function SignUpPage() {
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
                     disabled={loading}
+                    className="min-h-11"
                   />
                 </div>
                 {error && <p className="text-sm text-destructive">{error}</p>}
@@ -191,14 +195,14 @@ export default function SignUpPage() {
                     </p>
                   </div>
                 )}
-                <Button type="submit" className="w-full" disabled={loading || isFirstUser === false}>
+                <Button type="submit" className="w-full min-h-11 cursor-pointer font-semibold" disabled={loading || isFirstUser === false}>
                   {loading ? "Creating Account..." : isFirstUser ? "Create Super Admin Account" : "Sign Up Disabled"}
                 </Button>
               </form>
 
               <div className="mt-6 text-center">
                 <span className="text-sm text-muted-foreground">Already have an account? </span>
-                <Button variant="link" asChild className="p-0 h-auto">
+                <Button variant="link" asChild className="p-0 h-auto min-h-11 inline-flex items-center">
                   <Link href="/login">Sign In</Link>
                 </Button>
               </div>

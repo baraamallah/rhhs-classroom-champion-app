@@ -151,9 +151,9 @@ export function DivisionAssignmentModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden rounded-2xl border border-border">
+      <DialogContent className="max-w-2xl max-h-[90dvh] flex flex-col p-0 gap-0 overflow-hidden rounded-2xl border border-border">
         {/* Modal Header */}
-        <DialogHeader className="p-6 pb-4 border-b border-border bg-card/60 backdrop-blur-sm">
+        <DialogHeader className="p-4 sm:p-6 pb-4 border-b border-border bg-card/60 backdrop-blur-sm">
           <div className="flex items-center justify-between">
             <div className="space-y-1">
               <div className="flex items-center gap-2">
@@ -164,7 +164,7 @@ export function DivisionAssignmentModal({
                   {selectedIds.length} Selected
                 </span>
               </div>
-              <DialogTitle className="text-xl font-bold">
+              <DialogTitle className="text-lg sm:text-xl font-bold">
                 Assign Classrooms to {supervisor.name}
               </DialogTitle>
               <DialogDescription className="text-xs text-muted-foreground">
@@ -192,7 +192,7 @@ export function DivisionAssignmentModal({
                     type="button"
                     variant={allSelected ? "default" : "outline"}
                     size="sm"
-                    className={`h-7 text-xs rounded-full transition-all ${
+                    className={`min-h-9 xs:min-h-8 sm:h-7 text-xs rounded-full transition-all cursor-pointer ${
                       allSelected
                         ? "bg-primary text-primary-foreground font-semibold shadow-xs"
                         : "border-border hover:border-primary/50 text-muted-foreground hover:text-foreground"
@@ -212,14 +212,14 @@ export function DivisionAssignmentModal({
         </DialogHeader>
 
         {/* Filter and Search Bar */}
-        <div className="p-4 bg-muted/30 border-b border-border/60 flex flex-col sm:flex-row items-center gap-2.5">
+        <div className="p-3 sm:p-4 bg-muted/30 border-b border-border/60 flex flex-col sm:flex-row items-center gap-2.5">
           <div className="relative flex-1 w-full">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search by room name or grade..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 bg-background h-9 rounded-xl border-border"
+              className="pl-9 bg-background min-h-11 rounded-xl border-border text-xs sm:text-sm"
             />
           </div>
 
@@ -229,7 +229,7 @@ export function DivisionAssignmentModal({
               variant="ghost"
               size="sm"
               onClick={handleSelectAllFiltered}
-              className="h-8 text-xs text-primary font-medium"
+              className="min-h-9 px-2.5 text-xs text-primary font-medium cursor-pointer"
             >
               <CheckSquare className="mr-1 h-3.5 w-3.5" /> Select All Filtered
             </Button>
@@ -238,7 +238,7 @@ export function DivisionAssignmentModal({
               variant="ghost"
               size="sm"
               onClick={handleDeselectAllFiltered}
-              className="h-8 text-xs text-muted-foreground hover:text-destructive"
+              className="min-h-9 px-2.5 text-xs text-muted-foreground hover:text-destructive cursor-pointer"
             >
               <Square className="mr-1 h-3.5 w-3.5" /> Clear Filtered
             </Button>
@@ -246,7 +246,7 @@ export function DivisionAssignmentModal({
         </div>
 
         {/* Scrollable Classrooms List */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-2 max-h-95 scrollbar-thin">
+        <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-2 max-h-95 scrollbar-thin">
           {filteredClassrooms.length === 0 ? (
             <div className="text-center py-10 text-muted-foreground">
               <Building2 className="h-10 w-10 mx-auto text-muted-foreground/30 mb-2" />

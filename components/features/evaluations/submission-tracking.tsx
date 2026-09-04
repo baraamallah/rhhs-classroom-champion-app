@@ -753,15 +753,15 @@ function useSubmissionTrackingContent({ currentUser }: SubmissionTrackingProps) 
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 overflow-x-auto pb-1 shrink-0">
                         {p.workDays.map((day: any) => (
-                          <div key={format(day.date, "yyyy-MM-dd")} className="flex flex-col items-center gap-1">
+                          <div key={format(day.date, "yyyy-MM-dd")} className="flex flex-col items-center gap-1 shrink-0">
                             <span className="text-[10px] text-muted-foreground uppercase font-semibold">
                               {format(day.date, "eee").charAt(0)}
                             </span>
                             <div
                               className={cn(
-                                "h-8 w-8 rounded-md flex items-center justify-center border transition-[background-color,border-color,color,box-shadow,opacity,transform] duration-200",
+                                "h-9 w-9 sm:h-8 sm:w-8 rounded-md flex items-center justify-center border transition-[background-color,border-color,color,box-shadow,opacity,transform] duration-200",
                                 day.isSubmitted
                                   ? "bg-green-500/10 border-green-500/30 text-green-600 hover:bg-green-500/20"
                                   : "bg-destructive/10 border-destructive/30 text-destructive hover:bg-destructive/20"
@@ -778,8 +778,8 @@ function useSubmissionTrackingContent({ currentUser }: SubmissionTrackingProps) 
                         ))}
                       </div>
 
-                      <div className="text-right min-w-22.5 border-l pl-4">
-                        <p className="text-lg font-bold text-primary">{p.submittedCount}/{p.totalDays}</p>
+                      <div className="text-left md:text-right min-w-22.5 border-t pt-3 md:border-t-0 md:border-l md:pt-0 md:pl-4 flex md:flex-col justify-between md:justify-center items-center md:items-end">
+                        <p className="text-base sm:text-lg font-bold text-primary">{p.submittedCount}/{p.totalDays}</p>
                         <p className="text-[10px] text-muted-foreground uppercase font-medium tracking-wider">Submitted</p>
                       </div>
                     </div>

@@ -188,14 +188,14 @@ export function EvaluationForm({
 
   return (
     <LazyMotionProvider>
-      <div className="max-w-3xl mx-auto pb-24 sm:pb-8">
+      <div className="max-w-3xl mx-auto pb-[calc(var(--mobile-fab-height)+1.5rem)] sm:pb-8">
         {/* Navigation & Header */}
         <div className="mb-4 flex items-center justify-between gap-3">
           <Button
             variant="ghost"
             size="sm"
             onClick={onCancel}
-            className="text-xs sm:text-sm text-muted-foreground hover:text-foreground -ml-2 rounded-xl"
+            className="text-xs sm:text-sm text-muted-foreground hover:text-foreground -ml-2 rounded-xl min-h-11 px-3 cursor-pointer"
           >
             <ArrowLeft className="h-4 w-4 mr-1.5" /> Back to Selector
           </Button>
@@ -428,7 +428,7 @@ export function EvaluationForm({
 
         {/* Mobile Sticky Bottom Floating Action Bar */}
         {!isLocked && isWorkingDay && (
-          <div className="sm:hidden fixed bottom-0 left-0 right-0 p-3 bg-background/95 backdrop-blur-md border-t border-border shadow-2xl z-40">
+          <div className="sm:hidden fixed bottom-0 left-0 right-0 p-3 bg-background/95 backdrop-blur-md border-t border-border shadow-2xl z-40 pb-[calc(0.75rem+env(safe-area-inset-bottom,0))]">
             <div className="max-w-md mx-auto flex items-center justify-between gap-3">
               <div>
                 <div className="text-base font-black text-primary leading-tight">
@@ -442,7 +442,7 @@ export function EvaluationForm({
               <Button
                 onClick={handleSubmit}
                 disabled={submitting}
-                className="flex-1 h-11 rounded-xl font-bold text-sm bg-primary hover:bg-primary/90 text-primary-foreground shadow-md"
+                className="flex-1 min-h-11 rounded-xl font-bold text-sm bg-primary hover:bg-primary/90 text-primary-foreground shadow-md cursor-pointer"
               >
                 {submitting ? "Submitting..." : `Submit (${totalScore} pts)`}
               </Button>

@@ -74,9 +74,9 @@ export function AdminSidebar({ activeTab, onSelectTab, userRole }: AdminSidebarP
       {/* Mobile bottom navigation: optimized for daily workflow. */}
       <nav
         aria-label="Admin navigation"
-        className="lg:hidden fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 backdrop-blur-lg px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-8px_24px_rgba(15,23,42,0.08)]"
+        className="lg:hidden fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 backdrop-blur-lg px-2 pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] pt-2 shadow-[0_-8px_24px_rgba(15,23,42,0.08)]"
       >
-        <div className={`mx-auto grid max-w-lg ${isStats ? "grid-cols-3" : "grid-cols-4"} gap-1`}>
+        <div className={`mx-auto grid max-w-sm md:max-w-md ${isStats ? "grid-cols-3" : "grid-cols-4"} gap-1`}>
           {mobilePrimaryItems.map((item) => {
             const Icon = item.icon
             const isActive = activeTab === item.id
@@ -89,7 +89,7 @@ export function AdminSidebar({ activeTab, onSelectTab, userRole }: AdminSidebarP
                   e.preventDefault()
                   onSelectTab(item.id)
                 }}
-                className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[10px] font-semibold transition-colors ${
+                className={`flex min-h-13 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[10px] font-semibold transition-colors ${
                   isActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
                 }`}
               >
@@ -104,13 +104,13 @@ export function AdminSidebar({ activeTab, onSelectTab, userRole }: AdminSidebarP
               <SheetTrigger asChild>
                 <button
                   type="button"
-                  className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[10px] font-semibold text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground cursor-pointer"
+                  className="flex min-h-13 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[10px] font-semibold text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground cursor-pointer"
                 >
                   <MoreHorizontal className="h-5 w-5" />
                   <span>More</span>
                 </button>
               </SheetTrigger>
-              <SheetContent side="bottom" className="rounded-t-3xl px-4 pb-8">
+              <SheetContent side="bottom" className="rounded-t-3xl px-4 pb-8 max-h-[85dvh] overflow-y-auto">
                 <SheetHeader className="text-left pb-4">
                   <SheetTitle className="text-base font-bold">More administration</SheetTitle>
                 </SheetHeader>
@@ -127,7 +127,7 @@ export function AdminSidebar({ activeTab, onSelectTab, userRole }: AdminSidebarP
                           onSelectTab(item.id)
                           setMobileOpen(false)
                         }}
-                        className={`flex items-center gap-3 rounded-xl border px-3 py-3 text-left text-sm font-medium transition-colors ${
+                        className={`flex min-h-11 items-center gap-2.5 xs:gap-3 rounded-xl border px-3 py-2.5 text-left text-xs xs:text-sm font-medium transition-colors ${
                           isActive ? "border-primary bg-primary/10 text-primary font-semibold" : "border-border hover:bg-muted/60"
                         }`}
                       >
@@ -139,7 +139,7 @@ export function AdminSidebar({ activeTab, onSelectTab, userRole }: AdminSidebarP
                 </div>
 
                 <div className="pt-4 mt-4 border-t border-border">
-                  <Button asChild variant="outline" size="sm" className="w-full rounded-xl">
+                  <Button asChild variant="outline" size="sm" className="w-full min-h-11 rounded-xl cursor-pointer">
                     <Link href="/">
                       <Home className="mr-2 h-4 w-4" /> View Public Site
                     </Link>

@@ -157,7 +157,7 @@ export function EvaluationsList() {
               <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search classroom or supervisor..."
-                className="pl-9 h-9 text-xs rounded-xl bg-background"
+                className="pl-9 min-h-11 text-xs sm:text-sm rounded-xl bg-background"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -167,11 +167,11 @@ export function EvaluationsList() {
           {/* View Scope & Division Filters */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-3 border-t border-border/40 mt-3">
             {/* Scope Selector */}
-            <div className="flex items-center bg-muted/60 p-1 rounded-xl border border-border/60">
+            <div className="flex items-center bg-muted/60 p-1 rounded-xl border border-border/60 flex-wrap gap-1">
               <button
                 type="button"
                 onClick={() => setViewScope("all")}
-                className={`px-3 py-1 text-xs rounded-lg font-medium transition-all ${
+                className={`min-h-9.5 px-3 py-1.5 text-xs rounded-lg font-medium transition-all cursor-pointer ${
                   viewScope === "all"
                     ? "bg-background text-foreground shadow-xs font-semibold"
                     : "text-muted-foreground hover:text-foreground"
@@ -182,7 +182,7 @@ export function EvaluationsList() {
               <button
                 type="button"
                 onClick={() => setViewScope("active")}
-                className={`px-3 py-1 text-xs rounded-lg font-medium transition-all ${
+                className={`min-h-9.5 px-3 py-1.5 text-xs rounded-lg font-medium transition-all cursor-pointer ${
                   viewScope === "active"
                     ? "bg-primary text-primary-foreground shadow-xs font-semibold"
                     : "text-muted-foreground hover:text-foreground"
@@ -193,7 +193,7 @@ export function EvaluationsList() {
               <button
                 type="button"
                 onClick={() => setViewScope("archived")}
-                className={`px-3 py-1 text-xs rounded-lg font-medium transition-all ${
+                className={`min-h-9.5 px-3 py-1.5 text-xs rounded-lg font-medium transition-all cursor-pointer ${
                   viewScope === "archived"
                     ? "bg-amber-600 text-white shadow-xs font-semibold"
                     : "text-muted-foreground hover:text-foreground"
@@ -204,12 +204,12 @@ export function EvaluationsList() {
             </div>
 
             {/* Division Pills */}
-            <div className="flex flex-wrap gap-1">
+            <div className="flex flex-wrap gap-1.5">
               <Button
                 size="sm"
                 variant={divisionFilter === "all" ? "default" : "outline"}
                 onClick={() => setDivisionFilter("all")}
-                className="h-7 text-[11px] rounded-full"
+                className="min-h-8.5 xs:min-h-8 sm:h-7 text-[11px] rounded-full px-3 cursor-pointer"
               >
                 All Divisions
               </Button>
@@ -219,7 +219,7 @@ export function EvaluationsList() {
                   size="sm"
                   variant={divisionFilter === d.value ? "default" : "outline"}
                   onClick={() => setDivisionFilter(d.value)}
-                  className="h-7 text-[11px] rounded-full"
+                  className="min-h-8.5 xs:min-h-8 sm:h-7 text-[11px] rounded-full px-3 cursor-pointer"
                 >
                   {d.label}
                 </Button>
@@ -250,7 +250,7 @@ export function EvaluationsList() {
             /* Virtualized Windowing Container */
             <div
               ref={parentRef}
-              className="max-h-160 overflow-y-auto pr-1 select-none-scroll scrollbar-thin"
+              className="max-h-[65dvh] sm:max-h-160 overflow-y-auto pr-1 select-none-scroll scrollbar-thin"
               tabIndex={0}
               aria-label="Evaluation records list"
             >
@@ -350,7 +350,7 @@ export function EvaluationsList() {
                               variant="outline"
                               onClick={() => handleRestore(evaluation.id)}
                               disabled={restoringId === evaluation.id}
-                              className="rounded-xl text-xs h-8 hover:bg-primary/10 hover:text-primary"
+                              className="rounded-xl text-xs min-h-11 px-3.5 hover:bg-primary/10 hover:text-primary cursor-pointer"
                             >
                               {restoringId === evaluation.id ? (
                                 <Loader2 className="h-3.5 w-3.5 animate-spin" />

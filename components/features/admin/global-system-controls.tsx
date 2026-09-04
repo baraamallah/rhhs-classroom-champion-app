@@ -267,7 +267,7 @@ export function GlobalSystemControls({
   }
 
   return (
-    <div className="relative overflow-hidden rounded-3xl border border-border/70 bg-linear-to-b from-card via-card/70 to-muted/20 p-5 sm:p-7 shadow-lg shadow-black/5 backdrop-blur-md space-y-6">
+    <div className="relative overflow-hidden rounded-3xl border border-border/70 bg-linear-to-b from-card via-card/70 to-muted/20 p-3.5 xs:p-5 sm:p-7 shadow-lg shadow-black/5 backdrop-blur-md space-y-6">
       {/* Decorative ambient background accents */}
       <div className="pointer-events-none absolute -top-24 -right-24 h-80 w-80 rounded-full bg-primary/10 blur-3xl" />
       <div className="pointer-events-none absolute -bottom-24 -left-24 h-80 w-80 rounded-full bg-emerald-500/10 blur-3xl" />
@@ -276,12 +276,12 @@ export function GlobalSystemControls({
       {/* 1. EXECUTIVE COMMAND HEADER & LIVE STATUS STRIP */}
       {/* ============================================================ */}
       <div className="relative flex flex-col gap-4 border-b border-border/50 pb-6 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex items-start gap-3.5">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/15 text-primary border border-primary/25 shadow-inner">
-            <Sliders className="h-6 w-6" />
+        <div className="flex items-start gap-3">
+          <div className="flex h-11 w-11 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/15 text-primary border border-primary/25 shadow-inner">
+            <Sliders className="h-5 w-5 sm:h-6 sm:w-6" />
           </div>
-          <div>
-            <div className="flex items-center gap-2">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-xl font-extrabold tracking-tight text-foreground sm:text-2xl">
                 Global System Controls
               </h2>
@@ -359,7 +359,7 @@ export function GlobalSystemControls({
             size="sm"
             onClick={() => loadAllSettings(true)}
             disabled={refreshing || loading}
-            className="h-7.5 rounded-full px-3 text-xs gap-1.5 font-medium border-border/70 hover:bg-muted/80 shadow-xs"
+            className="h-9 min-h-9 rounded-full px-3 text-xs gap-1.5 font-medium border-border/70 hover:bg-muted/80 shadow-xs"
             title="Sync settings with database"
           >
             <RefreshCw
@@ -376,7 +376,7 @@ export function GlobalSystemControls({
       {settings.calculation_mode ? (
         <div className="flex items-start gap-3 rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 text-amber-900 dark:text-amber-200">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400">
-            <Calculator className="h-4.5 w-4.5" />
+            <Calculator className="h-4 w-4" />
           </div>
           <div className="flex-1 text-xs sm:text-sm">
             <p className="font-bold flex items-center gap-2">
@@ -393,7 +393,7 @@ export function GlobalSystemControls({
       ) : settings.winner_reveal_mode ? (
         <div className="flex items-start gap-3 rounded-2xl border border-purple-500/40 bg-purple-500/10 p-4 text-purple-900 dark:text-purple-200">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-purple-500/20 text-purple-600 dark:text-purple-400">
-            <PartyPopper className="h-4.5 w-4.5" />
+            <PartyPopper className="h-4 w-4" />
           </div>
           <div className="flex-1 text-xs sm:text-sm">
             <p className="font-bold flex items-center gap-2">
@@ -418,7 +418,7 @@ export function GlobalSystemControls({
           System Intake & Public Access
         </h3>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4.5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* CARD 1: SUBMISSIONS CONTROL */}
           <Card className={`relative overflow-hidden border transition-all duration-200 hover:shadow-md ${
             settings.evaluations_enabled
@@ -428,9 +428,9 @@ export function GlobalSystemControls({
             <div className={`absolute top-0 left-0 right-0 h-1 ${
               settings.evaluations_enabled ? "bg-emerald-500" : "bg-rose-500"
             }`} />
-            <CardContent className="p-5 flex flex-col justify-between h-full space-y-4">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-start gap-3">
+            <CardContent className="p-4 sm:p-5 flex flex-col justify-between h-full space-y-4">
+              <div className="flex flex-col xs:flex-row xs:items-start justify-between gap-3">
+                <div className="flex items-start gap-3 min-w-0">
                   <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border ${
                     settings.evaluations_enabled
                       ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
@@ -442,8 +442,8 @@ export function GlobalSystemControls({
                       <Lock className="h-5 w-5" />
                     )}
                   </div>
-                  <div>
-                    <div className="flex items-center gap-2">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
                       <h4 className="font-bold text-base text-foreground">
                         Evaluation Intake
                       </h4>
@@ -469,18 +469,18 @@ export function GlobalSystemControls({
                   disabled={savingKey === "evaluations_enabled"}
                   size="sm"
                   variant={settings.evaluations_enabled ? "destructive" : "default"}
-                  className="rounded-xl shrink-0 font-bold px-3.5 shadow-xs"
+                  className="rounded-xl shrink-0 font-bold px-3.5 shadow-xs min-h-11 w-full xs:w-auto"
                 >
                   {savingKey === "evaluations_enabled" ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : settings.evaluations_enabled ? (
                     <>
-                      <Lock className="h-3.5 w-3.5 mr-1.5" />
+                      <Lock className="h-4 w-4 mr-1.5" />
                       Lock System
                     </>
                   ) : (
                     <>
-                      <Unlock className="h-3.5 w-3.5 mr-1.5" />
+                      <Unlock className="h-4 w-4 mr-1.5" />
                       Open System
                     </>
                   )}
@@ -512,9 +512,9 @@ export function GlobalSystemControls({
             <div className={`absolute top-0 left-0 right-0 h-1 ${
               settings.winners_page_visible ? "bg-amber-500" : "bg-muted-foreground/30"
             }`} />
-            <CardContent className="p-5 flex flex-col justify-between h-full space-y-4">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-start gap-3">
+            <CardContent className="p-4 sm:p-5 flex flex-col justify-between h-full space-y-4">
+              <div className="flex flex-col xs:flex-row xs:items-start justify-between gap-3">
+                <div className="flex items-start gap-3 min-w-0">
                   <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border ${
                     settings.winners_page_visible
                       ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
@@ -522,8 +522,8 @@ export function GlobalSystemControls({
                   }`}>
                     <Trophy className="h-5 w-5" />
                   </div>
-                  <div>
-                    <div className="flex items-center gap-2">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
                       <h4 className="font-bold text-base text-foreground">
                         Winners Showcase Page
                       </h4>
@@ -549,18 +549,18 @@ export function GlobalSystemControls({
                   disabled={savingKey === "winners_page_visible"}
                   size="sm"
                   variant={settings.winners_page_visible ? "outline" : "default"}
-                  className="rounded-xl shrink-0 font-bold px-3.5 shadow-xs"
+                  className="rounded-xl shrink-0 font-bold px-3.5 shadow-xs min-h-11 w-full xs:w-auto"
                 >
                   {savingKey === "winners_page_visible" ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : settings.winners_page_visible ? (
                     <>
-                      <EyeOff className="h-3.5 w-3.5 mr-1.5" />
+                      <EyeOff className="h-4 w-4 mr-1.5" />
                       Hide Page
                     </>
                   ) : (
                     <>
-                      <Eye className="h-3.5 w-3.5 mr-1.5" />
+                      <Eye className="h-4 w-4 mr-1.5" />
                       Publish Page
                     </>
                   )}
@@ -569,36 +569,38 @@ export function GlobalSystemControls({
 
               {/* URL & quick actions bar */}
               <div className="flex items-center justify-between gap-2 rounded-xl bg-muted/40 px-3 py-2 border border-border/50">
-                <div className="flex items-center gap-2 truncate text-xs text-muted-foreground">
-                  <span className="font-medium text-foreground">Public URL:</span>
-                  <code className="rounded bg-background/80 px-1.5 py-0.5 font-mono text-[11px] text-primary border border-border/50">
+                <div className="flex items-center gap-2 min-w-0 text-xs text-muted-foreground">
+                  <span className="font-medium text-foreground shrink-0">Public URL:</span>
+                  <code className="truncate rounded bg-background/80 px-1.5 py-0.5 font-mono text-[11px] text-primary border border-border/50">
                     /winners
                   </code>
                 </div>
 
-                <div className="flex items-center gap-1.5 shrink-0">
+                <div className="flex items-center gap-1 shrink-0">
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={handleCopyWinnersUrl}
-                    className="h-7 px-2 text-xs rounded-lg text-muted-foreground hover:text-foreground"
+                    className="h-9 w-9 min-h-11 min-w-11 p-0 rounded-lg text-muted-foreground hover:text-foreground"
                     title="Copy direct link"
+                    aria-label="Copy direct link"
                   >
                     {copiedUrl ? (
-                      <Check className="h-3.5 w-3.5 text-emerald-500" />
+                      <Check className="h-4 w-4 text-emerald-500" />
                     ) : (
-                      <Copy className="h-3.5 w-3.5" />
+                      <Copy className="h-4 w-4" />
                     )}
                   </Button>
                   <Button
                     variant="ghost"
                     size="sm"
                     asChild
-                    className="h-7 px-2 text-xs rounded-lg text-muted-foreground hover:text-foreground"
+                    className="h-9 w-9 min-h-11 min-w-11 p-0 rounded-lg text-muted-foreground hover:text-foreground"
                     title="Open winners page in new tab"
+                    aria-label="Open winners page in new tab"
                   >
                     <a href="/winners" target="_blank" rel="noopener noreferrer">
-                      <ExternalLink className="h-3.5 w-3.5" />
+                      <ExternalLink className="h-4 w-4" />
                     </a>
                   </Button>
                 </div>
@@ -617,15 +619,15 @@ export function GlobalSystemControls({
           Homepage Display & Ceremony Modes
         </h3>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4.5">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* CARD 3: LEADERBOARD SCORING MODE (MONTHLY VS ALL-TIME) */}
           <Card className="relative overflow-hidden border border-border/80 bg-card/90 transition-all duration-200 hover:shadow-md flex flex-col justify-between">
-            <CardContent className="p-5 flex flex-col justify-between h-full space-y-4">
+            <CardContent className="p-4 sm:p-5 flex flex-col justify-between h-full space-y-4">
               <div className="space-y-3">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-2.5">
                     <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20">
-                      <BarChart3 className="h-4.5 w-4.5" />
+                      <BarChart3 className="h-4 w-4" />
                     </div>
                     <div>
                       <h4 className="font-bold text-sm text-foreground">
@@ -651,7 +653,7 @@ export function GlobalSystemControls({
                     type="button"
                     onClick={() => handleToggleLeaderboardMode(false)}
                     disabled={savingKey === "leaderboard_show_monthly"}
-                    className={`flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    className={`flex items-center justify-center gap-1.5 py-2 min-h-11 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                       !settings.leaderboard_show_monthly
                         ? "bg-background text-foreground shadow-xs border border-border/40"
                         : "text-muted-foreground hover:text-foreground"
@@ -663,7 +665,7 @@ export function GlobalSystemControls({
                     type="button"
                     onClick={() => handleToggleLeaderboardMode(true)}
                     disabled={savingKey === "leaderboard_show_monthly"}
-                    className={`flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    className={`flex items-center justify-center gap-1.5 py-2 min-h-11 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                       settings.leaderboard_show_monthly
                         ? "bg-primary text-primary-foreground shadow-xs"
                         : "text-muted-foreground hover:text-foreground"
@@ -692,7 +694,7 @@ export function GlobalSystemControls({
           <Card className={`relative overflow-hidden border transition-all duration-200 hover:shadow-md flex flex-col justify-between ${
             settings.calculation_mode ? "border-amber-500/40 bg-amber-500/5" : "border-border/80 bg-card/90"
           }`}>
-            <CardContent className="p-5 flex flex-col justify-between h-full space-y-4">
+            <CardContent className="p-4 sm:p-5 flex flex-col justify-between h-full space-y-4">
               <div className="space-y-3">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-2.5">
@@ -701,7 +703,7 @@ export function GlobalSystemControls({
                         ? "bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/30"
                         : "bg-muted text-muted-foreground border-border"
                     }`}>
-                      <Calculator className="h-4.5 w-4.5" />
+                      <Calculator className="h-4 w-4" />
                     </div>
                     <div>
                       <h4 className="font-bold text-sm text-foreground">
@@ -738,6 +740,7 @@ export function GlobalSystemControls({
                       onCheckedChange={handleToggleCalculationMode}
                       disabled={savingKey === "calculation_mode"}
                       className="data-[state=checked]:bg-amber-500"
+                      aria-label="Toggle calculation animation mode"
                     />
                   </div>
                 </div>
@@ -761,7 +764,7 @@ export function GlobalSystemControls({
           <Card className={`relative overflow-hidden border transition-all duration-200 hover:shadow-md flex flex-col justify-between ${
             settings.winner_reveal_mode ? "border-purple-500/40 bg-purple-500/5" : "border-border/80 bg-card/90"
           }`}>
-            <CardContent className="p-5 flex flex-col justify-between h-full space-y-4">
+            <CardContent className="p-4 sm:p-5 flex flex-col justify-between h-full space-y-4">
               <div className="space-y-3">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-2.5">
@@ -770,7 +773,7 @@ export function GlobalSystemControls({
                         ? "bg-purple-500/20 text-purple-600 dark:text-purple-400 border-purple-500/30"
                         : "bg-muted text-muted-foreground border-border"
                     }`}>
-                      <PartyPopper className="h-4.5 w-4.5" />
+                      <PartyPopper className="h-4 w-4" />
                     </div>
                     <div>
                       <h4 className="font-bold text-sm text-foreground">
@@ -807,6 +810,7 @@ export function GlobalSystemControls({
                       onCheckedChange={handleToggleWinnerRevealMode}
                       disabled={savingKey === "winner_reveal_mode"}
                       className="data-[state=checked]:bg-purple-600"
+                      aria-label="Toggle winner reveal mode"
                     />
                   </div>
                 </div>

@@ -97,31 +97,31 @@ export function SupervisorEvaluationsHistory({ supervisorId }: SupervisorEvaluat
           ) : (
             <div className="space-y-4">
               {/* Summary Metrics */}
-              <div className="grid grid-cols-3 gap-2.5 sm:gap-4">
-                <div className="p-3 sm:p-4 rounded-xl border border-primary/20 bg-primary/5 text-center">
-                  <p className="text-xl sm:text-2xl font-black text-primary">{evaluations.length}</p>
-                  <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 font-medium">Total Evaluations</p>
+              <div className="grid grid-cols-3 gap-2 sm:gap-4">
+                <div className="p-2.5 sm:p-4 rounded-xl border border-primary/20 bg-primary/5 text-center">
+                  <p className="text-lg sm:text-2xl font-black text-primary">{evaluations.length}</p>
+                  <p className="text-[9px] xs:text-[10px] sm:text-xs text-muted-foreground mt-0.5 font-medium truncate">Total Evaluations</p>
                 </div>
 
-                <div className="p-3 sm:p-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5 text-center">
-                  <p className="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400">
+                <div className="p-2.5 sm:p-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5 text-center">
+                  <p className="text-lg sm:text-2xl font-black text-emerald-600 dark:text-emerald-400">
                     {averageScore}
                   </p>
-                  <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 font-medium">Average Score</p>
+                  <p className="text-[9px] xs:text-[10px] sm:text-xs text-muted-foreground mt-0.5 font-medium truncate">Average Score</p>
                 </div>
 
-                <div className="p-3 sm:p-4 rounded-xl border border-amber-500/20 bg-amber-500/5 text-center">
-                  <p className="text-xl sm:text-2xl font-black text-amber-600 dark:text-amber-400">
+                <div className="p-2.5 sm:p-4 rounded-xl border border-amber-500/20 bg-amber-500/5 text-center">
+                  <p className="text-lg sm:text-2xl font-black text-amber-600 dark:text-amber-400">
                     {highestScore}
                   </p>
-                  <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 font-medium">Highest Score</p>
+                  <p className="text-[9px] xs:text-[10px] sm:text-xs text-muted-foreground mt-0.5 font-medium truncate">Highest Score</p>
                 </div>
               </div>
 
               {/* Virtualized Evaluation Records List */}
               <div
                 ref={parentRef}
-                className="max-h-120 overflow-y-auto rounded-xl border border-border/70 bg-card scrollbar-thin"
+                className="max-h-[60dvh] sm:max-h-120 overflow-y-auto rounded-xl border border-border/70 bg-card scrollbar-thin"
                 tabIndex={0}
                 aria-label="Supervisor evaluation history list"
               >
