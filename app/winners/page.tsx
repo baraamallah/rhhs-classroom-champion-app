@@ -7,6 +7,7 @@ import { LazyMotionProvider } from "@/components/providers/lazy-motion-provider"
 import { Confetti } from "@/components/features/animations/confetti"
 import { CelebrationAnimation } from "@/components/features/animations/celebration-animation"
 import { TrophyIcon, CrownIcon } from "@/components/common/icons"
+import { FirstPlaceLogo } from "@/components/common/podium-logos"
 import { getPublicMonthlyWinners } from "@/app/actions/public-winners-actions"
 import { getWinnersPageVisibility, getDefaultMonthSettings } from "@/app/actions/winners-page-actions"
 import { getClassroomWinCounts } from "@/app/actions/win-count-actions"
@@ -407,8 +408,8 @@ function WinnerCardBody({
       >
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2.5 xs:gap-3 min-w-0">
-            <div className="flex items-center justify-center w-10 h-10 xs:w-11 xs:h-11 rounded-full bg-amber-500/25 border border-amber-500/40 shadow-xs shrink-0">
-              <TrophyIcon className="h-5 w-5 xs:h-6 xs:w-6 text-amber-500" />
+            <div className="shrink-0 flex items-center justify-center">
+              <FirstPlaceLogo className="w-12 h-12 xs:w-14 xs:h-14 drop-shadow-md" />
             </div>
             <div className="min-w-0">
               <span className="text-[9px] xs:text-[10px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-400">

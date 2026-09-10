@@ -1,6 +1,17 @@
 import { createClient } from "@/lib/supabase/client"
 import { getEvaluationsStatus } from "@/app/actions/evaluation-settings-actions"
 import { submitEvaluation as submitEvaluationAction } from "@/app/actions/evaluation-actions"
+import {
+  createClassroomAction,
+  updateClassroomAction,
+  deleteClassroomAction,
+  bulkUpdateClassroomDivisionsAction
+} from "@/app/actions/classroom-actions"
+import {
+  addChecklistItemAction,
+  updateChecklistItemAction,
+  deleteChecklistItemAction
+} from "@/app/actions/checklist-actions"
 import type { Classroom, ChecklistItem, Evaluation, User } from "./types"
 
 // Client-side data functions
@@ -106,46 +117,10 @@ export async function addChecklistItem(
   points: number,
   category?: string,
   displayOrder?: number,
-  createdBy?: string,
+  _createdBy?: string,
   assignedSupervisorIds?: string[]
 ): Promise<{ success: boolean; error?: string }> {
-  try {
-    const supabase = createClient()
-
-    const { data: newItem, error } = await supabase.from("checklist_items").insert({
-      title,
-      description,
-      points,
-      category: category || null,
-      display_order: displayOrder || 0,
-    }).select().single()
-
-    if (error) {
-      console.error("[Database] Error adding checklist item:", error)
-      return { success: false, error: error.message }
-    }
-
-    // Insert assignments if any
-    if (assignedSupervisorIds && assignedSupervisorIds.length > 0) {
-      const assignments = assignedSupervisorIds.map(id => ({
-        checklist_item_id: newItem.id,
-        supervisor_id: id
-      }))
-
-      const { error: assignmentError } = await supabase
-        .from("checklist_item_assignments")
-        .insert(assignments)
-
-      if (assignmentError) {
-        console.error("[Database] Error adding checklist assignments:", assignmentError)
-      }
-    }
-
-    return { success: true }
-  } catch (error) {
-    console.error("[Database] Exception adding checklist item:", error)
-    return { success: false, error: "Failed to add checklist item" }
-  }
+  return addChecklistItemAction(title, description, points, category, displayOrder, assignedSupervisorIds)
 }
 
 export async function updateChecklistItem(
@@ -158,68 +133,11 @@ export async function updateChecklistItem(
   isActive?: boolean,
   assignedSupervisorIds?: string[]
 ): Promise<{ success: boolean; error?: string }> {
-  try {
-    const supabase = createClient()
-    const updateData: any = { title, description, points }
-
-    if (category !== undefined) updateData.category = category
-    if (displayOrder !== undefined) updateData.display_order = displayOrder
-    if (isActive !== undefined) updateData.is_active = isActive
-
-    const { error } = await supabase.from("checklist_items").update(updateData).eq("id", id)
-
-    if (error) {
-      console.error("[Database] Error updating checklist item:", error)
-      return { success: false, error: error.message }
-    }
-
-    // Update assignments if provided
-    if (assignedSupervisorIds !== undefined) {
-      // First delete existing assignments
-      await supabase
-        .from("checklist_item_assignments")
-        .delete()
-        .eq("checklist_item_id", id)
-
-      // Then insert new ones
-      if (assignedSupervisorIds.length > 0) {
-        const assignments = assignedSupervisorIds.map(supId => ({
-          checklist_item_id: id,
-          supervisor_id: supId
-        }))
-
-        const { error: assignmentError } = await supabase
-          .from("checklist_item_assignments")
-          .insert(assignments)
-
-        if (assignmentError) {
-          console.error("[Database] Error updating checklist assignments:", assignmentError)
-        }
-      }
-    }
-
-    return { success: true }
-  } catch (error) {
-    console.error("[Database] Exception updating checklist item:", error)
-    return { success: false, error: "Failed to update checklist item" }
-  }
+  return updateChecklistItemAction(id, title, description, points, category, displayOrder, isActive, assignedSupervisorIds)
 }
 
 export async function deleteChecklistItem(id: string): Promise<{ success: boolean; error?: string }> {
-  try {
-    const supabase = createClient()
-    // Soft delete by setting is_active to false
-    const { error } = await supabase.from("checklist_items").update({ is_active: false }).eq("id", id)
-
-    if (error) {
-      console.error("[Database] Error deleting checklist item:", error)
-      return { success: false, error: error.message }
-    }
-    return { success: true }
-  } catch (error) {
-    console.error("[Database] Exception deleting checklist item:", error)
-    return { success: false, error: "Failed to delete checklist item" }
-  }
+  return deleteChecklistItemAction(id)
 }
 
 // Classroom management functions
@@ -230,42 +148,7 @@ export async function createClassroom(
   description: string,
   supervisorIds: string[]
 ): Promise<{ success: boolean; error?: string }> {
-  try {
-    const supabase = createClient()
-
-    const { data: newClassroom, error } = await supabase.from("classrooms").insert({
-      name,
-      grade,
-      division: division || null,
-      description: description || null,
-    }).select().single()
-
-    if (error) {
-      console.error("[Database] Error creating classroom:", error)
-      return { success: false, error: error.message }
-    }
-
-    // Insert assignments if any
-    if (supervisorIds && supervisorIds.length > 0) {
-      const assignments = supervisorIds.map(id => ({
-        classroom_id: newClassroom.id,
-        supervisor_id: id
-      }))
-
-      const { error: assignmentError } = await supabase
-        .from("classroom_supervisors")
-        .insert(assignments)
-
-      if (assignmentError) {
-        console.error("[Database] Error adding classroom supervisors:", assignmentError)
-      }
-    }
-
-    return { success: true }
-  } catch (error) {
-    console.error("[Database] Exception creating classroom:", error)
-    return { success: false, error: "Failed to create classroom" }
-  }
+  return createClassroomAction(name, grade, division, description, supervisorIds)
 }
 
 export async function updateClassroom(
@@ -277,108 +160,18 @@ export async function updateClassroom(
   supervisorIds?: string[],
   isActive?: boolean
 ): Promise<{ success: boolean; error?: string }> {
-  try {
-    const supabase = createClient()
-    const updateData: any = { name, grade }
-
-    // Only include division if it's not empty to avoid violating the constraint
-    if (division) updateData.division = division
-
-    if (description !== undefined) updateData.description = description
-    if (isActive !== undefined) updateData.is_active = isActive
-
-    const { error } = await supabase.from("classrooms").update(updateData).eq("id", id)
-
-    if (error) {
-      console.error("[Database] Error updating classroom:", error)
-      return { success: false, error: error.message }
-    }
-
-    // Update assignments if provided
-    if (supervisorIds !== undefined) {
-      // First delete existing assignments
-      await supabase
-        .from("classroom_supervisors")
-        .delete()
-        .eq("classroom_id", id)
-
-      // Then insert new ones
-      if (supervisorIds.length > 0) {
-        const assignments = supervisorIds.map(supId => ({
-          classroom_id: id,
-          supervisor_id: supId
-        }))
-
-        const { error: assignmentError } = await supabase
-          .from("classroom_supervisors")
-          .insert(assignments)
-
-        if (assignmentError) {
-          console.error("[Database] Error updating classroom supervisors:", assignmentError)
-          console.error("[Database] Assignment error details:", JSON.stringify(assignmentError, null, 2))
-        }
-      }
-    }
-
-    return { success: true }
-  } catch (error) {
-    console.error("[Database] Exception updating classroom:", error)
-    return { success: false, error: "Failed to update classroom" }
-  }
+  return updateClassroomAction(id, name, grade, division, description, supervisorIds, isActive)
 }
 
 export async function bulkUpdateClassroomDivisions(
   classroomIds: string[],
   division: string
 ): Promise<{ success: boolean; error?: string; updatedCount?: number }> {
-  try {
-    if (!classroomIds || classroomIds.length === 0) {
-      return { success: false, error: "No classrooms selected" }
-    }
-
-    const supabase = createClient()
-    const updateData: any = {}
-
-    // Only include division if it's not empty to avoid violating the constraint
-    if (division) {
-      updateData.division = division
-    } else {
-      updateData.division = null
-    }
-
-    const { data, error } = await supabase
-      .from("classrooms")
-      .update(updateData)
-      .in("id", classroomIds)
-      .select("id")
-
-    if (error) {
-      console.error("[Database] Error bulk updating classroom divisions:", error)
-      return { success: false, error: error.message }
-    }
-
-    return { success: true, updatedCount: data?.length || 0 }
-  } catch (error) {
-    console.error("[Database] Exception bulk updating classroom divisions:", error)
-    return { success: false, error: "Failed to update classroom divisions" }
-  }
+  return bulkUpdateClassroomDivisionsAction(classroomIds, division)
 }
 
 export async function deleteClassroom(id: string): Promise<{ success: boolean; error?: string }> {
-  try {
-    const supabase = createClient()
-    // Soft delete by setting is_active to false
-    const { error } = await supabase.from("classrooms").update({ is_active: false }).eq("id", id)
-
-    if (error) {
-      console.error("[Database] Error deleting classroom:", error)
-      return { success: false, error: error.message }
-    }
-    return { success: true }
-  } catch (error) {
-    console.error("[Database] Exception deleting classroom:", error)
-    return { success: false, error: "Failed to delete classroom" }
-  }
+  return deleteClassroomAction(id)
 }
 
 // Statistics and analytics functions

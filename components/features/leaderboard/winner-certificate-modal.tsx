@@ -3,6 +3,7 @@
 import { useEffect } from "react"
 import { m, AnimatePresence } from "framer-motion"
 import { TrophyIcon, StarIcon, MedalIcon, CrownIcon } from "@/components/common/icons"
+import { FirstPlaceLogo, SecondPlaceLogo, ThirdPlaceLogo } from "@/components/common/podium-logos"
 import { X, Award, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { getDivisionDisplayName } from "@/lib/division-display"
@@ -18,7 +19,7 @@ const getRankInfo = (rank: number) => {
         bgColor: "bg-gradient-to-br from-yellow-500/20 via-amber-500/10 to-yellow-600/20",
         borderColor: "border-yellow-500",
         textColor: "text-yellow-500",
-        icon: <CrownIcon className="h-14 w-14 xs:h-16 xs:w-16 sm:h-20 sm:w-20 text-yellow-500" />,
+        icon: <FirstPlaceLogo className="h-20 w-20 xs:h-24 xs:w-24 sm:h-28 sm:w-28 drop-shadow-xl" />,
         medalColor: "text-yellow-500"
       }
     case 2:
@@ -29,7 +30,7 @@ const getRankInfo = (rank: number) => {
         bgColor: "bg-gradient-to-br from-gray-400/20 via-gray-300/10 to-gray-500/20",
         borderColor: "border-gray-400",
         textColor: "text-gray-400",
-        icon: <MedalIcon className="h-14 w-14 xs:h-16 xs:w-16 sm:h-20 sm:w-20 text-gray-400" />,
+        icon: <SecondPlaceLogo className="h-20 w-20 xs:h-24 xs:w-24 sm:h-28 sm:w-28 drop-shadow-xl" />,
         medalColor: "text-gray-400"
       }
     case 3:
@@ -40,7 +41,7 @@ const getRankInfo = (rank: number) => {
         bgColor: "bg-gradient-to-br from-amber-600/20 via-orange-500/10 to-amber-700/20",
         borderColor: "border-amber-600",
         textColor: "text-amber-600",
-        icon: <MedalIcon className="h-14 w-14 xs:h-16 xs:w-16 sm:h-20 sm:w-20 text-amber-600" />,
+        icon: <ThirdPlaceLogo className="h-20 w-20 xs:h-24 xs:w-24 sm:h-28 sm:w-28 drop-shadow-xl" />,
         medalColor: "text-amber-600"
       }
     default:
