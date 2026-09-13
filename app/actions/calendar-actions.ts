@@ -520,3 +520,240 @@ export async function getSupervisorDailyStatus(
     return { success: false, error: err.message || "Failed to calculate daily inspection status" }
   }
 }
+
+export interface DateClassroomStatus {
+  id: string
+  name: string
+  grade: string
+  division: string
+  isEvaluated: boolean
+  score?: number
+  maxScore?: number
+  evaluationId?: string
+  supervisorName?: string
+  evaluatedAt?: string
+}
+
+export interface DateEvaluationOverview {
+  date: string
+  isWorkingDay: boolean
+  isToday: boolean
+  isPast: boolean
+  isFuture: boolean
+  isWeekend: boolean
+  isHoliday: boolean
+  holidayReason?: string
+  isBeforeTerm: boolean
+  isAfterTerm: boolean
+  totalAssigned: number
+  completedCount: number
+  pendingCount: number
+  classrooms: DateClassroomStatus[]
+  missedDays: MissedDayRecord[]
+  schoolStartDate: string
+  schoolEndDate: string
+}
+
+/**
+ * Fetch evaluation overview for a specific date (today or a backfill date).
+ * Provides exact per-classroom evaluated/pending statuses, scores, and missed days for quick switching.
+ */
+export async function getDateClassroomEvaluationOverview(
+  dateStr: string,
+  supervisorId?: string
+): Promise<{ success: boolean; data?: DateEvaluationOverview; error?: string }> {
+  try {
+    const supabase = await createAdminClient()
+    const now = new Date()
+    const todayStr = format(now, "yyyy-MM-dd")
+    const targetDate = dateStr.trim()
+    const parsedTarget = parseISO(targetDate)
+
+    // 1. Get school term dates
+    const termRes = await getSchoolTermDates()
+    const schoolStartDate = termRes.data.startDate
+    const schoolEndDate = termRes.data.endDate
+
+    // 2. Fetch assigned classrooms
+    let assignedClassrooms: any[] = []
+    if (supervisorId) {
+      const { data: assignments, error: assignError } = await supabase
+        .from("classroom_supervisors")
+        .select(`
+          classroom_id,
+          classrooms:classroom_id (
+            id,
+            name,
+            grade,
+            division,
+            is_active
+          )
+        `)
+        .eq("supervisor_id", supervisorId)
+
+      if (assignError) throw assignError
+
+      assignedClassrooms = (assignments || [])
+        .map((a: any) => a.classrooms)
+        .filter((c: any) => c && c.is_active)
+    }
+
+    // Fallback if no specific supervisor assignments found
+    if (assignedClassrooms.length === 0) {
+      const { data: allRooms, error: roomError } = await supabase
+        .from("classrooms")
+        .select("id, name, grade, division, is_active")
+        .eq("is_active", true)
+        .order("name")
+
+      if (roomError) throw roomError
+      assignedClassrooms = allRooms || []
+    }
+
+    // 3. Calendar exceptions & calendar status
+    const { data: exceptions } = await supabase
+      .from("school_calendar_exceptions")
+      .select("exception_date, reason")
+
+    const exceptionMap = new Map((exceptions || []).map((e: any) => [e.exception_date, e.reason]))
+
+    const dayIsWeekend = isWeekend(parsedTarget)
+    const holidayReason = exceptionMap.get(targetDate)
+    const dayIsHoliday = !!holidayReason
+    const dayIsToday = targetDate === todayStr
+    const dayIsPast = targetDate < todayStr
+    const dayIsFuture = targetDate > todayStr
+    const isBeforeTerm = targetDate < schoolStartDate
+    const isAfterTerm = targetDate > schoolEndDate
+
+    let effectiveReason = holidayReason
+    if (isBeforeTerm) effectiveReason = "Before Academic School Year"
+    else if (isAfterTerm) effectiveReason = "School Year Ended (Break)"
+
+    const isWorkingDay = !dayIsWeekend && !holidayReason && !isBeforeTerm && !isAfterTerm
+
+    // 4. Fetch evaluations for these classrooms on targetDate
+    const classroomIds = assignedClassrooms.map((c: any) => c.id)
+    let evaluations: any[] = []
+    if (classroomIds.length > 0) {
+      const { data: evals, error: evalError } = await supabase
+        .from("evaluations")
+        .select(`
+          id,
+          classroom_id,
+          evaluation_date,
+          total_score,
+          max_score,
+          users:supervisor_id (
+            name
+          )
+        `)
+        .in("classroom_id", classroomIds)
+        .gte("evaluation_date", `${targetDate}T00:00:00.000Z`)
+        .lte("evaluation_date", `${targetDate}T23:59:59.999Z`)
+
+      if (evalError) throw evalError
+      evaluations = evals || []
+    }
+
+    const evalMap = new Map<string, any>()
+    evaluations.forEach((ev: any) => {
+      evalMap.set(ev.classroom_id, ev)
+    })
+
+    const classroomStatusList: DateClassroomStatus[] = assignedClassrooms.map((room: any) => {
+      const existing = evalMap.get(room.id)
+      return {
+        id: room.id,
+        name: room.name,
+        grade: room.grade,
+        division: room.division || "",
+        isEvaluated: !!existing,
+        score: existing?.total_score,
+        maxScore: existing?.max_score,
+        evaluationId: existing?.id,
+        supervisorName: existing?.users?.name,
+        evaluatedAt: existing?.evaluation_date,
+      }
+    })
+
+    const completedCount = classroomStatusList.filter((c) => c.isEvaluated).length
+    const pendingCount = isWorkingDay ? classroomStatusList.length - completedCount : 0
+
+    // 5. Calculate Missed Days for quick switcher
+    const parsedStart = parseISO(schoolStartDate)
+    const parsedEnd = parseISO(schoolEndDate)
+    const yesterday = subDays(now, 1)
+    const scanLowerBound = max([parsedStart, subDays(now, 60)])
+    const scanUpperBound = min([parsedEnd, yesterday])
+
+    const missedDays: MissedDayRecord[] = []
+    if (classroomIds.length > 0 && scanLowerBound <= scanUpperBound) {
+      // Query evaluations for the whole scan interval
+      const { data: rangeEvals } = await supabase
+        .from("evaluations")
+        .select("classroom_id, evaluation_date")
+        .in("classroom_id", classroomIds)
+        .gte("evaluation_date", `${format(scanLowerBound, "yyyy-MM-dd")}T00:00:00.000Z`)
+        .lte("evaluation_date", `${format(scanUpperBound, "yyyy-MM-dd")}T23:59:59.999Z`)
+
+      const intervalEvalMap = new Set<string>()
+      ;(rangeEvals || []).forEach((ev: any) => {
+        const dStr = format(parseISO(ev.evaluation_date), "yyyy-MM-dd")
+        intervalEvalMap.add(`${ev.classroom_id}_${dStr}`)
+      })
+
+      const intervalDays = eachDayOfInterval({ start: scanLowerBound, end: scanUpperBound })
+      for (const pastDay of intervalDays) {
+        const dKey = format(pastDay, "yyyy-MM-dd")
+        if (isWeekend(pastDay)) continue
+        if (exceptionMap.has(dKey)) continue
+
+        const missing = assignedClassrooms.filter(
+          (room: any) => !intervalEvalMap.has(`${room.id}_${dKey}`)
+        )
+
+        if (missing.length > 0) {
+          missedDays.push({
+            date: dKey,
+            missingClassroomIds: missing.map((r: any) => r.id),
+            missingClassrooms: missing.map((r: any) => ({
+              id: r.id,
+              name: r.name,
+              grade: r.grade,
+              division: r.division || "",
+            })),
+          })
+        }
+      }
+    }
+
+    missedDays.sort((a, b) => b.date.localeCompare(a.date))
+
+    return {
+      success: true,
+      data: {
+        date: targetDate,
+        isWorkingDay,
+        isToday: dayIsToday,
+        isPast: dayIsPast,
+        isFuture: dayIsFuture,
+        isWeekend: dayIsWeekend,
+        isHoliday: dayIsHoliday,
+        holidayReason: effectiveReason,
+        isBeforeTerm,
+        isAfterTerm,
+        totalAssigned: assignedClassrooms.length,
+        completedCount,
+        pendingCount,
+        classrooms: classroomStatusList,
+        missedDays,
+        schoolStartDate,
+        schoolEndDate,
+      },
+    }
+  } catch (err: any) {
+    console.error("[getDateClassroomEvaluationOverview] Error:", err)
+    return { success: false, error: err.message || "Failed to load date evaluation overview" }
+  }
+}

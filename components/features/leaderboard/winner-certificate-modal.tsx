@@ -1,81 +1,88 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useRef, useState } from "react"
 import { m, AnimatePresence } from "framer-motion"
-import { TrophyIcon, StarIcon, MedalIcon, CrownIcon } from "@/components/common/icons"
+import { TrophyIcon, StarIcon, CrownIcon } from "@/components/common/icons"
 import { FirstPlaceLogo, SecondPlaceLogo, ThirdPlaceLogo } from "@/components/common/podium-logos"
-import { X, Award, Sparkles } from "lucide-react"
+import { X, Award, Sparkles, Printer, Share2, Check, Download } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { getDivisionDisplayName } from "@/lib/division-display"
 import { LazyMotionProvider } from "@/components/providers/lazy-motion-provider"
+import { useToast } from "@/hooks/use-toast"
 
-const getRankInfo = (rank: number) => {
-  switch (rank) {
-    case 1:
-      return {
-        title: "CHAMPION",
-        subtitle: "1st Place",
-        color: "from-yellow-400 via-yellow-500 to-amber-600",
-        bgColor: "bg-gradient-to-br from-yellow-500/20 via-amber-500/10 to-yellow-600/20",
-        borderColor: "border-yellow-500",
-        textColor: "text-yellow-500",
-        icon: <FirstPlaceLogo className="h-20 w-20 xs:h-24 xs:w-24 sm:h-28 sm:w-28 drop-shadow-xl" />,
-        medalColor: "text-yellow-500"
-      }
-    case 2:
-      return {
-        title: "RUNNER UP",
-        subtitle: "2nd Place",
-        color: "from-gray-300 via-gray-400 to-gray-500",
-        bgColor: "bg-gradient-to-br from-gray-400/20 via-gray-300/10 to-gray-500/20",
-        borderColor: "border-gray-400",
-        textColor: "text-gray-400",
-        icon: <SecondPlaceLogo className="h-20 w-20 xs:h-24 xs:w-24 sm:h-28 sm:w-28 drop-shadow-xl" />,
-        medalColor: "text-gray-400"
-      }
-    case 3:
-      return {
-        title: "HONORABLE",
-        subtitle: "3rd Place",
-        color: "from-amber-600 via-amber-700 to-orange-700",
-        bgColor: "bg-gradient-to-br from-amber-600/20 via-orange-500/10 to-amber-700/20",
-        borderColor: "border-amber-600",
-        textColor: "text-amber-600",
-        icon: <ThirdPlaceLogo className="h-20 w-20 xs:h-24 xs:w-24 sm:h-28 sm:w-28 drop-shadow-xl" />,
-        medalColor: "text-amber-600"
-      }
-    default:
-      return {
-        title: "PARTICIPANT",
-        subtitle: `${rank}th Place`,
-        color: "from-blue-400 via-blue-500 to-blue-600",
-        bgColor: "bg-gradient-to-br from-blue-500/20 via-blue-400/10 to-blue-600/20",
-        borderColor: "border-blue-500",
-        textColor: "text-blue-500",
-        icon: <Award className="h-14 w-14 xs:h-16 xs:w-16 sm:h-20 sm:w-20 text-blue-500" />,
-        medalColor: "text-blue-500"
-      }
-  }
+interface WinnerData {
+  classroomName: string
+  grade: string
+  division: string
+  rank: number
+  totalScore: number
+  averageScore: number
+  evaluationCount: number
+  month: string
+  year: number
+  winCount?: number
 }
 
 interface WinnerCertificateModalProps {
   isOpen: boolean
   onClose: () => void
-  winner: {
-    classroomName: string
-    grade: string
-    division: string
-    rank: number
-    totalScore: number
-    averageScore: number
-    evaluationCount: number
-    month: string
-    year: number
-    winCount?: number
-  } | null
+  winner: WinnerData | null
+}
+
+const getRankTheme = (rank: number) => {
+  switch (rank) {
+    case 1:
+      return {
+        title: "CHAMPION OF EXCELLENCE",
+        subtitle: "1st Place Winner",
+        accentColor: "text-amber-500",
+        borderGold: "border-amber-400/90 dark:border-amber-400",
+        badgeBg: "bg-amber-500/15 border-amber-500/40 text-amber-600 dark:text-amber-300",
+        ribbonColor: "from-amber-500 via-yellow-400 to-amber-600",
+        icon: <FirstPlaceLogo className="w-16 h-16 sm:w-20 sm:h-20 drop-shadow-xl" />,
+        sealColor: "#d97706",
+      }
+    case 2:
+      return {
+        title: "DISTINGUISHED RUNNER-UP",
+        subtitle: "2nd Place Distinction",
+        accentColor: "text-slate-400 dark:text-slate-300",
+        borderGold: "border-slate-400/80 dark:border-slate-400",
+        badgeBg: "bg-slate-400/15 border-slate-400/40 text-slate-700 dark:text-slate-200",
+        ribbonColor: "from-slate-400 via-slate-300 to-slate-500",
+        icon: <SecondPlaceLogo className="w-16 h-16 sm:w-20 sm:h-20 drop-shadow-xl" />,
+        sealColor: "#64748b",
+      }
+    case 3:
+      return {
+        title: "HONORABLE ECO PIONEER",
+        subtitle: "3rd Place Honor",
+        accentColor: "text-amber-700 dark:text-amber-500",
+        borderGold: "border-amber-700/80 dark:border-amber-600",
+        badgeBg: "bg-amber-700/15 border-amber-700/40 text-amber-800 dark:text-amber-300",
+        ribbonColor: "from-amber-700 via-amber-600 to-orange-700",
+        icon: <ThirdPlaceLogo className="w-16 h-16 sm:w-20 sm:h-20 drop-shadow-xl" />,
+        sealColor: "#b45309",
+      }
+    default:
+      return {
+        title: "OUTSTANDING PARTICIPANT",
+        subtitle: `${rank}th Place Honor`,
+        accentColor: "text-emerald-500",
+        borderGold: "border-emerald-500/80",
+        badgeBg: "bg-emerald-500/15 border-emerald-500/40 text-emerald-700 dark:text-emerald-300",
+        ribbonColor: "from-emerald-600 via-teal-500 to-emerald-700",
+        icon: <Award className="w-14 h-14 sm:w-16 sm:h-16 text-emerald-500" />,
+        sealColor: "#059669",
+      }
+  }
 }
 
 export function WinnerCertificateModal({ isOpen, onClose, winner }: WinnerCertificateModalProps) {
+  const { toast } = useToast()
+  const [copied, setCopied] = useState(false)
+  const certificateRef = useRef<HTMLDivElement>(null)
+
   useEffect(() => {
     if (!isOpen) return
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -87,210 +94,234 @@ export function WinnerCertificateModal({ isOpen, onClose, winner }: WinnerCertif
 
   if (!winner) return null
 
-  const rankInfo = getRankInfo(winner.rank)
+  const theme = getRankTheme(winner.rank)
+
+  const handlePrint = () => {
+    window.print()
+  }
+
+  const handleCopyLink = async () => {
+    try {
+      if (typeof window !== "undefined") {
+        await navigator.clipboard.writeText(window.location.href)
+        setCopied(true)
+        toast({
+          title: "Certificate Link Copied",
+          description: `Share the link to celebrate ${winner.classroomName}'s victory!`,
+        })
+        setTimeout(() => setCopied(false), 2500)
+      }
+    } catch {
+      toast({
+        title: "Could not copy link",
+        description: "Please copy the URL directly from your browser bar.",
+        variant: "destructive",
+      })
+    }
+  }
 
   return (
     <LazyMotionProvider>
       <AnimatePresence>
         {isOpen && (
           <m.div
-            className="fixed inset-0 z-50 flex items-center justify-center p-3 xs:p-4"
+            className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 overflow-y-auto no-scrollbar"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           >
-            {/* Backdrop */}
+            {/* Darkened backdrop with blur */}
             <m.div
-              className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+              className="fixed inset-0 bg-black/80 backdrop-blur-md no-print"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={onClose}
             />
 
-            {/* Certificate Card */}
+            {/* Modal Container */}
             <m.div
-              className={`relative w-full max-w-lg ${rankInfo.bgColor} border-2 xs:border-4 ${rankInfo.borderColor} rounded-2xl xs:rounded-3xl p-4 xs:p-6 sm:p-8 shadow-2xl overflow-y-auto max-h-[90dvh] sm:max-h-[calc(100dvh-2.5rem)]`}
-              initial={{ scale: 0.5, opacity: 0, rotateY: -90 }}
-              animate={{ scale: 1, opacity: 1, rotateY: 0 }}
-              exit={{ scale: 0.5, opacity: 0, rotateY: 90 }}
-              transition={{ type: "spring", stiffness: 200, damping: 20 }}
+              className="relative z-10 w-full max-w-4xl my-auto flex flex-col items-center"
+              initial={{ scale: 0.92, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.92, opacity: 0, y: 20 }}
+              transition={{ type: "spring", stiffness: 260, damping: 24 }}
             >
-              {/* Close Button with 44px tap target */}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute top-2.5 right-2.5 xs:top-4 xs:right-4 z-20 min-h-11 min-w-11 rounded-full hover:bg-white/20 bg-background/40 backdrop-blur-xs cursor-pointer flex items-center justify-center"
-                onClick={onClose}
-                aria-label="Close certificate"
-              >
-                <X className="h-5 w-5" />
-              </Button>
+              {/* Top Floating Control Bar */}
+              <div className="w-full flex items-center justify-between mb-3 px-1 text-white no-print">
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-xs font-semibold text-amber-300">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    Official Certificate
+                  </span>
+                </div>
 
-              {/* Sparkle Effects */}
-              <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                {Array.from({ length: 12 }, (_, i) => {
-                  const top = (i * 37 + 8) % 100
-                  const left = (i * 61 + 10) % 100
-                  return (
-                    <m.div
-                      key={i}
-                      className="absolute"
-                      style={{
-                        top: `${top}%`,
-                        left: `${left}%`,
-                      }}
-                      initial={{ scale: 0.01, opacity: 0 }}
-                      animate={{
-                        scale: [0.01, 1, 0],
-                        opacity: [0, 1, 0],
-                        rotate: [0, 180, 360],
-                      }}
-                      transition={{
-                        delay: i * 0.15,
-                        duration: 2,
-                        repeat: Number.POSITIVE_INFINITY,
-                        repeatDelay: 1,
-                      }}
-                    >
-                      <Sparkles className={`h-4 w-4 ${rankInfo.textColor}`} />
-                    </m.div>
-                  )
-                })}
-              </div>
-
-              {/* Certificate Content */}
-              <div className="relative text-center space-y-4 xs:space-y-6">
-                {/* Trophy/Medal Icon */}
-                <m.div
-                  initial={{ scale: 0.01, rotate: -180 }}
-                  animate={{ scale: 1, rotate: 0 }}
-                  transition={{ delay: 0.3, type: "spring", stiffness: 200 }}
-                  className="flex justify-center"
-                >
-                  <div className="relative">
-                    {rankInfo.icon}
-                    {winner.rank === 1 && (
-                      <m.div
-                        className="absolute -top-2 -right-2"
-                        animate={{ rotate: [0, 10, -10, 0], scale: [1, 1.1, 1] }}
-                        transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY }}
-                      >
-                        <StarIcon className="h-6 w-6 sm:h-8 sm:w-8 text-yellow-400" />
-                      </m.div>
-                    )}
-                  </div>
-                </m.div>
-
-                {/* Title */}
-                <m.div
-                  initial={{ y: 20, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.4 }}
-                >
-                  <p className="text-xs sm:text-sm font-medium text-muted-foreground uppercase tracking-widest mb-1">
-                    Certificate of Excellence
-                  </p>
-                  <h1 className={`text-2xl xs:text-3xl sm:text-4xl font-extrabold bg-linear-to-r ${rankInfo.color} bg-clip-text text-transparent tracking-tight`}>
-                    {rankInfo.title}
-                  </h1>
-                  <p className={`text-sm xs:text-base sm:text-lg font-semibold ${rankInfo.textColor}`}>
-                    {rankInfo.subtitle}
-                  </p>
-                </m.div>
-
-                {/* Division & Month */}
-                <m.div
-                  initial={{ y: 20, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.5 }}
-                  className="space-y-0.5 sm:space-y-1"
-                >
-                  <p className="text-xs sm:text-sm text-muted-foreground">{getDivisionDisplayName(winner.division)} Division</p>
-                  <p className="text-base sm:text-lg font-semibold text-foreground">
-                    {winner.month} {winner.year}
-                  </p>
-                </m.div>
-
-                {/* Winner Name */}
-                <m.div
-                  initial={{ scale: 0.8, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ delay: 0.6 }}
-                  className={`py-3 xs:py-4 px-3 xs:px-6 rounded-xl border-2 ${rankInfo.borderColor} bg-card/50 backdrop-blur-sm`}
-                >
-                  <p className="text-xs sm:text-sm text-muted-foreground mb-1">Awarded To</p>
-                  <h2 className="text-xl xs:text-2xl font-bold text-foreground truncate">{winner.classroomName}</h2>
-                  <p className="text-xs sm:text-sm text-muted-foreground">Grade {winner.grade}</p>
-                </m.div>
-
-                {/* Stats */}
-                <m.div
-                  initial={{ y: 20, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.7 }}
-                  className="grid grid-cols-3 gap-2 xs:gap-3 sm:gap-4"
-                >
-                  <div className="text-center p-2 xs:p-3 rounded-lg bg-card/30 border border-border">
-                    <p className="text-lg xs:text-xl sm:text-2xl font-bold text-foreground">{winner.totalScore}</p>
-                    <p className="text-[10px] xs:text-xs text-muted-foreground">Total Score</p>
-                  </div>
-                  <div className="text-center p-2 xs:p-3 rounded-lg bg-card/30 border border-border">
-                    <p className="text-lg xs:text-xl sm:text-2xl font-bold text-foreground">{winner.averageScore.toFixed(1)}</p>
-                    <p className="text-[10px] xs:text-xs text-muted-foreground">Average</p>
-                  </div>
-                  <div className="text-center p-2 xs:p-3 rounded-lg bg-card/30 border border-border">
-                    <p className="text-lg xs:text-xl sm:text-2xl font-bold text-foreground">{winner.evaluationCount}</p>
-                    <p className="text-[10px] xs:text-xs text-muted-foreground">Evaluations</p>
-                  </div>
-                </m.div>
-
-                {/* Win Count Badge */}
-                {winner.winCount && winner.winCount > 0 && (
-                  <m.div
-                    initial={{ scale: 0.01 }}
-                    animate={{ scale: 1 }}
-                    transition={{ delay: 0.8, type: "spring" }}
-                    className="inline-flex items-center gap-2 px-3.5 xs:px-4 py-1.5 xs:py-2 rounded-full bg-yellow-500/20 border border-yellow-500/50"
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCopyLink}
+                    className="min-h-10 px-3 rounded-full bg-white/10 hover:bg-white/20 text-white border-white/20 text-xs font-semibold backdrop-blur-md cursor-pointer transition-all"
                   >
-                    <TrophyIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-yellow-500 shrink-0" />
-                    <span className="text-xs sm:text-sm font-semibold text-yellow-600 dark:text-yellow-400">
-                      {winner.winCount} Total {winner.winCount === 1 ? 'Win' : 'Wins'} This Year
-                    </span>
-                  </m.div>
-                )}
+                    {copied ? <Check className="w-3.5 h-3.5 mr-1.5 text-emerald-400" /> : <Share2 className="w-3.5 h-3.5 mr-1.5" />}
+                    <span>{copied ? "Copied" : "Share"}</span>
+                  </Button>
 
-                {/* Decorative Stars */}
-                <div className="flex justify-center gap-2 pt-1 sm:pt-2">
-                  {[...Array(5)].map((_, i) => (
-                    <m.div
-                      key={i}
-                      initial={{ scale: 0.01, rotate: -180 }}
-                      animate={{ scale: 1, rotate: 0 }}
-                      transition={{ delay: 0.9 + i * 0.1 }}
-                    >
-                      <StarIcon 
-                        className={`h-5 w-5 sm:h-6 sm:w-6 ${i < Math.min(winner.rank <= 3 ? 4 - winner.rank + 3 : 2, 5) ? rankInfo.medalColor : 'text-muted-foreground/30'}`} 
-                      />
-                    </m.div>
-                  ))}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handlePrint}
+                    className="min-h-10 px-3.5 rounded-full bg-amber-500 hover:bg-amber-400 text-slate-950 border-none text-xs font-bold shadow-lg shadow-amber-500/25 cursor-pointer transition-all"
+                  >
+                    <Printer className="w-3.5 h-3.5 mr-1.5" />
+                    <span>Print / PDF</span>
+                  </Button>
+
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={onClose}
+                    className="min-h-10 min-w-10 rounded-full bg-white/10 hover:bg-white/20 text-white cursor-pointer ml-1"
+                    aria-label="Close certificate"
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
                 </div>
               </div>
 
-              {/* Pulsing Border Effect */}
-              <m.div
-                className={`absolute inset-0 rounded-2xl xs:rounded-3xl border-2 xs:border-4 ${rankInfo.borderColor} pointer-events-none`}
-                initial={{ opacity: 0.5 }}
-                animate={{
-                  opacity: [0.3, 0.6, 0.3],
-                  scale: [1, 1.02, 1],
-                }}
-                transition={{
-                  duration: 2,
-                  repeat: Number.POSITIVE_INFINITY,
-                  ease: "easeInOut",
-                }}
-              />
+              {/* The Diploma Document (No scrollbar cutting, responsive scaling) */}
+              <div
+                id="printable-certificate"
+                ref={certificateRef}
+                className="relative w-full rounded-2xl sm:rounded-3xl p-4 xs:p-6 sm:p-8 md:p-10 shadow-2xl overflow-hidden select-none bg-linear-to-b from-[#fdfbf7] via-[#fffdf9] to-[#f9f5ec] dark:from-[#171614] dark:via-[#1a1917] dark:to-[#141311] border-2 sm:border-4 border-amber-500/70 dark:border-amber-400/80 text-slate-900 dark:text-slate-100"
+              >
+                {/* Ornate Gold Foil Outer & Inner Borders */}
+                <div className="absolute inset-1 sm:inset-2 border border-amber-500/40 dark:border-amber-400/40 rounded-xl sm:rounded-2xl pointer-events-none" />
+                <div className="absolute inset-2.5 sm:inset-4 border border-dashed border-amber-500/30 dark:border-amber-400/30 rounded-lg sm:rounded-xl pointer-events-none" />
+
+                {/* Classical SVG Corner Flourishes */}
+                <CornerFlourish position="top-left" />
+                <CornerFlourish position="top-right" />
+                <CornerFlourish position="bottom-left" />
+                <CornerFlourish position="bottom-right" />
+
+                {/* Subtle Background Watermark Seal */}
+                <div className="absolute inset-0 flex items-center justify-center opacity-[0.035] dark:opacity-[0.045] pointer-events-none select-none">
+                  <div className="w-72 h-72 sm:w-96 sm:h-96 rounded-full border-12 border-amber-600 flex items-center justify-center">
+                    <TrophyIcon className="w-48 h-48 sm:w-64 sm:h-64 text-amber-600" />
+                  </div>
+                </div>
+
+                {/* Certificate Core Content */}
+                <div className="relative z-10 flex flex-col items-center text-center">
+                  {/* Top Header & School Identity */}
+                  <div className="mb-2 sm:mb-3">
+                    <p className="text-[10px] sm:text-xs md:text-sm uppercase tracking-[0.25em] sm:tracking-[0.35em] font-black text-amber-700 dark:text-amber-400">
+                      Rafic Hariri High School
+                    </p>
+                    <p className="text-[9px] sm:text-[10px] tracking-[0.2em] uppercase font-bold text-muted-foreground/80 mt-0.5">
+                      Green Classroom Champions Initiative
+                    </p>
+                  </div>
+
+                  {/* Emblem / Trophy Medallion */}
+                  <div className="relative my-1 sm:my-2">
+                    <div className="p-1 sm:p-2 rounded-full bg-linear-to-b from-amber-500/20 via-yellow-400/10 to-transparent">
+                      {theme.icon}
+                    </div>
+                    {winner.rank === 1 && (
+                      <m.div
+                        className="absolute -top-1 -right-1"
+                        animate={{ rotate: [0, 8, -8, 0], scale: [1, 1.1, 1] }}
+                        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                      >
+                        <CrownIcon className="w-6 h-6 sm:w-8 sm:h-8 text-amber-500 drop-shadow-md" />
+                      </m.div>
+                    )}
+                  </div>
+
+                  {/* Certificate Title */}
+                  <div className="space-y-1 mb-3 sm:mb-5">
+                    <h1 className="text-xl xs:text-2xl sm:text-3xl md:text-4xl font-serif font-black tracking-tight bg-linear-to-r from-amber-700 via-amber-500 to-yellow-600 dark:from-amber-300 dark:via-yellow-400 dark:to-amber-500 bg-clip-text text-transparent">
+                      CERTIFICATE OF EXCELLENCE
+                    </h1>
+                    <p className="text-xs xs:text-sm sm:text-base font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                      {theme.title} • {theme.subtitle}
+                    </p>
+                    <div className="inline-flex items-center gap-2 px-3 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-xs font-semibold text-muted-foreground">
+                      <span>{getDivisionDisplayName(winner.division)} Division</span>
+                      <span>•</span>
+                      <span className="font-bold text-foreground">{winner.month} {winner.year}</span>
+                    </div>
+                  </div>
+
+                  {/* Presentation Citation */}
+                  <div className="w-full max-w-xl my-1 sm:my-3 px-2 sm:px-4">
+                    <p className="text-xs sm:text-sm font-serif italic text-muted-foreground mb-1 sm:mb-2">
+                      This official honor is proudly conferred upon
+                    </p>
+
+                    {/* Classroom Name Banner */}
+                    <div className="py-2.5 sm:py-3.5 px-4 sm:px-6 rounded-xl bg-linear-to-r from-amber-500/10 via-amber-500/20 to-amber-500/10 border-y-2 border-amber-500/60 dark:border-amber-400/60 shadow-xs my-1 sm:my-2">
+                      <h2 className="text-2xl xs:text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-foreground font-serif uppercase">
+                        {winner.classroomName}
+                      </h2>
+                      <p className="text-xs sm:text-sm font-bold text-amber-700 dark:text-amber-300 mt-0.5">
+                        Grade {winner.grade}
+                      </p>
+                    </div>
+
+                    <p className="text-[11px] sm:text-xs text-muted-foreground/90 max-w-md mx-auto leading-relaxed mt-2 font-medium">
+                      In recognition of supreme dedication to environmental cleanliness, peer teamwork, and exemplary hygiene standards.
+                    </p>
+                  </div>
+
+                  {/* Honor Performance Stats Bar */}
+                  <div className="w-full max-w-lg grid grid-cols-3 gap-2 sm:gap-3 my-3 sm:my-4">
+                    <div className="p-2 sm:p-3 rounded-lg bg-card/60 dark:bg-card/40 border border-amber-500/20 backdrop-blur-xs">
+                      <p className="text-base xs:text-lg sm:text-xl font-black text-amber-600 dark:text-amber-400">
+                        {winner.totalScore}
+                      </p>
+                      <p className="text-[9px] sm:text-[10px] uppercase font-bold text-muted-foreground">
+                        Total Score
+                      </p>
+                    </div>
+
+                    <div className="p-2 sm:p-3 rounded-lg bg-card/60 dark:bg-card/40 border border-amber-500/20 backdrop-blur-xs">
+                      <p className="text-base xs:text-lg sm:text-xl font-black text-amber-600 dark:text-amber-400">
+                        {winner.averageScore.toFixed(1)}
+                      </p>
+                      <p className="text-[9px] sm:text-[10px] uppercase font-bold text-muted-foreground">
+                        Average Score
+                      </p>
+                    </div>
+
+                    <div className="p-2 sm:p-3 rounded-lg bg-card/60 dark:bg-card/40 border border-amber-500/20 backdrop-blur-xs">
+                      <p className="text-base xs:text-lg sm:text-xl font-black text-amber-600 dark:text-amber-400">
+                        {winner.evaluationCount}
+                      </p>
+                      <p className="text-[9px] sm:text-[10px] uppercase font-bold text-muted-foreground">
+                        Evaluations
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Win Count Distinction Badge (if > 0) */}
+                  {winner.winCount && winner.winCount > 0 && (
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/40 text-amber-700 dark:text-amber-300 text-xs font-bold mb-2">
+                      <TrophyIcon className="w-3.5 h-3.5 text-amber-500" />
+                      <span>{winner.winCount} Total Champion Title{winner.winCount > 1 ? "s" : ""} This Academic Year</span>
+                    </div>
+                  )}
+
+                  {/* Decorative Stars */}
+                  <div className="flex justify-center gap-1.5 pt-2 sm:pt-4">
+                    {[...Array(5)].map((_, i) => (
+                      <StarIcon key={i} className="w-5 h-5 text-amber-400 fill-amber-400 drop-shadow-xs" />
+                    ))}
+                  </div>
+                </div>
+              </div>
             </m.div>
           </m.div>
         )}
@@ -298,3 +329,42 @@ export function WinnerCertificateModal({ isOpen, onClose, winner }: WinnerCertif
     </LazyMotionProvider>
   )
 }
+
+/**
+ * Ornate Classical SVG Corner Flourish
+ */
+function CornerFlourish({ position }: { position: "top-left" | "top-right" | "bottom-left" | "bottom-right" }) {
+  const rotationClass = {
+    "top-left": "",
+    "top-right": "rotate-90",
+    "bottom-right": "rotate-180",
+    "bottom-left": "-rotate-90",
+  }[position]
+
+  const positionClass = {
+    "top-left": "top-2 left-2 sm:top-3 sm:left-3",
+    "top-right": "top-2 right-2 sm:top-3 sm:right-3",
+    "bottom-left": "bottom-2 left-2 sm:bottom-3 sm:left-3",
+    "bottom-right": "bottom-2 right-2 sm:bottom-3 sm:right-3",
+  }[position]
+
+  return (
+    <div className={`absolute ${positionClass} ${rotationClass} pointer-events-none text-amber-500/70 dark:text-amber-400/80`}>
+      <svg width="34" height="34" viewBox="0 0 40 40" fill="none" className="w-6 h-6 sm:w-8 sm:h-8">
+        <path
+          d="M2 2H18C20 2 22 4 22 6C22 8 20 10 18 10H8V20C8 22 6 24 4 24C2 24 2 22 2 20V2Z"
+          fill="currentColor"
+          fillOpacity="0.8"
+        />
+        <path
+          d="M6 6L28 6C30 6 32 8 32 10C32 12 30 14 28 14L14 14L14 28C14 30 12 32 10 32C8 32 6 30 6 28L6 6Z"
+          fill="currentColor"
+          fillOpacity="0.3"
+        />
+        <circle cx="5" cy="5" r="2.5" fill="currentColor" />
+        <circle cx="16" cy="16" r="2" fill="currentColor" />
+      </svg>
+    </div>
+  )
+}
+

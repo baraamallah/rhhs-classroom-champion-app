@@ -37,6 +37,8 @@ interface EvaluationFormProps {
   onComplete: () => void
   onCancel: () => void
   initialDate?: string
+  onChangeDate?: () => void
+  onBackToDashboard?: () => void
 }
 
 export function EvaluationForm({
@@ -45,6 +47,8 @@ export function EvaluationForm({
   onComplete,
   onCancel,
   initialDate,
+  onChangeDate,
+  onBackToDashboard,
 }: EvaluationFormProps) {
   const todayStr = format(new Date(), "yyyy-MM-dd")
   const [targetDate, setTargetDate] = useState<string>(initialDate || todayStr)
@@ -284,15 +288,35 @@ export function EvaluationForm({
                   {existingEval.supervisor?.name ? ` by ${existingEval.supervisor.name}` : ""}.
                   Daily evaluations are locked once submitted.
                 </p>
-                <div className="mt-3 flex items-center gap-2">
+                <div className="mt-3 flex flex-wrap items-center gap-2">
                   <Button
                     size="sm"
                     variant="outline"
                     onClick={onCancel}
-                    className="rounded-xl text-xs h-8 bg-background/80"
+                    className="rounded-xl text-xs h-8 bg-background/90 hover:bg-background cursor-pointer font-semibold"
                   >
                     Inspect Another Room
                   </Button>
+                  {onChangeDate && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={onChangeDate}
+                      className="rounded-xl text-xs h-8 bg-background/90 hover:bg-background cursor-pointer font-semibold"
+                    >
+                      <Calendar className="h-3.5 w-3.5 mr-1 text-primary" /> Switch Date
+                    </Button>
+                  )}
+                  {onBackToDashboard && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={onBackToDashboard}
+                      className="rounded-xl text-xs h-8 cursor-pointer text-muted-foreground hover:text-foreground"
+                    >
+                      Return to Dashboard
+                    </Button>
+                  )}
                 </div>
               </div>
             </CardContent>
@@ -315,14 +339,36 @@ export function EvaluationForm({
                     ? `This date is marked as a dismissed school closure (${holidayReason}). Daily evaluations cannot be submitted.`
                     : "This date is a weekend (Saturday/Sunday). Daily evaluations are only conducted on Mon–Fri working days."}
                 </p>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={onCancel}
-                  className="rounded-xl text-xs h-8 mt-3 bg-background/80"
-                >
-                  Return to Dashboard
-                </Button>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={onCancel}
+                    className="rounded-xl text-xs h-8 bg-background/80 cursor-pointer"
+                  >
+                    Back to Room Selector
+                  </Button>
+                  {onChangeDate && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={onChangeDate}
+                      className="rounded-xl text-xs h-8 bg-background/80 cursor-pointer"
+                    >
+                      <Calendar className="h-3.5 w-3.5 mr-1" /> Choose Different Date
+                    </Button>
+                  )}
+                  {onBackToDashboard && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={onBackToDashboard}
+                      className="rounded-xl text-xs h-8 cursor-pointer"
+                    >
+                      Return to Dashboard
+                    </Button>
+                  )}
+                </div>
               </div>
             </CardContent>
           </Card>

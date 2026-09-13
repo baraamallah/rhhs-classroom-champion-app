@@ -254,38 +254,51 @@ function SupervisorDashboardContent({ currentUser }: SupervisorDashboardContentP
                     </div>
                   </div>
 
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      // Select the most recent missed day
-                      const firstMissed = missedDays[0]
-                      if (firstMissed) {
-                        const targetCalDay = calendarDays.find((d) => d.date === firstMissed.date)
-                        if (targetCalDay) {
-                          setSelectedCalendarDay(targetCalDay)
-                        } else {
-                          setSelectedCalendarDay({
-                            date: firstMissed.date,
-                            dayNumber: parseInt(firstMissed.date.split("-")[2], 10),
-                            isCurrentMonth: true,
-                            isWeekend: false,
-                            isHoliday: false,
-                            isToday: false,
-                            isPast: true,
-                            isFuture: false,
-                            status: "missing",
-                            evaluatedCount: 0,
-                            totalAssigned: totalAssignedCount,
-                          })
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        const firstMissed = missedDays[0]
+                        if (firstMissed) {
+                          router.push(`/supervisor/evaluate?date=${firstMissed.date}`)
                         }
-                        setIsBackfillDialogOpen(true)
-                      }
-                    }}
-                    className="w-full sm:w-auto h-9 rounded-xl text-xs font-semibold shrink-0"
-                  >
-                    Backfill Recent Day ({format(parseISO(missedDays[0].date), "MMM d")})
-                  </Button>
+                      }}
+                      className="h-9 px-3.5 rounded-xl text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white shrink-0 cursor-pointer shadow-xs"
+                    >
+                      Backfill {format(parseISO(missedDays[0].date), "EEE, MMM d")} ({missedDays[0].missingClassroomIds.length} left)
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        const firstMissed = missedDays[0]
+                        if (firstMissed) {
+                          const targetCalDay = calendarDays.find((d) => d.date === firstMissed.date)
+                          if (targetCalDay) {
+                            setSelectedCalendarDay(targetCalDay)
+                          } else {
+                            setSelectedCalendarDay({
+                              date: firstMissed.date,
+                              dayNumber: parseInt(firstMissed.date.split("-")[2], 10),
+                              isCurrentMonth: true,
+                              isWeekend: false,
+                              isHoliday: false,
+                              isToday: false,
+                              isPast: true,
+                              isFuture: false,
+                              status: "missing",
+                              evaluatedCount: 0,
+                              totalAssigned: totalAssignedCount,
+                            })
+                          }
+                          setIsBackfillDialogOpen(true)
+                        }
+                      }}
+                      className="h-9 rounded-xl text-xs font-semibold shrink-0"
+                    >
+                      View Day Rooms
+                    </Button>
+                  </div>
                 </div>
               </Card>
             )}
@@ -637,38 +650,91 @@ function SupervisorDashboardContent({ currentUser }: SupervisorDashboardContentP
 
           <div className="space-y-3 py-2">
             <p className="text-xs text-muted-foreground">
-              Select an assigned classroom to evaluate for this date. Completed inspections will be locked.
+              Select an assigned classroom to evaluate for this date. Completed inspections are locked.
             </p>
 
-            <div className="space-y-2 max-h-72 overflow-y-auto">
+            <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
               {classrooms.map((room) => {
-                // If it's today, check room.isEvaluatedToday
-                const isRoomDone =
-                  selectedCalendarDay?.isToday && room.isEvaluatedToday
+                const missedRecord = missedDays.find((m) => m.date === selectedCalendarDay?.date)
+                const isRoomPending = selectedCalendarDay?.isToday
+                  ? !room.isEvaluatedToday
+                  : missedRecord
+                  ? missedRecord.missingClassroomIds.includes(room.id)
+                  : true
 
                 return (
                   <div
                     key={room.id}
-                    className="p-3 rounded-xl border border-border flex items-center justify-between gap-3 bg-card"
+                    className="p-3 rounded-xl border border-border flex items-center justify-between gap-3 bg-card shadow-2xs"
                   >
                     <div className="min-w-0">
-                      <p className="text-sm font-bold text-foreground truncate">{room.name}</p>
-                      <p className="text-xs text-muted-foreground">Grade {room.grade}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-bold text-foreground truncate">{room.name}</p>
+                        {!isRoomPending && (
+                          <Badge
+                            variant="outline"
+                            className="bg-emerald-500/10 text-emerald-600 border-emerald-500/30 text-[10px] px-1.5 py-0.2"
+                          >
+                            <Check className="h-2.5 w-2.5 mr-0.5" /> Done
+                          </Badge>
+                        )}
+                        {isRoomPending && (
+                          <Badge
+                            variant="outline"
+                            className="bg-amber-500/10 text-amber-600 border-amber-500/30 text-[10px] px-1.5 py-0.2"
+                          >
+                            Pending
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">Grade {room.grade} {room.division ? `• ${room.division}` : ""}</p>
                     </div>
 
                     <Button
                       size="sm"
+                      variant={isRoomPending ? "default" : "outline"}
                       onClick={() =>
                         selectedCalendarDay?.date &&
                         handleStartBackfillEvaluation(room.id, selectedCalendarDay.date)
                       }
-                      className="min-h-11 px-3.5 text-xs rounded-xl font-semibold bg-primary hover:bg-primary/90 text-primary-foreground shrink-0 cursor-pointer"
+                      className={cn(
+                        "min-h-9 px-3 text-xs rounded-xl font-semibold shrink-0 cursor-pointer",
+                        isRoomPending
+                          ? "bg-primary hover:bg-primary/90 text-primary-foreground shadow-xs"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
                     >
-                      Inspect <ArrowRight className="ml-1 h-3 w-3" />
+                      {isRoomPending ? (
+                        <>
+                          Backfill <ArrowRight className="ml-1 h-3 w-3" />
+                        </>
+                      ) : (
+                        "View Record"
+                      )}
                     </Button>
                   </div>
                 )
               })}
+            </div>
+
+            {/* Direct Link to Full Evaluation Center for this date */}
+            <div className="pt-3 border-t border-border/70 flex items-center justify-between gap-2">
+              <span className="text-xs text-muted-foreground">
+                Need to inspect multiple rooms?
+              </span>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  if (selectedCalendarDay?.date) {
+                    setIsBackfillDialogOpen(false)
+                    router.push(`/supervisor/evaluate?date=${selectedCalendarDay.date}`)
+                  }
+                }}
+                className="rounded-xl text-xs h-8 font-semibold cursor-pointer border-primary/40 text-primary hover:bg-primary/10"
+              >
+                Open Evaluation Workspace →
+              </Button>
             </div>
           </div>
         </DialogContent>
