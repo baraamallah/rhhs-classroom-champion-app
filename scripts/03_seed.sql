@@ -21,9 +21,9 @@ ON CONFLICT DO NOTHING;
 -- Creates or updates the main admin user
 INSERT INTO users (email, password_hash, name, role, is_active)
 VALUES (
-  'baraa.elmallah@gmail.com',
+  'admin@rhhs.edu.lb',
   crypt('admin123', gen_salt('bf')),
-  'Baraa Elmallah',
+  'RHHS Administrator',
   'admin',
   true
 )

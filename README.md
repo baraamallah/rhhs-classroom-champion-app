@@ -73,10 +73,10 @@ The system supports four distinct user roles, each with specific permissions:
 - **Batch Selection**: Multi-select functionality for efficient management
 - **Smart Search**: Filter evaluations by classroom, grade, supervisor, or date
 
-#### **Permanent Deletion**
-- **Evaluation Deletion**: Remove specific evaluations by UUID
-- **Classroom Deletion**: Delete classrooms and all associated evaluations
-- **Safety Confirmations**: Alert dialogs prevent accidental deletions
+#### **Controlled Data Management**
+- **Record Management**: Administrative ability to review and update evaluation records
+- **Classroom Lifecycle**: Manage classroom participation across divisions and academic terms
+- **Safety Confirmations**: Multi-step confirmation dialogs prevent accidental data loss
 
 ### 📈 **Statistics & Analytics**
 
@@ -156,11 +156,11 @@ Use analytics to inform sustainability initiatives and resource allocation.
 
 ## 🔒 **Security & Privacy**
 
-- **Secure Authentication**: Session-based authentication with encrypted tokens
-- **Role-Based Permissions**: Granular access control based on user roles
-- **Data Protection**: Row-level security policies on all database operations
-- **Audit Trails**: Complete logging of administrative actions
-- **Safe Deletion**: Confirmation dialogs and UUID validation
+- **Secure Authentication**: Encrypted session-based authentication with strict access tokens
+- **Role-Based Access Control**: Granular permission tiers separating public viewing, evaluation, and administrative governance
+- **Data Protection**: Encrypted transport (TLS/HTTPS) and database-level access boundaries
+- **Audit Integrity**: Comprehensive audit tracking for administrative modifications
+- **Safe Operations**: Multi-factor confirmation checks safeguard against accidental record alteration
 
 ---
 
@@ -191,9 +191,9 @@ Archive system maintains complete records across multiple evaluation periods.
 - **Web-Based**: Access from any device with a modern browser
 - **Real-Time Updates**: Instant leaderboard refreshes and live data
 - **Responsive Design**: Optimized for desktop, tablet, and mobile
-- **Fast Performance**: Built with Next.js for optimal speed
-- **Reliable Database**: PostgreSQL with Supabase for robust data management
-- **Modern Stack**: TypeScript, React, and Tailwind CSS for maintainability
+- **Fast Performance**: High-performance responsive frontend architecture
+- **Reliable Database**: Resilient cloud database infrastructure for secure data management
+- **Clean Architecture**: Modular, maintainable, and standards-compliant codebase
 
 ---
 

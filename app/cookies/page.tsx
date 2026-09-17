@@ -3,11 +3,12 @@ import Link from "next/link"
 import { Cookie, ArrowLeft, ShieldCheck, Lock, Activity, EyeOff, Globe } from "lucide-react"
 import { Header } from "@/components/layout/header"
 import { OpenPreferencesButton } from "@/components/features/legal/open-preferences-button"
+import { StaffCookiesAddendum } from "@/components/features/legal/staff-policy-addendum"
 
 export const metadata: Metadata = {
   title: "Cookie & Telemetry Policy | RHHS Classroom Champion",
   description:
-    "Complete inventory of cookies, terminal storage, and performance telemetry utilized across the RHHS Classroom Champion platform under Lebanese Law No. 81/2018.",
+    "Complete inventory of cookies, local storage, and performance telemetry utilized across the RHHS Classroom Champion platform under Lebanese Law No. 81/2018.",
   alternates: {
     canonical: "/cookies",
   },
@@ -43,7 +44,7 @@ export default function CookiesPolicyPage() {
             Cookie &amp; Storage Policy
           </h1>
           <p className="mt-3 text-sm sm:text-base text-muted-foreground leading-relaxed">
-            This policy transparently itemizes every cookie, browser terminal storage key (<code className="text-xs bg-muted px-1.5 py-0.5 rounded">localStorage</code>), and performance telemetry technology deployed across the **RHHS ECO Club Classroom Champion** web platform.
+            This policy transparently outlines the cookies, local browser storage, and performance telemetry technologies deployed across the **RHHS ECO Club Classroom Champion** web platform.
           </p>
         </header>
 
@@ -66,14 +67,14 @@ export default function CookiesPolicyPage() {
           {/* Section 1: Overview */}
           <section className="space-y-3">
             <h2 className="text-xl sm:text-2xl font-bold text-foreground">
-              1. Understanding Terminal Storage &amp; Telemetry
+              1. Understanding Cookies &amp; Local Storage
             </h2>
             <p className="text-muted-foreground">
-              Under **Lebanese Law No. 81/2018** and international ePrivacy standards, platforms that store data in your browser terminal equipment must provide clear, prior information regarding their technical purpose and duration.
+              Under **Lebanese Law No. 81/2018** and international data protection standards, platforms that store data in your browser must provide clear, prior information regarding their technical purpose and duration.
             </p>
             <ul className="list-disc pl-5 space-y-1 text-xs sm:text-sm text-muted-foreground">
-              <li><strong>HTTP Cookies:</strong> Small strings of text sent by our server and stored in your browser, used primarily for secure supervisor authentication and write consistency.</li>
-              <li><strong>Local Storage (localStorage):</strong> Browser-managed terminal storage used to retain client-side display preferences (such as light/dark theme) across sessions.</li>
+              <li><strong>HTTP Cookies:</strong> Small strings of text managed by your browser, used to maintain secure authenticated sessions and ensure data consistency.</li>
+              <li><strong>Local Storage:</strong> Browser-managed storage used to retain client-side display preferences (such as light/dark theme) across visits.</li>
               <li><strong>Cookie-Free Performance Telemetry:</strong> Aggregated, privacy-preserving network diagnostics that do <strong>not</strong> write persistent tracking cookies to your device.</li>
             </ul>
           </section>
@@ -94,40 +95,22 @@ export default function CookiesPolicyPage() {
               <table className="w-full text-left text-xs sm:text-sm border-collapse">
                 <thead>
                   <tr className="bg-muted/70 text-foreground border-b border-border/60">
-                    <th className="p-3 font-semibold">Identifier</th>
-                    <th className="p-3 font-semibold">Type</th>
-                    <th className="p-3 font-semibold">Purpose</th>
+                    <th className="p-3 font-semibold">Classification</th>
+                    <th className="p-3 font-semibold">Mechanism</th>
+                    <th className="p-3 font-semibold">Functional Purpose</th>
                     <th className="p-3 font-semibold">Lifespan</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/50 bg-card">
                   <tr>
-                    <td className="p-3 font-mono font-medium text-foreground">rhhs_session</td>
-                    <td className="p-3 text-muted-foreground">HTTP Cookie (HttpOnly, Secure, SameSite=Lax)</td>
-                    <td className="p-3 text-muted-foreground">Authenticates logged-in school supervisors and administrators; protects backend evaluation endpoints.</td>
-                    <td className="p-3 text-muted-foreground">7 Days</td>
-                  </tr>
-                  <tr>
-                    <td className="p-3 font-mono font-medium text-foreground">sb-* (Supabase)</td>
-                    <td className="p-3 text-muted-foreground">HTTP Cookie / Storage</td>
-                    <td className="p-3 text-muted-foreground">Maintains secure database connection state for authenticated requests.</td>
-                    <td className="p-3 text-muted-foreground">Session / Refresh token</td>
-                  </tr>
-                  <tr>
-                    <td className="p-3 font-mono font-medium text-foreground">rhhs_recent_mutation</td>
-                    <td className="p-3 text-muted-foreground">HTTP Cookie</td>
-                    <td className="p-3 text-muted-foreground">Ensures read-after-write cache synchronization so newly submitted scores appear immediately.</td>
-                    <td className="p-3 text-muted-foreground">10 Seconds</td>
-                  </tr>
-                  <tr>
-                    <td className="p-3 font-mono font-medium text-foreground">theme</td>
-                    <td className="p-3 text-muted-foreground">localStorage</td>
+                    <td className="p-3 font-medium text-foreground">Theme Preference</td>
+                    <td className="p-3 text-muted-foreground">Browser Local Storage</td>
                     <td className="p-3 text-muted-foreground">Remembers the user&apos;s preferred interface color mode (Light, Dark, or System).</td>
                     <td className="p-3 text-muted-foreground">Persistent</td>
                   </tr>
                   <tr>
-                    <td className="p-3 font-mono font-medium text-foreground">rhhs_privacy_consent_v1</td>
-                    <td className="p-3 text-muted-foreground">localStorage</td>
+                    <td className="p-3 font-medium text-foreground">Consent Record</td>
+                    <td className="p-3 text-muted-foreground">Browser Local Storage</td>
                     <td className="p-3 text-muted-foreground">Stores your affirmative privacy and telemetry preferences and consent timestamp.</td>
                     <td className="p-3 text-muted-foreground">1 Year</td>
                   </tr>
@@ -160,15 +143,15 @@ export default function CookiesPolicyPage() {
                 </thead>
                 <tbody className="divide-y divide-border/50 bg-card">
                   <tr>
-                    <td className="p-3 font-medium text-foreground">Vercel Web Analytics</td>
+                    <td className="p-3 font-medium text-foreground">Aggregated Site Analytics</td>
                     <td className="p-3 text-muted-foreground">Cookie-free aggregated beacons</td>
                     <td className="p-3 text-muted-foreground">Page path, referring URL, country, browser family. No personal IP addresses or student profiles are recorded.</td>
                     <td className="p-3 text-primary font-medium">Opt-In Required</td>
                   </tr>
                   <tr>
-                    <td className="p-3 font-medium text-foreground">Vercel Speed Insights</td>
-                    <td className="p-3 text-muted-foreground">Real-User Performance Telemetry</td>
-                    <td className="p-3 text-muted-foreground">Core Web Vitals (LCP, FID, CLS), network connection speed, and route loading latency.</td>
+                    <td className="p-3 font-medium text-foreground">Speed &amp; Performance Insights</td>
+                    <td className="p-3 text-muted-foreground">Aggregated Performance Telemetry</td>
+                    <td className="p-3 text-muted-foreground">Web performance metrics, network connection speed, and route loading latency.</td>
                     <td className="p-3 text-primary font-medium">Opt-In Required</td>
                   </tr>
                 </tbody>
@@ -185,12 +168,12 @@ export default function CookiesPolicyPage() {
               </h2>
             </div>
             <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-              Certain client-side keys exist solely to honor an explicit action you took in the interface:
+              Certain client-side preferences exist solely to honor an explicit action you took in the interface:
             </p>
             <div className="p-4 rounded-xl bg-card border border-border/60 text-xs sm:text-sm space-y-1">
-              <span className="font-mono font-semibold text-foreground">pwa_install_dismissed (localStorage)</span>
+              <span className="font-semibold text-foreground">Notification &amp; Install Dismissal</span>
               <p className="text-muted-foreground">
-                When you click &quot;Not Now&quot; on the PWA Install Banner, this key records a timestamp so the platform respects your decision and does not prompt you again for seven (7) days.
+                When you dismiss promotional or install prompts (such as &quot;Later&quot;), a local session state is stored in your browser so the platform respects your decision and does not prompt you again for the remainder of your visit.
               </p>
             </div>
           </section>
@@ -204,18 +187,21 @@ export default function CookiesPolicyPage() {
               </h2>
             </div>
             <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-              In addition to our on-site Privacy Preferences dialog, you can inspect, block, or purge cookies and local terminal storage through your web browser settings:
+              In addition to our on-site Privacy Preferences dialog, you can inspect, block, or purge cookies and local browser storage through your web browser settings:
             </p>
             <ul className="list-disc pl-5 space-y-1 text-xs sm:text-sm text-muted-foreground">
-              <li><strong>Google Chrome:</strong> Settings $\rightarrow$ Privacy and Security $\rightarrow$ Cookies and other site data.</li>
-              <li><strong>Apple Safari (iOS &amp; macOS):</strong> Settings $\rightarrow$ Safari $\rightarrow$ Advanced $\rightarrow$ Website Data.</li>
-              <li><strong>Mozilla Firefox:</strong> Settings $\rightarrow$ Privacy &amp; Security $\rightarrow$ Cookies and Site Data.</li>
-              <li><strong>Microsoft Edge:</strong> Settings $\rightarrow$ Cookies and site permissions $\rightarrow$ Manage and delete cookies.</li>
+              <li><strong>Google Chrome:</strong> Settings → Privacy and Security → Cookies and other site data.</li>
+              <li><strong>Apple Safari (iOS &amp; macOS):</strong> Settings → Safari → Advanced → Website Data.</li>
+              <li><strong>Mozilla Firefox:</strong> Settings → Privacy &amp; Security → Cookies and Site Data.</li>
+              <li><strong>Microsoft Edge:</strong> Settings → Cookies and site permissions → Manage and delete cookies.</li>
             </ul>
             <p className="text-xs text-muted-foreground pt-1">
-              <em>Note: Disabling strictly necessary cookies in your browser settings will prevent supervisor and administrative authentication from functioning.</em>
+              <em>Note: Disabling cookies and local storage in your browser settings may prevent your interface display preferences from being saved.</em>
             </p>
           </section>
+
+          {/* Authenticated Staff Cookies Addendum (renders only when logged in) */}
+          <StaffCookiesAddendum />
         </div>
       </main>
     </div>

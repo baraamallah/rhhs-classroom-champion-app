@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { Shield, ArrowLeft, Building, Lock, FileText, CheckCircle2, Mail, ExternalLink } from "lucide-react"
 import { Header } from "@/components/layout/header"
+import { StaffPrivacyAddendum } from "@/components/features/legal/staff-policy-addendum"
 
 export const metadata: Metadata = {
   title: "Privacy Policy | RHHS Classroom Champion",
@@ -143,16 +144,7 @@ export default function PrivacyPolicyPage() {
 
               <div className="p-4 rounded-xl bg-card border border-border/60">
                 <h3 className="font-semibold text-foreground text-sm sm:text-base">
-                  B. Staff &amp; Supervisor Accounts (Restricted Access)
-                </h3>
-                <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                  Full name of supervisor or administrator, institutional school email address, salted bcrypt password hash, assigned role (`super_admin`, `admin`, `supervisor`, `stats`), and evaluation submission audit logs.
-                </p>
-              </div>
-
-              <div className="p-4 rounded-xl bg-card border border-border/60">
-                <h3 className="font-semibold text-foreground text-sm sm:text-base">
-                  C. Technical &amp; Performance Telemetry (Opt-In Only)
+                  B. Technical &amp; Performance Telemetry (Opt-In Only)
                 </h3>
                 <p className="text-xs sm:text-sm text-muted-foreground mt-1">
                   Cookie-free, aggregated Web Vitals and route latency metrics via Vercel Web Analytics and Speed Insights. This telemetry is transmitted <strong>only</strong> after affirmative user consent in the privacy preferences banner.
@@ -167,14 +159,9 @@ export default function PrivacyPolicyPage() {
               <Lock className="h-5 w-5 text-primary shrink-0" />
               <span>5. Data Storage &amp; Infrastructure Safeguards</span>
             </h2>
-            <p>
-              Data is hosted using Supabase cloud database infrastructure. Connections to Supabase HTTP API services enforce Transport Layer Security (TLS/HTTPS). Database connection security and administrative safeguards are configured in accordance with the school’s security deployment settings.
+            <p className="text-muted-foreground leading-relaxed">
+              Platform records are securely hosted in enterprise-grade, encrypted cloud database facilities. Network transmissions strictly enforce Transport Layer Security (TLS/HTTPS), with database access controls and administrative safeguards configured to ensure data integrity and confidentiality in accordance with Lebanese Law No. 81/2018.
             </p>
-            <ul className="list-disc pl-5 space-y-1.5 text-xs sm:text-sm text-muted-foreground">
-              <li><strong>Password Protection:</strong> Account passwords are encrypted using one-way bcrypt hashing with individual random salts prior to storage; plaintext passwords are never stored.</li>
-              <li><strong>Session Security:</strong> Authenticated sessions utilize encrypted, HttpOnly, SameSite cookies with a strictly enforced 7-day expiration.</li>
-              <li><strong>Role-Based Access Control:</strong> Strict backend permission boundaries partition Super Admin, Admin, Supervisor, and Public access levels.</li>
-            </ul>
           </section>
 
           {/* Section 6: Data Subject Rights under Law 81/2018 */}
@@ -183,20 +170,20 @@ export default function PrivacyPolicyPage() {
               6. Your Rights Under Lebanese Law No. 81/2018
             </h2>
             <p>
-              In accordance with Part II of Lebanese Law No. 81/2018, authorized individuals whose data is processed have the following enforceable rights:
+              In accordance with Part II of Lebanese Law No. 81/2018, individuals have the following enforceable rights:
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
               <div className="p-3.5 rounded-lg bg-card border border-border/60 text-xs sm:text-sm">
                 <span className="font-semibold text-foreground block">Right of Access</span>
-                <span className="text-muted-foreground">Verify what personal account or inspection records are associated with your profile.</span>
+                <span className="text-muted-foreground">Verify what classroom inspection records are published for your section.</span>
               </div>
               <div className="p-3.5 rounded-lg bg-card border border-border/60 text-xs sm:text-sm">
-                <span className="font-semibold text-foreground block">Right of Rectification &amp; Completion</span>
-                <span className="text-muted-foreground">Request the prompt correction or completion of inaccurate or incomplete records.</span>
+                <span className="font-semibold text-foreground block">Right of Rectification</span>
+                <span className="text-muted-foreground">Request administrative review of inaccurate scoring or division assignment records.</span>
               </div>
               <div className="p-3.5 rounded-lg bg-card border border-border/60 text-xs sm:text-sm">
                 <span className="font-semibold text-foreground block">Right of Deletion</span>
-                <span className="text-muted-foreground">Request deletion of data that is obsolete, excessive, prohibited, or incompatible with the educational purpose.</span>
+                <span className="text-muted-foreground">Request archival or deletion of data incompatible with the educational sustainability program.</span>
               </div>
               <div className="p-3.5 rounded-lg bg-card border border-border/60 text-xs sm:text-sm">
                 <span className="font-semibold text-foreground block">Right of Purpose Limitation</span>
@@ -224,6 +211,9 @@ export default function PrivacyPolicyPage() {
               Rafic Hariri High School reserves the right to update this Privacy Policy to reflect system enhancements or regulatory developments. Notice of material modifications will be posted prominently on the platform.
             </p>
           </section>
+
+          {/* Authenticated Staff Governance Addendum (renders only when logged in) */}
+          <StaffPrivacyAddendum />
         </div>
       </main>
     </div>

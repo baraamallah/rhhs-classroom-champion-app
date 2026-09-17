@@ -1,11 +1,12 @@
 "use client"
 
-import { m } from "framer-motion"
+import { useState } from "react"
+import { m, AnimatePresence } from "framer-motion"
 import { Header } from "@/components/layout/header"
 import { LazyMotionProvider } from "@/components/providers/lazy-motion-provider"
 import { LeafIcon, TrophyIcon, StarIcon, CalculatorIcon, PodiumIcon, AwardBadgeIcon } from "@/components/common/icons"
 import { FirstPlaceLogo, SecondPlaceLogo, ThirdPlaceLogo } from "@/components/common/podium-logos"
-import { Mail, Code2, Sparkles, ShieldCheck, Award, Users, Laptop } from "lucide-react"
+import { Mail, Code2, Sparkles, ShieldCheck, Award, Users, Laptop, ChevronDown } from "lucide-react"
 
 const appSteps = [
   {
@@ -87,7 +88,7 @@ function AboutHero() {
 function MilestonesBanner() {
   return (
     <m.div
-      className="max-w-5xl mx-auto mb-16 sm:mb-20 grid grid-cols-2 md:grid-cols-4 gap-2.5 xs:gap-3 sm:gap-4"
+      className="max-w-5xl mx-auto mb-16 sm:mb-20 grid grid-cols-1 sm:grid-cols-3 gap-2.5 xs:gap-3 sm:gap-4"
       initial={{ opacity: 0, y: 15 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
@@ -97,12 +98,6 @@ function MilestonesBanner() {
         <p className="text-2xl xs:text-3xl sm:text-4xl font-black text-primary">5</p>
         <p className="text-xs font-bold text-foreground mt-1">Divisions</p>
         <p className="text-[10px] xs:text-[11px] text-muted-foreground">Pre-School to Technical</p>
-      </div>
-
-      <div className="p-3.5 xs:p-4 sm:p-5 rounded-2xl bg-card/80 dark:bg-card/50 backdrop-blur-md border border-border/70 shadow-xs text-center">
-        <p className="text-2xl xs:text-3xl sm:text-4xl font-black text-emerald-600 dark:text-emerald-400">100%</p>
-        <p className="text-xs font-bold text-foreground mt-1">Student Built</p>
-        <p className="text-[10px] xs:text-[11px] text-muted-foreground">Software & Design</p>
       </div>
 
       <div className="p-3.5 xs:p-4 sm:p-5 rounded-2xl bg-card/80 dark:bg-card/50 backdrop-blur-md border border-border/70 shadow-xs text-center">
@@ -487,9 +482,18 @@ function EcoBadgesSection() {
 }
 
 function TeamSection() {
+  const [openSections, setOpenSections] = useState<{ [key: string]: boolean }>({
+    technical: true,
+    eco: true,
+  })
+
+  const toggleSection = (key: string) => {
+    setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }))
+  }
+
   return (
     <div className="max-w-5xl mx-auto">
-      <div className="text-center mb-12">
+      <div className="text-center mb-10 sm:mb-12">
         <div className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-primary mb-2">
           <Users className="h-3.5 w-3.5" />
           <span>Project Leadership</span>
@@ -502,70 +506,146 @@ function TeamSection() {
         </p>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-8">
-        <TeamList title="Software Engineering Team" subtitle="Rafic Hariri Technical Institute" accent="primary" members={technicalTeam} />
-        <TeamList title="ECO Club Executive Board" subtitle="Rafic Hariri High School" accent="green" members={ecoClubTeam} />
+      <div className="grid md:grid-cols-2 gap-6 items-start">
+        <TeamDropdown
+          id="technical"
+          title="Software Engineering Team"
+          subtitle="Rafic Hariri Technical Institute"
+          accent="primary"
+          members={technicalTeam}
+          isOpen={!!openSections.technical}
+          onToggle={() => toggleSection("technical")}
+        />
+        <TeamDropdown
+          id="eco"
+          title="ECO Club Executive Board"
+          subtitle="Rafic Hariri High School"
+          accent="green"
+          members={ecoClubTeam}
+          isOpen={!!openSections.eco}
+          onToggle={() => toggleSection("eco")}
+        />
       </div>
     </div>
   )
 }
 
-function TeamList({
+function TeamDropdown({
+  id,
   title,
   subtitle,
   accent,
   members,
+  isOpen,
+  onToggle,
 }: {
+  id: string
   title: string
   subtitle: string
   accent: "primary" | "green"
   members: { name: string; role: string; email: string; initials: string }[]
+  isOpen: boolean
+  onToggle: () => void
 }) {
   const isGreen = accent === "green"
 
   return (
-    <div className="space-y-4">
-      <div className="pb-3 border-b border-border/60">
-        <div className="flex items-center gap-2 mb-0.5">
-          <div className={`h-6 w-6 rounded-lg flex items-center justify-center text-xs font-black ${isGreen ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" : "bg-primary/15 text-primary"}`}>
-            {isGreen ? <LeafIcon className="h-3.5 w-3.5" /> : <Code2 className="h-3.5 w-3.5" />}
-          </div>
-          <h3 className="text-base font-bold text-foreground">{title}</h3>
-        </div>
-        <p className="text-[11px] text-muted-foreground font-medium">{subtitle}</p>
-      </div>
-
-      <div className="space-y-2.5">
-        {members.map((member, index) => (
-          <m.div
-            key={member.email}
-            className="flex items-center justify-between p-3 bg-card/80 dark:bg-card/50 border border-border/70 rounded-2xl hover:border-primary/40 shadow-2xs hover:shadow-xs transition-all duration-200 group"
-            initial={{ opacity: 0, y: 10 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: index * 0.06 }}
+    <div className="bg-card/80 dark:bg-card/50 backdrop-blur-md border border-border/70 rounded-3xl shadow-xs overflow-hidden transition-all duration-300 hover:border-primary/40">
+      <button
+        type="button"
+        id={`team-dropdown-btn-${id}`}
+        onClick={onToggle}
+        aria-expanded={isOpen}
+        aria-controls={`team-dropdown-content-${id}`}
+        className="w-full flex items-center justify-between p-4 sm:p-5 text-left cursor-pointer select-none hover:bg-muted/40 transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary"
+      >
+        <div className="flex items-center gap-3">
+          <div
+            className={`h-10 w-10 rounded-2xl flex items-center justify-center shrink-0 transition-transform ${
+              isGreen
+                ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
+                : "bg-primary/15 text-primary border border-primary/30"
+            }`}
           >
-            <div className="flex items-center gap-3">
-              <div className={`h-9 w-9 rounded-full flex items-center justify-center font-bold text-xs ${isGreen ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30" : "bg-primary/15 text-primary border border-primary/30"}`}>
-                {member.initials}
-              </div>
-              <div>
-                <p className="font-bold text-xs sm:text-sm text-foreground tracking-tight">{member.name}</p>
-                <span className="text-[11px] text-muted-foreground font-medium">{member.role}</span>
-              </div>
-            </div>
+            {isGreen ? <LeafIcon className="h-5 w-5" /> : <Code2 className="h-5 w-5" />}
+          </div>
+          <div>
+            <h3 className="text-base font-bold text-foreground tracking-tight leading-snug">{title}</h3>
+            <p className="text-[11px] text-muted-foreground font-medium">{subtitle}</p>
+          </div>
+        </div>
 
-            <a
-              href={`mailto:${member.email}`}
-              aria-label={`Email ${member.name}`}
-              className="min-h-11 min-w-11 flex items-center justify-center p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-full transition-colors cursor-pointer"
-              title={`Email ${member.email}`}
-            >
-              <Mail className="h-4 w-4" />
-            </a>
+        <div className="flex items-center gap-2 shrink-0">
+          <span
+            className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${
+              isGreen
+                ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20"
+                : "bg-primary/10 text-primary border border-primary/20"
+            }`}
+          >
+            {members.length} {members.length === 1 ? "Member" : "Members"}
+          </span>
+          <div
+            className={`h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground transition-transform duration-300 ${
+              isOpen ? "rotate-180 text-foreground bg-muted" : "bg-muted/60"
+            }`}
+          >
+            <ChevronDown className="h-4 w-4" />
+          </div>
+        </div>
+      </button>
+
+      <AnimatePresence initial={false}>
+        {isOpen && (
+          <m.div
+            id={`team-dropdown-content-${id}`}
+            role="region"
+            aria-labelledby={`team-dropdown-btn-${id}`}
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.3, ease: "easeInOut" }}
+            className="overflow-hidden"
+          >
+            <div className="p-4 sm:p-5 pt-0 border-t border-border/40 space-y-2.5 mt-1">
+              {members.map((member, index) => (
+                <m.div
+                  key={member.email}
+                  className="flex items-center justify-between p-3 bg-muted/40 dark:bg-muted/20 border border-border/60 rounded-2xl hover:border-primary/40 shadow-2xs hover:shadow-xs transition-all duration-200 group"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.04 }}
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`h-9 w-9 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${
+                        isGreen
+                          ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30"
+                          : "bg-primary/15 text-primary border border-primary/30"
+                      }`}
+                    >
+                      {member.initials}
+                    </div>
+                    <div>
+                      <p className="font-bold text-xs sm:text-sm text-foreground tracking-tight">{member.name}</p>
+                      <span className="text-[11px] text-muted-foreground font-medium">{member.role}</span>
+                    </div>
+                  </div>
+
+                  <a
+                    href={`mailto:${member.email}`}
+                    aria-label={`Email ${member.name}`}
+                    className="min-h-10 min-w-10 flex items-center justify-center p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-full transition-colors cursor-pointer"
+                    title={`Email ${member.email}`}
+                  >
+                    <Mail className="h-4 w-4" />
+                  </a>
+                </m.div>
+              ))}
+            </div>
           </m.div>
-        ))}
-      </div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

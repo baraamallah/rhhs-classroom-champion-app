@@ -58,7 +58,7 @@ export function PrivacyConsentBanner() {
           aria-label="Privacy and Cookie Consent"
           className="fixed bottom-0 left-0 right-0 z-50 p-3 sm:p-4 bg-background/95 dark:bg-card/95 backdrop-blur-md border-t border-border/70 shadow-2xl animate-in fade-in slide-in-from-bottom-5"
         >
-          <div className="container mx-auto max-w-6xl">
+          <div className="container mx-auto max-w-5xl">
             <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
               <div className="flex items-start gap-3 max-w-3xl">
                 <div className="h-10 w-10 shrink-0 rounded-xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center mt-0.5">
@@ -66,10 +66,10 @@ export function PrivacyConsentBanner() {
                 </div>
                 <div className="space-y-1 text-xs sm:text-sm text-muted-foreground leading-relaxed">
                   <p className="text-foreground font-semibold text-sm sm:text-base">
-                    Privacy & Storage Preferences
+                    Privacy &amp; Cookie Preferences
                   </p>
                   <p>
-                    We use strictly necessary session cookies and terminal storage to operate the RHHS Classroom Champion platform under Lebanese Law No. 81/2018. With your affirmative consent, we also collect anonymized performance telemetry to optimize loading speeds on school networks.
+                    We use essential browser storage for website display preferences under Lebanese Law No. 81/2018. With your consent, we also gather anonymized performance metrics (Vercel Web Analytics &amp; Speed Insights) to help optimize page loading speeds on school networks.
                   </p>
                   <div className="flex items-center gap-3 pt-1 text-xs">
                     <Link
@@ -83,7 +83,7 @@ export function PrivacyConsentBanner() {
                       href="/cookies"
                       className="underline text-primary hover:text-primary/80 font-medium min-h-11 inline-flex items-center"
                     >
-                      Cookie & Telemetry Policy
+                      Cookie Policy
                     </Link>
                   </div>
                 </div>
@@ -126,11 +126,11 @@ export function PrivacyConsentBanner() {
             <div className="flex items-center gap-2 text-primary">
               <Shield className="h-5 w-5" />
               <DialogTitle className="text-lg font-bold text-foreground">
-                Privacy & Storage Preferences
+                Privacy &amp; Cookie Preferences
               </DialogTitle>
             </div>
             <DialogDescription className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-              Customize which categories of terminal storage and telemetry you allow. You can update your choices at any time via the Cookie Settings link in the footer.
+              Customize which categories of storage and telemetry you allow. You can adjust your preferences at any time via the Cookie Settings link in the footer.
             </DialogDescription>
           </DialogHeader>
 
@@ -141,7 +141,7 @@ export function PrivacyConsentBanner() {
                 <div className="flex items-center gap-2">
                   <Lock className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm font-semibold text-foreground">
-                    Strictly Necessary Cookies & Storage
+                    Essential Browser Storage
                   </span>
                 </div>
                 <Badge variant="secondary" className="text-[11px] font-semibold bg-muted text-muted-foreground">
@@ -149,7 +149,7 @@ export function PrivacyConsentBanner() {
                 </Badge>
               </div>
               <p className="text-xs text-muted-foreground leading-relaxed">
-                Essential for core site functions, secure supervisor and administrative login sessions (<code className="text-xs bg-muted px-1 rounded">rhhs_session</code>), database write consistency (<code className="text-xs bg-muted px-1 rounded">rhhs_recent_mutation</code>), and interface theme preference (<code className="text-xs bg-muted px-1 rounded">theme</code>). These cannot be disabled.
+                Remembers your chosen interface display theme (Light/Dark mode) and affirmative privacy choices. These are strictly necessary for basic site usability and cannot be disabled.
               </p>
             </div>
 
@@ -158,10 +158,10 @@ export function PrivacyConsentBanner() {
               <div className="flex items-center justify-between gap-3">
                 <div className="space-y-0.5">
                   <span className="text-sm font-semibold text-foreground">
-                    Performance & Analytics Telemetry
+                    Performance &amp; Analytics Telemetry
                   </span>
                   <p className="text-[11px] text-muted-foreground">
-                    Cookie-free, aggregated Web Vitals and route latency diagnostics
+                    Cookie-free, aggregated Web Vitals and route latency metrics
                   </p>
                 </div>
                 <Switch
@@ -172,30 +172,7 @@ export function PrivacyConsentBanner() {
                 />
               </div>
               <p className="text-xs text-muted-foreground leading-relaxed">
-                Measures page loading speeds and aggregated stability across Lebanese telecom and school Wi-Fi networks using Vercel Web Analytics and Speed Insights. It does not track individual students, student IDs, or personal IP addresses.
-              </p>
-            </div>
-
-            {/* Category 3: Functional Preferences */}
-            <div className="pt-4 space-y-2">
-              <div className="flex items-center justify-between gap-3">
-                <div className="space-y-0.5">
-                  <span className="text-sm font-semibold text-foreground">
-                    Functional Experience Preferences
-                  </span>
-                  <p className="text-[11px] text-muted-foreground">
-                    Client-side terminal storage for state persistence
-                  </p>
-                </div>
-                <Switch
-                  id="functional-toggle"
-                  checked={functionalEnabled}
-                  onCheckedChange={setFunctionalEnabled}
-                  aria-label="Toggle Functional Experience Preferences"
-                />
-              </div>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Remembers user interface preferences locally in your browser to avoid repetitive promptings and maintain smooth workflow during inspections.
+                Measures page loading speeds and aggregated platform stability across school Wi-Fi and mobile networks using Vercel Web Analytics and Speed Insights. It does not track individual students, student IDs, or personal IP addresses.
               </p>
             </div>
           </div>
@@ -213,7 +190,7 @@ export function PrivacyConsentBanner() {
               onClick={rejectNonEssential}
               className="w-full sm:w-auto min-h-11 text-xs"
             >
-              Reject Non-Essential
+              Essential Only
             </Button>
             <div className="flex items-center gap-2 w-full sm:w-auto">
               <Button

@@ -28,11 +28,11 @@ Your app shows **401 (Unauthorized)** and **404 (Not Found)** errors on Vercel b
 
 In your deployment platform (Vercel, Supabase, etc.), set:
 
-\`\`\`bash
-NEXT_PUBLIC_SUPABASE_URL=https://dqfpinqjomlgpoyfewzk.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRxZnBpbnFqb21sZ3BveWZld3prIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEyMzQxODYsImV4cCI6MjA3NjgxMDE4Nn0.2FH88MXYMBClo8hQ1pIMMcV3c7I7xxMaeFOECp1qaXc
+```bash
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key-here
 AUTH_SECRET=your-secret-key-here-min-32-chars
-\`\`\`
+```
 
 ### Step 2: Run Database Scripts in Supabase
 
@@ -77,7 +77,7 @@ USING (is_active = true);
 ## 🧪 Testing
 
 1. Visit your deployed URL
-2. Login with: `admin@school.com` / `AdminPassword123!`
+2. Login with your configured administrative credentials
 3. Check that data loads (classrooms, evaluations, etc.)
 4. Open browser console - should see no 401/404 errors
 

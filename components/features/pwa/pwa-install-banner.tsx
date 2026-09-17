@@ -4,6 +4,7 @@ import React, { useEffect, useState, useTransition } from "react"
 import Image from "next/image"
 import { Download, Share2, PlusSquare, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useConsent } from "@/components/providers/consent-provider"
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>
@@ -11,9 +12,11 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 const PWA_DISMISSED_KEY = "pwa_install_dismissed"
+const PWA_SESSION_DISMISSED_KEY = "pwa_install_dismissed_session"
 const DISMISS_DURATION_MS = 7 * 24 * 60 * 60 * 1000 // 7 days
 
 export function PwaInstallBanner() {
+  const { hasDecided } = useConsent()
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [isIos, setIsIos] = useState(false)
   const [showIosGuide, setShowIosGuide] = useState(false)
@@ -30,20 +33,29 @@ export function PwaInstallBanner() {
       return
     }
 
-    // 2. Check dismissal cooldown
+    // 2. Check session dismissal (if user chose "Later" in this browsing session, do not show until next visit)
+    try {
+      if (sessionStorage.getItem(PWA_SESSION_DISMISSED_KEY) === "true") {
+        return
+      }
+    } catch {
+      // Ignore storage errors
+    }
+
+    // 3. Check dismissal cooldown
     try {
       const dismissedTimestamp = localStorage.getItem(PWA_DISMISSED_KEY)
       if (dismissedTimestamp) {
         const timeElapsed = Date.now() - parseInt(dismissedTimestamp, 10)
         if (timeElapsed < DISMISS_DURATION_MS) {
-          return // User explicitly chose "Not Now" within the past 7 days
+          return // User explicitly chose "Later" within cooldown period
         }
       }
     } catch {
       // Ignore storage errors
     }
 
-    // 3. Detect iOS / iPadOS (Safari & iOS 16.4+ modern browsers)
+    // 4. Detect iOS / iPadOS (Safari & iOS 16.4+ modern browsers)
     const ua = window.navigator.userAgent
     const isIosDevice =
       /iPad|iPhone|iPod/.test(ua) ||
@@ -56,7 +68,7 @@ export function PwaInstallBanner() {
       })
     }
 
-    // 4. Listen for Chromium beforeinstallprompt
+    // 5. Listen for Chromium beforeinstallprompt
     const handleBeforeInstall = (e: Event) => {
       e.preventDefault()
       startTransition(() => {
@@ -65,7 +77,7 @@ export function PwaInstallBanner() {
       })
     }
 
-    // 5. Listen for appinstalled
+    // 6. Listen for appinstalled
     const handleAppInstalled = () => {
       startTransition(() => {
         setDeferredPrompt(null)
@@ -101,13 +113,15 @@ export function PwaInstallBanner() {
   const handleDismiss = () => {
     setIsVisible(false)
     try {
+      sessionStorage.setItem(PWA_SESSION_DISMISSED_KEY, "true")
       localStorage.setItem(PWA_DISMISSED_KEY, Date.now().toString())
     } catch {
       // Ignore storage errors
     }
   }
 
-  if (!isVisible) {
+  // Do not show while cookie banner is undecided to prevent popup clashes
+  if (!isVisible || !hasDecided) {
     return null
   }
 
@@ -170,7 +184,7 @@ export function PwaInstallBanner() {
                     className="min-h-11 text-xs text-muted-foreground"
                     onClick={handleDismiss}
                   >
-                    Not Now
+                    Later
                   </Button>
                 </div>
               )}
@@ -191,7 +205,7 @@ export function PwaInstallBanner() {
                 className="min-h-11 text-xs text-muted-foreground"
                 onClick={handleDismiss}
               >
-                Not Now
+                Later
               </Button>
             </div>
           )}

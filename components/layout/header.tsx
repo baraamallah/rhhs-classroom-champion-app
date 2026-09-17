@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { LayoutDashboard, LogOut, Sun, Moon, User, LogIn, Info } from "lucide-react"
+import { LayoutDashboard, LogOut, Sun, Moon, User, LogIn, Info, ShieldCheck } from "lucide-react"
 import { useTheme } from "next-themes"
 import { m } from "framer-motion"
 import { WinnersLink } from "@/components/layout/winners-link"
@@ -181,6 +181,12 @@ export function Header() {
                           <Link href={getControlPanelLink()} className="flex items-center py-2">
                             <LayoutDashboard className="h-4 w-4 mr-2 text-primary" />
                             <span>Control Panel</span>
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild className="rounded-lg cursor-pointer">
+                          <Link href="/privacy#staff-governance" className="flex items-center py-2">
+                            <ShieldCheck className="h-4 w-4 mr-2 text-primary" />
+                            <span>Staff Policy & Terms</span>
                           </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem

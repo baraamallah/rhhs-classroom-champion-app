@@ -1,7 +1,8 @@
 import type { Metadata } from "next"
 import Link from "next/link"
-import { Scale, ArrowLeft, Award, CheckCircle, AlertTriangle, UserCheck, ShieldCheck } from "lucide-react"
+import { Scale, ArrowLeft, Award, CheckCircle, AlertTriangle, ShieldCheck } from "lucide-react"
 import { Header } from "@/components/layout/header"
+import { StaffTermsAddendum } from "@/components/features/legal/staff-policy-addendum"
 
 export const metadata: Metadata = {
   title: "Terms of Service | RHHS Classroom Champion",
@@ -42,7 +43,7 @@ export default function TermsOfServicePage() {
             Terms of Service &amp; Code of Conduct
           </h1>
           <p className="mt-3 text-sm sm:text-base text-muted-foreground leading-relaxed">
-            Welcome to the **RHHS ECO Club Classroom Champion** platform. By accessing or using this service, students, faculty, supervisors, and administrative personnel agree to adhere to these Terms of Service and Code of Conduct established by **Rafic Hariri High School**.
+            Welcome to the **RHHS ECO Club Classroom Champion** platform. By accessing or using this service, students, faculty, and school community members agree to adhere to these Terms of Service and Code of Conduct established by **Rafic Hariri High School**.
           </p>
         </header>
 
@@ -78,7 +79,7 @@ export default function TermsOfServicePage() {
               </div>
               <div className="p-3.5 rounded-lg bg-card border border-border/60">
                 <span className="font-semibold text-foreground block text-sm">Zero Falsification:</span>
-                <span className="text-xs sm:text-sm text-muted-foreground">Any attempt to fabricate inspection records, coerce supervisors, or alter score entries will result in immediate disqualification of the section and formal school disciplinary review.</span>
+                <span className="text-xs sm:text-sm text-muted-foreground">Any attempt to fabricate inspection records, alter score tallies, or deceive evaluators will result in immediate disqualification of the section and formal school disciplinary review.</span>
               </div>
               <div className="p-3.5 rounded-lg bg-card border border-border/60">
                 <span className="font-semibold text-foreground block text-sm">Respect for Campus Facilities:</span>
@@ -87,46 +88,25 @@ export default function TermsOfServicePage() {
             </div>
           </section>
 
-          {/* Section 3: Supervisor Obligations */}
-          <section className="space-y-3">
-            <h2 className="text-xl sm:text-2xl font-bold text-foreground flex items-center gap-2.5">
-              <UserCheck className="h-5 w-5 text-primary shrink-0" />
-              <span>3. Supervisor Standards &amp; Impartiality</span>
-            </h2>
-            <p>
-              Designated student supervisors and faculty inspectors hold positions of trust and must uphold high standards of objectivity:
-            </p>
-            <ul className="list-disc pl-5 space-y-1.5 text-xs sm:text-sm text-muted-foreground">
-              <li><strong>Impartial Evaluations:</strong> Supervisors must evaluate assigned classrooms without bias, favoritism, or personal prejudice.</li>
-              <li><strong>Standard Rubric Adherence:</strong> Every evaluation must strictly follow the official 5-point eco rubric (Waste Sorting, Cleanliness, Lighting/Energy, Board/Furniture, Ecological Initiative).</li>
-              <li><strong>Timely Submission:</strong> Daily inspections must be conducted and submitted within the assigned schedule to ensure transparent, live leaderboard updates.</li>
-            </ul>
-          </section>
-
-          {/* Section 4: Account Security */}
+          {/* Section 3: Platform Integrity */}
           <section className="space-y-3">
             <h2 className="text-xl sm:text-2xl font-bold text-foreground flex items-center gap-2.5">
               <ShieldCheck className="h-5 w-5 text-primary shrink-0" />
-              <span>4. Account Security and Authorized Access</span>
+              <span>3. Platform Integrity &amp; Lawful Use</span>
             </h2>
             <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-              Administrative and supervisor accounts are granted exclusively to designated RHHS personnel. Account holders are personally responsible for preserving the confidentiality of their credentials.
+              Users agree to access the Classroom Champion web platform respectfully. Attempting to tamper with leaderboard scores, inject unauthorized code, circumvent system boundaries, or disrupt platform availability for other users is strictly prohibited.
             </p>
-            <ul className="list-disc pl-5 space-y-1.5 text-xs sm:text-sm text-muted-foreground">
-              <li>Account sharing, password lending, or unauthorized delegation is strictly prohibited.</li>
-              <li>Supervisors must promptly notify the school administration if they suspect credential compromise.</li>
-              <li>Attempting to bypass role-based access control, inject unauthorized payloads, or reverse-engineer API endpoints is prohibited.</li>
-            </ul>
           </section>
 
-          {/* Section 5: Administrative Authority */}
+          {/* Section 4: Administrative Authority */}
           <section className="space-y-3">
             <h2 className="text-xl sm:text-2xl font-bold text-foreground flex items-center gap-2.5">
               <AlertTriangle className="h-5 w-5 text-primary shrink-0" />
-              <span>5. Administrative Authority &amp; Final Decisions</span>
+              <span>4. Administrative Authority &amp; Final Decisions</span>
             </h2>
             <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-              The Rafic Hariri High School Administration and designated Super Admins retain final authority over all platform operations, including:
+              The Rafic Hariri High School Administration retains final authority over all platform operations, including:
             </p>
             <ul className="list-disc pl-5 space-y-1 text-xs sm:text-sm text-muted-foreground">
               <li>Auditing inspection logs and invalidating suspicious or duplicate submissions.</li>
@@ -135,20 +115,20 @@ export default function TermsOfServicePage() {
             </ul>
           </section>
 
-          {/* Section 6: Intellectual Property */}
+          {/* Section 5: Intellectual Property */}
           <section className="space-y-3">
             <h2 className="text-xl sm:text-2xl font-bold text-foreground">
-              6. Intellectual Property &amp; School Marks
+              5. Intellectual Property &amp; School Marks
             </h2>
             <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
               All official trademarks, school crests, logos (Rafic Hariri High School, Rafic Hariri Technical Institute, ECO Club Champion), UI designs, and codebase rights are the intellectual property of **Rafic Hariri High School** or their respective student creators. Unauthorized commercial reproduction is prohibited.
             </p>
           </section>
 
-          {/* Section 7: Governing Jurisdiction */}
+          {/* Section 6: Governing Jurisdiction */}
           <section className="space-y-3">
             <h2 className="text-xl sm:text-2xl font-bold text-foreground">
-              7. Governing Guidelines &amp; Inquiries
+              6. Governing Guidelines &amp; Inquiries
             </h2>
             <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
               These Terms of Service are governed by the institutional bylaws and educational policies of Rafic Hariri High School and the applicable laws of the Republic of Lebanon.
@@ -161,6 +141,9 @@ export default function TermsOfServicePage() {
               .
             </p>
           </section>
+
+          {/* Authenticated Staff Terms Addendum (renders only when logged in) */}
+          <StaffTermsAddendum />
         </div>
       </main>
     </div>
