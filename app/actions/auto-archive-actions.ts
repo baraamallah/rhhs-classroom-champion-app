@@ -72,43 +72,81 @@ export async function checkAndAutoArchive() {
       return { success: true, archived: false, reason: "already_archived" }
     }
 
-    // Perform the archive
+    // Perform the archive atomically via PostgreSQL RPC
+    const { data: rpcData, error: rpcError } = await supabase.rpc("archive_monthly_evaluations", {
+      p_archived_at: now.toISOString(),
+    })
 
-    // Fetch all evaluations to archive
+    if (!rpcError && rpcData?.success) {
+      return { 
+        success: true, 
+        archived: true, 
+        count: rpcData.archived_count || 0,
+        fromMonth: `${evalYear}-${String(evalMonth).padStart(2, '0')}`
+      }
+    }
+
+    // Graceful fallback if RPC is not yet registered in database
+    console.warn("[autoArchive] RPC unavailable, falling back to batch transfer:", rpcError?.message)
+
+    // Fetch all evaluations with classroom & supervisor details
     const { data: allEvaluations, error: fetchError } = await supabase
       .from("evaluations")
-      .select("*")
+      .select(`
+        *,
+        classrooms:classroom_id (name, grade, division),
+        users:supervisor_id (name)
+      `)
 
     if (fetchError || !allEvaluations || allEvaluations.length === 0) {
       console.error("[autoArchive] Error fetching evaluations:", fetchError)
       return { success: false, archived: false }
     }
 
-    // Add archived_at timestamp
-    const evaluationsToArchive = allEvaluations.map(ev => ({
-      ...ev,
-      archived_at: now.toISOString()
+    // Add frozen denormalized details and archived_at timestamp
+    const evaluationsToArchive = allEvaluations.map((ev: any) => ({
+      id: ev.id,
+      classroom_id: ev.classroom_id,
+      classroom_name: ev.classrooms?.name || "Unknown",
+      classroom_grade: ev.classrooms?.grade || "",
+      classroom_division: ev.classrooms?.division || "",
+      supervisor_id: ev.supervisor_id,
+      supervisor_name: ev.users?.name || "Unknown",
+      evaluation_date: ev.evaluation_date,
+      items: ev.items || {},
+      total_score: ev.total_score,
+      max_score: ev.max_score,
+      notes: ev.notes || null,
+      created_at: ev.created_at,
+      archived_at: now.toISOString(),
     }))
 
-    // Insert into archive
-    const { error: archiveError } = await supabase
-      .from("archive_evaluations")
-      .insert(evaluationsToArchive)
+    // Chunk in batches of 40 to avoid 16KB HTTP headers limit
+    for (let i = 0; i < evaluationsToArchive.length; i += 40) {
+      const chunk = evaluationsToArchive.slice(i, i + 40)
+      const { error: archiveError } = await supabase
+        .from("archive_evaluations")
+        .upsert(chunk, { onConflict: "id" })
 
-    if (archiveError) {
-      console.error("[autoArchive] Error archiving evaluations:", archiveError)
-      return { success: false, archived: false }
+      if (archiveError) {
+        console.error("[autoArchive] Error archiving evaluations chunk:", archiveError)
+        return { success: false, archived: false }
+      }
     }
 
-    // Delete from main table
-    const { error: deleteError } = await supabase
-      .from("evaluations")
-      .delete()
-      .neq("id", "") // Delete all
+    // Delete archived evaluations in chunks
+    const ids = allEvaluations.map((e: any) => e.id)
+    for (let i = 0; i < ids.length; i += 40) {
+      const idChunk = ids.slice(i, i + 40)
+      const { error: deleteError } = await supabase
+        .from("evaluations")
+        .delete()
+        .in("id", idChunk)
 
-    if (deleteError) {
-      console.error("[autoArchive] Error deleting evaluations:", deleteError)
-      return { success: false, archived: false }
+      if (deleteError) {
+        console.error("[autoArchive] Error deleting evaluations chunk:", deleteError)
+        return { success: false, archived: false }
+      }
     }
 
     return { 

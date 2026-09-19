@@ -36,7 +36,25 @@ export async function getPublicMonthlyWinners(year?: number, month?: number) {
       return { success: false, error: `Failed to fetch winners: ${fetchError.message}`, data: [] }
     }
 
-    return { success: true, data: data || [] }
+    const formattedData = (data || []).map((row: any) => {
+      const clsName = row.classrooms?.name || row.classroom_name || "Unknown Classroom"
+      const clsGrade = row.classrooms?.grade || row.classroom_grade || ""
+      const clsDivision = row.classrooms?.division || row.division
+
+      return {
+        ...row,
+        classroom_name: clsName,
+        classroom_grade: clsGrade,
+        classrooms: {
+          id: row.classroom_id,
+          name: clsName,
+          grade: clsGrade,
+          division: clsDivision,
+        },
+      }
+    })
+
+    return { success: true, data: formattedData }
   } catch (dbError: any) {
     console.error("[getPublicMonthlyWinners] Unexpected error:", dbError)
     return { success: false, error: "Failed to fetch winners", data: [] }

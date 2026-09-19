@@ -65,13 +65,49 @@ export interface Evaluation {
   max_score: number
   notes?: string
   created_at?: string
+  archived_at?: string
+  is_archived?: boolean
+  // Denormalized historical snapshot fields
+  classroom_name?: string
+  classroom_grade?: string
+  classroom_division?: string
+  supervisor_name?: string
   // Joined data from relations
   classroom?: {
+    id?: string
     name: string
     grade: string
     division?: string
   }
   supervisor?: {
+    name: string
+    email: string
+  }
+}
+
+export interface MonthlyWinner {
+  id: string
+  classroom_id: string
+  classroom_name?: string
+  classroom_grade?: string
+  division: string
+  year: number
+  month: number
+  total_score: number
+  average_score: number
+  evaluation_count: number
+  declared_by?: string
+  declared_at?: string
+  notes?: string
+  created_at?: string
+  classroom?: {
+    id: string
+    name: string
+    grade: string
+    division: string
+  }
+  declared_by_user?: {
+    id: string
     name: string
     email: string
   }

@@ -63,9 +63,30 @@ export async function archiveAndReset() {
   const supabase = await createAdminClient()
 
   try {
+    // Attempt atomic database-level monthly archive RPC
+    const { data: rpcData, error: rpcError } = await supabase.rpc("archive_monthly_evaluations", {
+      p_archived_at: new Date().toISOString(),
+    })
+
+    if (!rpcError && rpcData?.success) {
+      revalidatePath("/", "layout")
+      revalidatePath("/admin")
+      return {
+        success: true,
+        message: `Successfully archived ${rpcData.archived_count || 0} evaluations. Classrooms preserved.`,
+      }
+    }
+
+    console.warn("[archiveAndReset] RPC unavailable, falling back to batched transfer:", rpcError?.message)
+
+    // Fallback: fetch with classroom & supervisor details
     const { data: evaluations, error: evalFetchError } = await supabase
       .from("evaluations")
-      .select("*")
+      .select(`
+        *,
+        classrooms:classroom_id (name, grade, division),
+        users:supervisor_id (name)
+      `)
 
     if (evalFetchError) {
       console.error("[archiveAndReset] Failed to fetch evaluations:", evalFetchError)
@@ -73,8 +94,26 @@ export async function archiveAndReset() {
     }
 
     if (evaluations && evaluations.length > 0) {
-      // Chunk batches for safe upsert
-      const chunks = chunkArray(evaluations, 40)
+      const nowIso = new Date().toISOString()
+      const evaluationsToArchive = evaluations.map((ev: any) => ({
+        id: ev.id,
+        classroom_id: ev.classroom_id,
+        classroom_name: ev.classrooms?.name || "Unknown",
+        classroom_grade: ev.classrooms?.grade || "",
+        classroom_division: ev.classrooms?.division || "",
+        supervisor_id: ev.supervisor_id,
+        supervisor_name: ev.users?.name || "Unknown",
+        evaluation_date: ev.evaluation_date,
+        items: ev.items || {},
+        total_score: ev.total_score,
+        max_score: ev.max_score,
+        notes: ev.notes || null,
+        created_at: ev.created_at,
+        archived_at: nowIso,
+      }))
+
+      // Chunk batches for safe upsert (avoid 16KB HTTP headers limit)
+      const chunks = chunkArray(evaluationsToArchive, 40)
       for (const chunk of chunks) {
         const { error: archiveEvalError } = await supabase
           .from("archive_evaluations")
@@ -87,7 +126,7 @@ export async function archiveAndReset() {
       }
 
       // Chunk IDs for safe deletion
-      const idChunks = chunkArray(evaluations.map((e) => e.id), 40)
+      const idChunks = chunkArray(evaluations.map((e: any) => e.id), 40)
       for (const idChunk of idChunks) {
         const { error: deleteEvalError } = await supabase
           .from("evaluations")
@@ -101,6 +140,7 @@ export async function archiveAndReset() {
       }
     }
 
+    revalidatePath("/", "layout")
     revalidatePath("/admin")
     return {
       success: true,
@@ -255,14 +295,31 @@ export async function archiveEvaluations(evaluationIds: string[]) {
   const supabase = await createAdminClient()
 
   try {
+    // Attempt database-level atomic selective archive RPC
+    const { data: rpcData, error: rpcError } = await supabase.rpc("archive_selective_evaluations", {
+      p_evaluation_ids: evaluationIds,
+      p_archived_at: new Date().toISOString(),
+    })
+
+    if (!rpcError && rpcData?.success) {
+      revalidatePath("/admin")
+      return { success: true, message: `Successfully archived ${rpcData.archived_count || evaluationIds.length} evaluations` }
+    }
+
+    console.warn("[archiveEvaluations] RPC unavailable, falling back to batch transfer:", rpcError?.message)
+
     const idChunks = chunkArray(evaluationIds, 40)
     let totalArchived = 0
 
     for (const chunk of idChunks) {
-      // 1. Fetch in small chunk
+      // 1. Fetch in small chunk with details
       const { data: evaluations, error: fetchError } = await supabase
         .from("evaluations")
-        .select("*")
+        .select(`
+          *,
+          classrooms:classroom_id (name, grade, division),
+          users:supervisor_id (name)
+        `)
         .in("id", chunk)
 
       if (fetchError) {
@@ -271,9 +328,22 @@ export async function archiveEvaluations(evaluationIds: string[]) {
       }
 
       if (evaluations && evaluations.length > 0) {
-        const evaluationsToArchive = evaluations.map((ev) => ({
-          ...ev,
-          archived_at: new Date().toISOString(),
+        const nowIso = new Date().toISOString()
+        const evaluationsToArchive = evaluations.map((ev: any) => ({
+          id: ev.id,
+          classroom_id: ev.classroom_id,
+          classroom_name: ev.classrooms?.name || "Unknown",
+          classroom_grade: ev.classrooms?.grade || "",
+          classroom_division: ev.classrooms?.division || "",
+          supervisor_id: ev.supervisor_id,
+          supervisor_name: ev.users?.name || "Unknown",
+          evaluation_date: ev.evaluation_date,
+          items: ev.items || {},
+          total_score: ev.total_score,
+          max_score: ev.max_score,
+          notes: ev.notes || null,
+          created_at: ev.created_at,
+          archived_at: nowIso,
         }))
 
         // 2. Upsert chunk
@@ -351,10 +421,17 @@ export async function getArchivedEvaluations(limit = 50, offset = 0) {
       const classroom = allClassrooms.find((c) => c.id === ev.classroom_id)
       const supervisor = users?.find((u) => u.id === ev.supervisor_id)
 
+      const classroomName = ev.classroom_name || classroom?.name || "Unknown Classroom"
+      const classroomGrade = ev.classroom_grade || classroom?.grade || ""
+      const supervisorName = ev.supervisor_name || supervisor?.name || "Unknown Supervisor"
+
       return {
         ...ev,
-        classrooms: classroom ? { name: classroom.name, grade: classroom.grade } : null,
-        users: supervisor ? { name: supervisor.name } : null,
+        classroom_name: classroomName,
+        classroom_grade: classroomGrade,
+        supervisor_name: supervisorName,
+        classrooms: { name: classroomName, grade: classroomGrade },
+        users: { name: supervisorName },
       }
     })
 
@@ -450,9 +527,9 @@ export async function createAcademicYearArchive(
   const supabase = await createAdminClient()
 
   try {
-    // 1. Fetch all active classrooms and all current evaluations
+    // 1. Fetch all classrooms (including any deactivated during the year) and all current evaluations
     const [{ data: classrooms, error: classError }, { data: evaluations, error: evalError }] = await Promise.all([
-      supabase.from("classrooms").select("*").eq("is_active", true),
+      supabase.from("classrooms").select("*"),
       supabase.from("evaluations").select("*"),
     ])
 

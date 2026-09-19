@@ -386,7 +386,7 @@ export async function getArchivedEvaluationsList(): Promise<Evaluation[]> {
     const supabase = createClient()
     const { data: archiveData, error } = await supabase
       .from("archive_evaluations")
-      .select("id, classroom_id, supervisor_id, evaluation_date, total_score, max_score, created_at, archived_at")
+      .select("id, classroom_id, classroom_name, classroom_grade, classroom_division, supervisor_id, supervisor_name, evaluation_date, total_score, max_score, created_at, archived_at")
       .order("archived_at", { ascending: false })
 
     if (error) {
@@ -416,29 +416,34 @@ export async function getArchivedEvaluationsList(): Promise<Evaluation[]> {
       const cls = roomMap.get(row.classroom_id)
       const usr = userMap.get(row.supervisor_id)
 
+      const classroomName = row.classroom_name || cls?.name || "Unknown Classroom"
+      const classroomGrade = row.classroom_grade || cls?.grade || ""
+      const classroomDivision = row.classroom_division || cls?.division
+      const supervisorName = row.supervisor_name || usr?.name || "Unknown Supervisor"
+
       return {
         id: row.id,
         classroom_id: row.classroom_id,
         supervisor_id: row.supervisor_id,
+        classroom_name: classroomName,
+        classroom_grade: classroomGrade,
+        classroom_division: classroomDivision,
+        supervisor_name: supervisorName,
         evaluation_date: row.evaluation_date,
         items: row.items || {},
         total_score: row.total_score,
         max_score: row.max_score,
         created_at: row.created_at,
         is_archived: true,
-        classroom: cls
-          ? {
-              name: cls.name,
-              grade: cls.grade ?? "",
-              division: cls.division,
-            }
-          : undefined,
-        supervisor: usr
-          ? {
-              name: usr.name,
-              email: usr.email ?? "",
-            }
-          : undefined,
+        classroom: {
+          name: classroomName,
+          grade: classroomGrade,
+          division: classroomDivision,
+        },
+        supervisor: {
+          name: supervisorName,
+          email: usr?.email ?? "",
+        },
       }
     })
   } catch (error) {
