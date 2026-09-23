@@ -168,6 +168,22 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+
+  @keyframes indeterminate-slide {
+    0% {
+      transform: translateX(-100%);
+    }
+    50% {
+      transform: translateX(100%);
+    }
+    100% {
+      transform: translateX(300%);
+    }
+  }
+
+  .animate-indeterminate-slide {
+    animation: indeterminate-slide 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

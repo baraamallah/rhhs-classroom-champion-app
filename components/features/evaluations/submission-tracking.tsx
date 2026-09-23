@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo, useRef, useDeferredValue } from "react"
+import { useState, useEffect, useMemo, useCallback, useRef, useDeferredValue } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -17,8 +17,11 @@ import {
   BarChart3,
   ArrowLeft,
   Loader2,
-  Filter
+  Filter,
+  CalendarOff,
+  Info
 } from "lucide-react"
+import { getCalendarExceptions, getSchoolTermDates, type CalendarException, type SchoolTermDates } from "@/app/actions/calendar-actions"
 import { getClassrooms, getEvaluationsByDateRange } from "@/lib/supabase-data"
 import type { Evaluation, Classroom, User } from "@/lib/types"
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isWeekend, startOfWeek, addDays } from "date-fns"
@@ -50,6 +53,8 @@ function useSubmissionTrackingContent({ currentUser }: SubmissionTrackingProps) 
   const deferredSearch = useDeferredValue(searchTerm)
   const [selectedDivision, setSelectedDivision] = useState<string>("all")
   const [exporting, setExporting] = useState(false)
+  const [exceptions, setExceptions] = useState<CalendarException[]>([])
+  const [termDates, setTermDates] = useState<SchoolTermDates | null>(null)
 
   const fetchData = async () => {
     setLoading(true)
@@ -86,13 +91,21 @@ function useSubmissionTrackingContent({ currentUser }: SubmissionTrackingProps) 
         endDate = customEndDate
       }
 
-      const [classroomsData, evaluationsData] = await Promise.all([
+      const [classroomsData, evaluationsData, exceptionsRes, termRes] = await Promise.all([
         getClassrooms(),
-        getEvaluationsByDateRange(startDate, endDate)
+        getEvaluationsByDateRange(startDate, endDate),
+        getCalendarExceptions(),
+        getSchoolTermDates(),
       ])
 
       setClassrooms(classroomsData)
       setEvaluations(evaluationsData)
+      if (exceptionsRes.success && exceptionsRes.data) {
+        setExceptions(exceptionsRes.data)
+      }
+      if (termRes.success && termRes.data) {
+        setTermDates(termRes.data)
+      }
     } catch (error) {
       console.error("Error fetching tracking data:", error)
       toast({
@@ -125,99 +138,168 @@ function useSubmissionTrackingContent({ currentUser }: SubmissionTrackingProps) 
     return filtered
   }, [classrooms, selectedDivision, deferredSearch])
 
+  const exceptionMap = useMemo(() => {
+    return new Map<string, CalendarException>(
+      exceptions.map((e) => [e.exception_date, e])
+    )
+  }, [exceptions])
+
+  const isWorkingSchoolDay = useCallback((d: Date | string) => {
+    const dateObj = typeof d === "string" ? new Date(d) : d
+    if (isWeekend(dateObj)) return false
+    const dateStr = format(dateObj, "yyyy-MM-dd")
+    if (exceptionMap.has(dateStr)) return false
+    if (termDates?.startDate && dateStr < termDates.startDate) return false
+    if (termDates?.endDate && dateStr > termDates.endDate) return false
+    return true
+  }, [exceptionMap, termDates])
+
   const submissionStats = useMemo(() => {
     if (viewType === "daily") {
+      const selectedDateStr = format(date, "yyyy-MM-dd")
+      const dayException = exceptionMap.get(selectedDateStr)
+      const isSelectedWeekend = isWeekend(date)
+      const isOutsideTerm = termDates && (selectedDateStr < termDates.startDate || selectedDateStr > termDates.endDate)
+      const isNonWorkingDay = isSelectedWeekend || !!dayException || !!isOutsideTerm
+      const nonWorkingReason = dayException?.reason || (isSelectedWeekend ? "Weekend" : isOutsideTerm ? "Outside Academic Term" : "Calendar Exception")
+
       const submittedIds = new Set(evaluations.map(e => e.classroom_id))
       const submitted = filteredClassrooms.filter(c => submittedIds.has(c.id))
-      const notSubmitted = filteredClassrooms.filter(c => !submittedIds.has(c.id))
+      // On non-working days / calendar exceptions, no classroom is penalized as missing
+      const notSubmitted = isNonWorkingDay ? [] : filteredClassrooms.filter(c => !submittedIds.has(c.id))
 
       return {
         submitted,
         notSubmitted,
-        rate: filteredClassrooms.length > 0 ? (submitted.length / filteredClassrooms.length) * 100 : 0
+        rate: isNonWorkingDay ? 100 : (filteredClassrooms.length > 0 ? (submitted.length / filteredClassrooms.length) * 100 : 0),
+        isNonWorkingDay,
+        nonWorkingReason,
+        excludedExceptionsCount: isNonWorkingDay ? 1 : 0
       }
     } else if (viewType === "weekly") {
       const start = startOfWeek(date, { weekStartsOn: 1 })
-      const workDays = Array.from({ length: 5 }, (_, i) => addDays(start, i))
+      const rawDays = Array.from({ length: 5 }, (_, i) => addDays(start, i))
+
+      const weeklyDays = rawDays.map(d => {
+        const dStr = format(d, "yyyy-MM-dd")
+        const exc = exceptionMap.get(dStr)
+        const isOutside = termDates && (dStr < termDates.startDate || dStr > termDates.endDate)
+        const isException = !!exc || !!isOutside
+        const reason = exc?.reason || (isOutside ? "Outside Term" : undefined)
+        return {
+          date: d,
+          dateStr: dStr,
+          isException,
+          reason,
+        }
+      })
+
+      const activeDays = weeklyDays.filter(d => !d.isException)
+      const totalDays = activeDays.length
+      const excludedExceptionsCount = weeklyDays.filter(d => d.isException).length
 
       const classroomPerformance = filteredClassrooms.map(c => {
         const classEvals = evaluations.filter(e => e.classroom_id === c.id)
         const submittedDays = new Set(classEvals.map(e => format(new Date(e.evaluation_date), "yyyy-MM-dd")))
 
+        const submittedCount = activeDays.filter(d => submittedDays.has(d.dateStr)).length
+
         return {
           classroom: c,
-          submittedCount: workDays.filter(d => submittedDays.has(format(d, "yyyy-MM-dd"))).length,
-          totalDays: workDays.length,
-          workDays: workDays.map(d => ({
-            date: d,
-            isSubmitted: submittedDays.has(format(d, "yyyy-MM-dd"))
+          submittedCount,
+          totalDays,
+          rate: totalDays > 0 ? (submittedCount / totalDays) * 100 : 100,
+          workDays: weeklyDays.map(d => ({
+            date: d.date,
+            isSubmitted: submittedDays.has(d.dateStr),
+            isException: d.isException,
+            reason: d.reason,
           }))
         }
       })
 
       return {
         classroomPerformance,
+        excludedExceptionsCount,
         avgRate: classroomPerformance.length > 0
-          ? classroomPerformance.reduce((sum, p) => sum + (p.submittedCount / p.totalDays), 0) / classroomPerformance.length * 100
+          ? classroomPerformance.reduce((sum, p) => sum + p.rate, 0) / classroomPerformance.length
           : 0
       }
     } else if (viewType === "monthly") {
-      // Monthly stats
-      const daysInMonth = eachDayOfInterval({
+      // Monthly stats synced with calendar exceptions
+      const allDays = eachDayOfInterval({
         start: startOfMonth(date),
         end: endOfMonth(date)
-      }).filter(d => !isWeekend(d))
+      })
+
+      const allWeekdays = allDays.filter(d => !isWeekend(d))
+      const activeDays = allDays.filter(d => isWorkingSchoolDay(d))
+      const totalDays = activeDays.length
+      const activeDateStrs = new Set(activeDays.map(d => format(d, "yyyy-MM-dd")))
+      const excludedExceptionsCount = Math.max(0, allWeekdays.length - totalDays)
 
       const classroomPerformance = filteredClassrooms.map(c => {
         const classEvals = evaluations.filter(e => e.classroom_id === c.id)
         const submittedDays = new Set(classEvals.map(e => format(new Date(e.evaluation_date), "yyyy-MM-dd")))
+
+        // Only count submissions that fall on active school days
+        const submittedCount = Array.from(submittedDays).filter(dStr => activeDateStrs.has(dStr)).length
+
         return {
           classroom: c,
-          submittedCount: submittedDays.size,
-          totalDays: daysInMonth.length,
-          rate: daysInMonth.length > 0 ? (submittedDays.size / daysInMonth.length) * 100 : 0
+          submittedCount,
+          totalDays,
+          rate: totalDays > 0 ? (submittedCount / totalDays) * 100 : 100
         }
       })
 
       return {
         classroomPerformance,
+        excludedExceptionsCount,
         avgRate: classroomPerformance.length > 0
           ? classroomPerformance.reduce((sum, p) => sum + p.rate, 0) / classroomPerformance.length
           : 0
       }
     } else {
-      // Custom Date Range stats
+      // Custom Date Range stats synced with calendar exceptions
       let startD = new Date(customStartDate)
       let endD = new Date(customEndDate)
       if (isNaN(startD.getTime())) startD = startOfMonth(new Date())
       if (isNaN(endD.getTime())) endD = endOfMonth(new Date())
 
-      const customDays = eachDayOfInterval({
+      const allCustomDays = eachDayOfInterval({
         start: startD,
         end: endD
-      }).filter(d => !isWeekend(d))
+      })
+
+      const allWeekdays = allCustomDays.filter(d => !isWeekend(d))
+      const activeDays = allCustomDays.filter(d => isWorkingSchoolDay(d))
+      const totalDays = activeDays.length
+      const activeDateStrs = new Set(activeDays.map(d => format(d, "yyyy-MM-dd")))
+      const excludedExceptionsCount = Math.max(0, allWeekdays.length - totalDays)
 
       const classroomPerformance = filteredClassrooms.map(c => {
         const classEvals = evaluations.filter(e => e.classroom_id === c.id)
         const submittedDays = new Set(classEvals.map(e => format(new Date(e.evaluation_date), "yyyy-MM-dd")))
-        const totalDays = customDays.length
-        
+        const submittedCount = Array.from(submittedDays).filter(dStr => activeDateStrs.has(dStr)).length
+
         return {
           classroom: c,
-          submittedCount: submittedDays.size,
-          totalDays: totalDays,
-          rate: totalDays > 0 ? (submittedDays.size / totalDays) * 100 : 0
+          submittedCount,
+          totalDays,
+          rate: totalDays > 0 ? (submittedCount / totalDays) * 100 : 100
         }
       })
 
       return {
         classroomPerformance,
+        excludedExceptionsCount,
         avgRate: classroomPerformance.length > 0
           ? classroomPerformance.reduce((sum, p) => sum + p.rate, 0) / classroomPerformance.length
           : 0
       }
     }
-  }, [filteredClassrooms, evaluations, viewType, date, customStartDate, customEndDate])
+  }, [filteredClassrooms, evaluations, viewType, date, customStartDate, customEndDate, exceptionMap, termDates, isWorkingSchoolDay])
 
   // Synchronized sorting across all detailed lists
   const sortedClassroomPerformance = useMemo(() => {
@@ -333,7 +415,7 @@ function useSubmissionTrackingContent({ currentUser }: SubmissionTrackingProps) 
           ]
 
           p.workDays.forEach((day: any) => {
-            row.push(day.isSubmitted ? "YES" : "NO")
+            row.push(day.isException ? "EXCUSED" : (day.isSubmitted ? "YES" : "NO"))
           })
           data.push(row)
         })
@@ -349,7 +431,7 @@ function useSubmissionTrackingContent({ currentUser }: SubmissionTrackingProps) 
           end: endOfMonth(date)
         })
 
-        const workdays = daysInMonth.filter(d => !isWeekend(d))
+        const workdays = daysInMonth.filter(d => isWorkingSchoolDay(d))
         const headers = ["Classroom", "Grade", "Division", "Supervisor(s)", "Total Submitted", "Total Workdays", "Submission Rate %"]
         workdays.forEach(d => {
           headers.push(format(d, "MMM d"))
@@ -399,7 +481,7 @@ function useSubmissionTrackingContent({ currentUser }: SubmissionTrackingProps) 
           end: endD
         })
 
-        const workdays = customDays.filter(d => !isWeekend(d))
+        const workdays = customDays.filter(d => isWorkingSchoolDay(d))
         const headers = ["Classroom", "Grade", "Division", "Supervisor(s)", "Total Submitted", "Total Workdays", "Submission Rate %"]
         workdays.forEach(d => {
           headers.push(format(d, "MMM d"))
@@ -628,19 +710,33 @@ function useSubmissionTrackingContent({ currentUser }: SubmissionTrackingProps) 
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs font-semibold text-muted-foreground">
-                      {viewType === "daily" ? "Not Submitted" : "Target Workdays"}
+                      {viewType === "daily" ? ((submissionStats as any).isNonWorkingDay ? "Status" : "Not Submitted") : "Target School Days"}
                     </p>
                     <p className="text-2xl font-bold">
                       {viewType === "daily"
-                        ? (submissionStats as any).notSubmitted.length
+                        ? ((submissionStats as any).isNonWorkingDay ? "Excused" : (submissionStats as any).notSubmitted.length)
                         : (submissionStats as any).classroomPerformance[0]?.totalDays || 0}
                     </p>
                   </div>
-                  <XCircle className="h-8 w-8 text-destructive opacity-20" />
+                  {viewType === "daily" && (submissionStats as any).isNonWorkingDay ? (
+                    <CalendarOff className="h-8 w-8 text-blue-500 opacity-40" />
+                  ) : (
+                    <XCircle className="h-8 w-8 text-destructive opacity-20" />
+                  )}
                 </div>
               </CardContent>
             </Card>
           </div>
+
+          {/* Calendar Synced Notice */}
+          {(submissionStats as any).excludedExceptionsCount > 0 && viewType !== "daily" && (
+            <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-700 dark:text-blue-300 text-xs">
+              <Calendar className="h-4 w-4 shrink-0" />
+              <span>
+                <strong>School Calendar Synced:</strong> {(submissionStats as any).excludedExceptionsCount} calendar exception day{((submissionStats as any).excludedExceptionsCount > 1 ? "s were" : " was")} automatically eliminated from required audit targets.
+              </span>
+            </div>
+          )}
 
           {/* Detailed Lists */}
           <Card className="border-border/80 shadow-sm">
@@ -663,6 +759,21 @@ function useSubmissionTrackingContent({ currentUser }: SubmissionTrackingProps) 
                 </div>
               ) : viewType === "daily" ? (
                 <div className="space-y-6">
+                  {/* Calendar Exception Notice */}
+                  {(submissionStats as any).isNonWorkingDay && (
+                    <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/25 flex items-start gap-3">
+                      <CalendarOff className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
+                      <div>
+                        <h4 className="text-sm font-bold text-foreground">
+                          School Calendar Exception Day ({format(date, "PPPP")})
+                        </h4>
+                        <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                          Reason: <strong className="text-foreground">{(submissionStats as any).nonWorkingReason}</strong>. This date is marked in the school calendar as an excused exception. No supervisor evaluations are required, and no classrooms are penalized as missing.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Submitted List */}
                   <div className="space-y-3">
                     <h3 className="text-sm font-semibold text-green-600 flex items-center gap-2">
@@ -707,7 +818,7 @@ function useSubmissionTrackingContent({ currentUser }: SubmissionTrackingProps) 
                   </div>
 
                   {/* Missing List - High Priority */}
-                  {(submissionStats as any).notSubmitted.length > 0 && (
+                  {!(submissionStats as any).isNonWorkingDay && (submissionStats as any).notSubmitted.length > 0 && (
                     <div className="space-y-3">
                       <h3 className="text-sm font-semibold text-destructive flex items-center gap-2">
                         <XCircle className="h-4 w-4" />
@@ -759,21 +870,30 @@ function useSubmissionTrackingContent({ currentUser }: SubmissionTrackingProps) 
                             <span className="text-[10px] text-muted-foreground uppercase font-semibold">
                               {format(day.date, "eee").charAt(0)}
                             </span>
-                            <div
-                              className={cn(
-                                "h-9 w-9 sm:h-8 sm:w-8 rounded-md flex items-center justify-center border transition-[background-color,border-color,color,box-shadow,opacity,transform] duration-200",
-                                day.isSubmitted
-                                  ? "bg-green-500/10 border-green-500/30 text-green-600 hover:bg-green-500/20"
-                                  : "bg-destructive/10 border-destructive/30 text-destructive hover:bg-destructive/20"
-                              )}
-                              title={`${format(day.date, "EEEE, MMM d")}: ${day.isSubmitted ? "Submitted" : "Missing"}`}
-                            >
-                              {day.isSubmitted ? (
-                                <CheckCircle2 className="h-4 w-4" />
-                              ) : (
-                                <XCircle className="h-4 w-4" />
-                              )}
-                            </div>
+                            {day.isException ? (
+                              <div
+                                className="h-9 w-9 sm:h-8 sm:w-8 rounded-md flex items-center justify-center border bg-blue-500/10 border-blue-500/30 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 transition-all duration-200"
+                                title={`${format(day.date, "EEEE, MMM d")}: Calendar Exception (${day.reason || "Excused Day"})`}
+                              >
+                                <CalendarOff className="h-4 w-4" />
+                              </div>
+                            ) : (
+                              <div
+                                className={cn(
+                                  "h-9 w-9 sm:h-8 sm:w-8 rounded-md flex items-center justify-center border transition-[background-color,border-color,color,box-shadow,opacity,transform] duration-200",
+                                  day.isSubmitted
+                                    ? "bg-green-500/10 border-green-500/30 text-green-600 hover:bg-green-500/20"
+                                    : "bg-destructive/10 border-destructive/30 text-destructive hover:bg-destructive/20"
+                                )}
+                                title={`${format(day.date, "EEEE, MMM d")}: ${day.isSubmitted ? "Submitted" : "Missing"}`}
+                              >
+                                {day.isSubmitted ? (
+                                  <CheckCircle2 className="h-4 w-4" />
+                                ) : (
+                                  <XCircle className="h-4 w-4" />
+                                )}
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>

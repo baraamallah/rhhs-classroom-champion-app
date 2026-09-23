@@ -55,7 +55,7 @@ const getRankTheme = (rank: number) => {
       }
     case 3:
       return {
-        title: "HONORABLE ECO PIONEER",
+        title: "DISTINGUISHED ECO TRAILBLAZER",
         subtitle: "3rd Place Honor",
         accentColor: "text-amber-700 dark:text-amber-500",
         borderGold: "border-amber-700/80 dark:border-amber-600",

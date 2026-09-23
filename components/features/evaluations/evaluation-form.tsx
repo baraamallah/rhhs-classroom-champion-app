@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useTransition } from "react"
+import { useState, useEffect, useMemo, useTransition } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -133,17 +133,43 @@ export function EvaluationForm({
     }
   }
 
+  // Filter checklist items to those applicable to this classroom's division (or common)
+  const applicableChecklistItems = useMemo(() => {
+    const classDiv = (classroom.division || "").trim().toLowerCase()
+    return checklistItems.filter((item) => {
+      const cat = (item.category || "").trim().toLowerCase()
+      // If item is assigned to "all", "general", legacy categories, or empty, it applies to all classrooms
+      if (
+        !cat ||
+        cat === "all" ||
+        cat === "all divisions" ||
+        cat === "general" ||
+        ["energy", "waste", "cleanliness", "environment"].includes(cat)
+      ) {
+        return true
+      }
+      if (!classDiv) return true
+      if (cat === classDiv) return true
+      if (cat.includes("pre") && classDiv.includes("pre")) return true
+      if (cat.includes("elem") && classDiv.includes("elem")) return true
+      if ((cat.includes("middle") || cat.includes("interm")) && (classDiv.includes("middle") || classDiv.includes("interm"))) return true
+      if ((cat.includes("high") || cat.includes("second")) && (classDiv.includes("high") || classDiv.includes("second"))) return true
+      if (cat.includes("tech") && classDiv.includes("tech")) return true
+      return false
+    })
+  }, [checklistItems, classroom.division])
+
   const calculateTotalScore = () => {
     return checkedItems.reduce((total, itemId) => {
-      const item = checklistItems.find((i) => i.id === itemId)
+      const item = applicableChecklistItems.find((i) => i.id === itemId)
       return total + (item ? item.points : 0)
     }, 0)
   }
 
-  const maxScore = checklistItems.reduce((sum, item) => sum + item.points, 0)
+  const maxScore = applicableChecklistItems.reduce((sum, item) => sum + item.points, 0)
   const totalScore = calculateTotalScore()
   const completedCount = checkedItems.length
-  const progressPercent = checklistItems.length > 0 ? (completedCount / checklistItems.length) * 100 : 0
+  const progressPercent = applicableChecklistItems.length > 0 ? (completedCount / applicableChecklistItems.length) * 100 : 0
 
   const parsedTargetDate = parseISO(targetDate)
   const isDateToday = isToday(parsedTargetDate)
@@ -249,7 +275,7 @@ export function EvaluationForm({
                   {totalScore} <span className="text-xs sm:text-sm font-semibold text-muted-foreground">/ {maxScore} pts</span>
                 </div>
                 <div className="text-[10px] text-muted-foreground">
-                  {completedCount} of {checklistItems.length} passed
+                  {completedCount} of {applicableChecklistItems.length} passed
                 </div>
               </div>
             </div>
@@ -260,7 +286,7 @@ export function EvaluationForm({
             <m.div
               className="h-full bg-linear-to-r from-primary to-emerald-500 origin-left"
               initial={{ scaleX: 0 }}
-              animate={{ scaleX: checklistItems.length ? completedCount / checklistItems.length : 0 }}
+              animate={{ scaleX: applicableChecklistItems.length ? completedCount / applicableChecklistItems.length : 0 }}
               transition={{ duration: 0.25 }}
             />
           </div>
@@ -385,7 +411,7 @@ export function EvaluationForm({
         {/* Checklist Form */}
         <form onSubmit={handleSubmit} className="space-y-3">
           <div className="space-y-2.5">
-            {checklistItems.map((item, index) => {
+            {applicableChecklistItems.map((item, index) => {
               const isChecked = checkedItems.includes(item.id)
 
               return (
@@ -420,11 +446,6 @@ export function EvaluationForm({
                       <span className="text-sm sm:text-base font-bold text-foreground leading-snug">
                         {item.title}
                       </span>
-                      {item.category && (
-                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-muted text-muted-foreground uppercase tracking-wider hidden sm:inline-block">
-                          {item.category}
-                        </span>
-                      )}
                     </div>
                     {item.description && (
                       <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
