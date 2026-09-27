@@ -184,6 +184,10 @@
   .animate-indeterminate-slide {
     animation: indeterminate-slide 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
   }
+
+  .animate-spin-slow {
+    animation: spin 10s linear infinite;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

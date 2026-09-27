@@ -5,36 +5,47 @@ import { Card, CardContent } from "@/components/ui/card"
 import { LeafIcon, TrophyIcon } from "@/components/common/icons"
 import { FirstPlaceLogo, SecondPlaceLogo, ThirdPlaceLogo } from "@/components/common/podium-logos"
 import { getScoreColor, getScoreRange } from "@/lib/utils-leaderboard"
+import { AnimatedCounter } from "@/components/common/animated-counter"
 import { cn } from "@/lib/utils"
 import { m } from "framer-motion"
 
 interface SimpleClassroomCardProps {
   classroom: ClassroomScore
   rank: number
+  maxScore?: number
 }
 
-export function SimpleClassroomCard({ classroom, rank }: SimpleClassroomCardProps) {
+export function SimpleClassroomCard({
+  classroom,
+  rank,
+  maxScore = 100,
+}: SimpleClassroomCardProps) {
   const scoreColor = getScoreColor(classroom.averageScore)
   const scoreRange = getScoreRange(classroom.averageScore)
   const isChampion = rank === 1
   const isRunnerUp = rank === 2
   const isThirdPlace = rank === 3
 
+  // Progress relative to highest score or 100
+  const progressPercent = Math.min(
+    Math.round((classroom.totalScore / (maxScore > 0 ? maxScore : 100)) * 100),
+    100
+  )
+
   return (
     <m.div
-      whileHover={{ y: -3, scale: 1.008 }}
-      whileTap={{ scale: 0.99 }}
-      transition={{ 
-        type: "spring", 
-        stiffness: 350, 
-        damping: 24
+      whileHover={{ y: -2 }}
+      transition={{
+        type: "spring",
+        stiffness: 350,
+        damping: 24,
       }}
     >
       <Card
         className={cn(
-          "group relative overflow-hidden transition-all duration-300 border rounded-2xl cursor-pointer",
+          "group relative overflow-hidden transition-all duration-300 border rounded-2xl",
           isChampion
-            ? "border-amber-400/80 dark:border-amber-500/70 bg-linear-to-r from-amber-500/10 via-yellow-500/5 to-card shadow-md shadow-amber-500/10 hover:shadow-xl hover:shadow-amber-500/20"
+            ? "border-amber-400/80 dark:border-amber-500/70 bg-linear-to-r from-amber-500/10 via-yellow-500/5 to-card shadow-md shadow-amber-500/10 hover:shadow-lg hover:shadow-amber-500/15"
             : isRunnerUp
             ? "border-slate-300 dark:border-slate-600/80 bg-linear-to-r from-slate-200/40 via-transparent to-card dark:from-slate-800/30 shadow-xs hover:shadow-md hover:border-slate-400 dark:hover:border-slate-500"
             : isThirdPlace
@@ -49,22 +60,22 @@ export function SimpleClassroomCard({ classroom, rank }: SimpleClassroomCardProp
 
         <CardContent className="p-3 xs:p-3.5 sm:p-4.5">
           <div className="flex items-center gap-2.5 xs:gap-3 sm:gap-4">
-            {/* Rank Badge / New Custom Podium Logos for 1st, 2nd, 3rd */}
+            {/* Rank Badge / Custom Podium Logos for 1st, 2nd, 3rd */}
             <div className="shrink-0 flex items-center justify-center">
               {isChampion ? (
-                <div className="relative group-hover:scale-110 transition-transform duration-300 drop-shadow-md">
+                <div className="relative group-hover:scale-105 transition-transform duration-300 drop-shadow-md">
                   <FirstPlaceLogo className="w-11 h-11 xs:w-12 xs:h-12 sm:w-14 sm:h-14" />
                 </div>
               ) : isRunnerUp ? (
-                <div className="relative group-hover:scale-110 transition-transform duration-300 drop-shadow-md">
+                <div className="relative group-hover:scale-105 transition-transform duration-300 drop-shadow-md">
                   <SecondPlaceLogo className="w-11 h-11 xs:w-12 xs:h-12 sm:w-14 sm:h-14" />
                 </div>
               ) : isThirdPlace ? (
-                <div className="relative group-hover:scale-110 transition-transform duration-300 drop-shadow-md">
+                <div className="relative group-hover:scale-105 transition-transform duration-300 drop-shadow-md">
                   <ThirdPlaceLogo className="w-11 h-11 xs:w-12 xs:h-12 sm:w-14 sm:h-14" />
                 </div>
               ) : (
-                <div className="w-10 h-10 xs:w-11 xs:h-11 sm:w-14 sm:h-14 rounded-xl xs:rounded-2xl flex items-center justify-center font-black shadow-inner bg-muted/80 text-muted-foreground border border-border/60">
+                <div className="w-10 h-10 xs:w-11 xs:h-11 sm:w-14 sm:h-14 rounded-xl xs:rounded-2xl flex items-center justify-center font-black shadow-inner bg-muted/80 text-muted-foreground border border-border/60 group-hover:border-primary/40 group-hover:text-foreground transition-colors">
                   <span className="text-xs xs:text-sm sm:text-base font-bold">#{rank}</span>
                 </div>
               )}
@@ -73,7 +84,10 @@ export function SimpleClassroomCard({ classroom, rank }: SimpleClassroomCardProp
             {/* Classroom Info */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5 xs:gap-2 flex-wrap mb-0.5">
-                <h3 className="text-sm xs:text-base sm:text-lg font-bold text-foreground truncate tracking-tight" title={classroom.classroom.name}>
+                <h3
+                  className="text-sm xs:text-base sm:text-lg font-bold text-foreground truncate tracking-tight group-hover:text-primary transition-colors"
+                  title={classroom.classroom.name}
+                >
                   {classroom.classroom.name}
                 </h3>
                 {isChampion && (
@@ -102,13 +116,17 @@ export function SimpleClassroomCard({ classroom, rank }: SimpleClassroomCardProp
               <div className="flex flex-wrap items-center gap-1.5 xs:gap-2 sm:gap-3 text-[10px] xs:text-[11px] sm:text-xs">
                 <div className="inline-flex items-center gap-1 text-muted-foreground bg-muted/60 dark:bg-muted/30 px-1.5 xs:px-2 py-0.5 rounded-md">
                   <LeafIcon className="h-3 w-3 text-primary shrink-0" />
-                  <span>{classroom.evaluationCount} eval{classroom.evaluationCount !== 1 ? "s" : ""}</span>
+                  <span>
+                    {classroom.evaluationCount} eval{classroom.evaluationCount !== 1 ? "s" : ""}
+                  </span>
                 </div>
 
-                <span className={cn(
-                  "px-1.5 xs:px-2 py-0.5 rounded-md font-semibold text-[9px] xs:text-[10px] sm:text-[11px]",
-                  scoreRange.color
-                )}>
+                <span
+                  className={cn(
+                    "px-1.5 xs:px-2 py-0.5 rounded-md font-semibold text-[9px] xs:text-[10px] sm:text-[11px]",
+                    scoreRange.color
+                  )}
+                >
                   {scoreRange.label}
                 </span>
 
@@ -116,19 +134,42 @@ export function SimpleClassroomCard({ classroom, rank }: SimpleClassroomCardProp
                   Avg: <strong className="text-foreground">{Number(classroom.averageScore).toFixed(1)}</strong>
                 </span>
               </div>
+
+              {/* Subtle Eco-Progress Bar */}
+              <div className="mt-2 w-full h-1.5 bg-muted/80 rounded-full overflow-hidden">
+                <m.div
+                  className={cn(
+                    "h-full rounded-full",
+                    isChampion
+                      ? "bg-linear-to-r from-amber-500 to-yellow-400"
+                      : isRunnerUp
+                      ? "bg-linear-to-r from-slate-400 to-slate-300 dark:from-slate-500 dark:to-slate-400"
+                      : isThirdPlace
+                      ? "bg-linear-to-r from-amber-700 to-amber-600"
+                      : "bg-linear-to-r from-emerald-500 to-primary"
+                  )}
+                  initial={{ width: 0 }}
+                  animate={{ width: `${progressPercent}%` }}
+                  transition={{ duration: 0.8, ease: "easeOut" }}
+                />
+              </div>
             </div>
 
             {/* Score Display */}
-            <div className="shrink-0 text-right">
+            <div className="shrink-0 text-right flex items-center gap-1 sm:gap-2">
               <div className="flex flex-col items-end">
                 <div className="flex items-baseline gap-0.5 xs:gap-1">
-                  <span className={cn(
-                    "text-xl xs:text-2xl sm:text-3xl font-black tracking-tight",
-                    isChampion ? "text-amber-600 dark:text-amber-400" : scoreColor
-                  )}>
-                    {classroom.totalScore}
+                  <span
+                    className={cn(
+                      "text-xl xs:text-2xl sm:text-3xl font-black tracking-tight",
+                      isChampion ? "text-amber-600 dark:text-amber-400" : scoreColor
+                    )}
+                  >
+                    <AnimatedCounter value={classroom.totalScore} />
                   </span>
-                  <span className="text-[10px] xs:text-[11px] font-semibold text-muted-foreground uppercase">pts</span>
+                  <span className="text-[10px] xs:text-[11px] font-semibold text-muted-foreground uppercase">
+                    pts
+                  </span>
                 </div>
                 <span className="text-[9px] xs:text-[10px] sm:text-[11px] text-muted-foreground font-medium">
                   Total Score
@@ -141,4 +182,3 @@ export function SimpleClassroomCard({ classroom, rank }: SimpleClassroomCardProp
     </m.div>
   )
 }
-

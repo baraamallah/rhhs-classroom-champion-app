@@ -2,6 +2,7 @@ import type { ClassroomScore } from "@/lib/types"
 import { Card, CardContent } from "@/components/ui/card"
 import { TrophyIcon, StarIcon, LeafIcon } from "@/components/common/icons"
 import { getRankBadge, getScoreColor, getScoreRange } from "@/lib/utils-leaderboard"
+import { AnimatedCounter } from "@/components/common/animated-counter"
 import { cn } from "@/lib/utils"
 
 interface LeaderboardCardProps {
@@ -60,7 +61,9 @@ export function LeaderboardCard({ score, rank }: LeaderboardCardProps) {
           <div className="flex flex-col items-end">
             <div className="flex items-center gap-1 mb-1">
               <StarIcon className={cn("h-5 w-5", scoreColor)} />
-              <span className={cn("text-2xl font-bold", scoreColor)}>{score.totalScore}</span>
+              <span className={cn("text-2xl font-bold", scoreColor)}>
+                <AnimatedCounter value={score.totalScore} />
+              </span>
             </div>
             <span className="text-xs text-muted-foreground mb-1">Total Points</span>
 
