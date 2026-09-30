@@ -164,7 +164,7 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       </head>
-      <body className={`${poppins.variable} font-sans antialiased`}>
+      <body className={`${poppins.variable} font-sans antialiased overflow-x-clip`}>
         <a 
           href="#main-content" 
           className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-4 focus:bg-background focus:text-foreground focus:shadow-lg"
@@ -180,7 +180,7 @@ export default function RootLayout({
           <AuthProvider>
             <ConsentProvider>
               <AutoArchiveChecker />
-              <div className="min-h-screen flex flex-col">
+              <div className="min-h-screen flex flex-col w-full overflow-x-clip">
                 <MotionProvider>
                   {children}
                 </MotionProvider>

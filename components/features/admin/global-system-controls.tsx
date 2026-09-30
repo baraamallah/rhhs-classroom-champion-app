@@ -32,6 +32,7 @@ import {
   setWinnerRevealMode,
   type AdminSettings,
 } from "@/app/actions/winners-page-actions"
+import { setCachedWinnersVisibility } from "@/lib/winners-visibility"
 import {
   getEvaluationsStatus,
   setEvaluationsStatus,
@@ -101,6 +102,7 @@ export function GlobalSystemControls({
       }
 
       setSettings(updated)
+      setCachedWinnersVisibility(updated.winners_page_visible)
       if (onSettingsChange) onSettingsChange(updated)
 
       if (isManualRefresh) {
@@ -155,6 +157,7 @@ export function GlobalSystemControls({
       const res = await setWinnersPageVisibility(nextVal)
       if (res.success) {
         setSettings((prev) => ({ ...prev, winners_page_visible: nextVal }))
+        setCachedWinnersVisibility(nextVal)
         toast({
           title: nextVal ? "Winners Page Public" : "Winners Page Hidden",
           description: nextVal

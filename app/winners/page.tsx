@@ -10,6 +10,7 @@ import { TrophyIcon, CrownIcon, StarIcon } from "@/components/common/icons"
 import { FirstPlaceLogo } from "@/components/common/podium-logos"
 import { getPublicMonthlyWinners } from "@/app/actions/public-winners-actions"
 import { getWinnersPageVisibility, getDefaultMonthSettings } from "@/app/actions/winners-page-actions"
+import { getCachedWinnersVisibility, setCachedWinnersVisibility } from "@/lib/winners-visibility"
 import { getClassroomWinCounts } from "@/app/actions/win-count-actions"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
@@ -68,7 +69,7 @@ interface SelectedWinner {
 
 export default function WinnersPage() {
   const router = useRouter()
-  const [visible, setVisible] = useState(true)
+  const [visible, setVisible] = useState(() => getCachedWinnersVisibility(true))
   const [loading, setLoading] = useState(true)
   const [winners, setWinners] = useState<Winner[]>([])
   const [winCounts, setWinCounts] = useState<Record<string, number>>({})
@@ -105,6 +106,7 @@ export default function WinnersPage() {
 
         const isVisible = visibilityResult.success ? (visibilityResult.visible ?? true) : true
         setVisible(isVisible)
+        setCachedWinnersVisibility(isVisible)
         if (!isVisible) {
           router.replace("/")
           return
@@ -199,7 +201,7 @@ export default function WinnersPage() {
 
   return (
     <LazyMotionProvider>
-      <div className="min-h-screen bg-radial-[at_top] from-amber-500/10 via-background to-background pb-20 selection:bg-amber-500/20">
+      <div className="min-h-screen bg-radial-[at_top] from-amber-500/10 via-background to-background pb-20 selection:bg-amber-500/20 overflow-x-clip">
         <Header />
         <Confetti active={showConfetti} />
         <CelebrationAnimation
@@ -482,17 +484,17 @@ function GrandChampionSpotlight({
         {/* Right Stats & CTA */}
         <div className="flex flex-col sm:flex-row items-center gap-4 w-full lg:w-auto">
           <div className="grid grid-cols-3 gap-2 sm:gap-3 text-center w-full sm:w-auto">
-            <div className="p-2.5 sm:p-3 rounded-xl bg-card/80 border border-amber-500/30 backdrop-blur-xs min-w-20">
-              <span className="text-[10px] uppercase font-bold text-muted-foreground block">Score</span>
-              <p className="text-lg sm:text-xl font-black text-amber-600 dark:text-amber-400">{winner.total_score}</p>
+            <div className="p-2 xs:p-2.5 sm:p-3 rounded-xl bg-card/80 border border-amber-500/30 backdrop-blur-xs min-w-0 flex-1 sm:min-w-20">
+              <span className="text-[9px] xs:text-[10px] uppercase font-bold text-muted-foreground block truncate">Score</span>
+              <p className="text-base sm:text-xl font-black text-amber-600 dark:text-amber-400">{winner.total_score}</p>
             </div>
-            <div className="p-2.5 sm:p-3 rounded-xl bg-card/80 border border-amber-500/30 backdrop-blur-xs min-w-20">
-              <span className="text-[10px] uppercase font-bold text-muted-foreground block">Average</span>
-              <p className="text-lg sm:text-xl font-black text-amber-600 dark:text-amber-400">{Number(winner.average_score).toFixed(1)}</p>
+            <div className="p-2 xs:p-2.5 sm:p-3 rounded-xl bg-card/80 border border-amber-500/30 backdrop-blur-xs min-w-0 flex-1 sm:min-w-20">
+              <span className="text-[9px] xs:text-[10px] uppercase font-bold text-muted-foreground block truncate">Average</span>
+              <p className="text-base sm:text-xl font-black text-amber-600 dark:text-amber-400">{Number(winner.average_score).toFixed(1)}</p>
             </div>
-            <div className="p-2.5 sm:p-3 rounded-xl bg-card/80 border border-amber-500/30 backdrop-blur-xs min-w-20">
-              <span className="text-[10px] uppercase font-bold text-muted-foreground block">Wins</span>
-              <p className="text-lg sm:text-xl font-black text-amber-600 dark:text-amber-400">{winCount || 1}</p>
+            <div className="p-2 xs:p-2.5 sm:p-3 rounded-xl bg-card/80 border border-amber-500/30 backdrop-blur-xs min-w-0 flex-1 sm:min-w-20">
+              <span className="text-[9px] xs:text-[10px] uppercase font-bold text-muted-foreground block truncate">Wins</span>
+              <p className="text-base sm:text-xl font-black text-amber-600 dark:text-amber-400">{winCount || 1}</p>
             </div>
           </div>
 

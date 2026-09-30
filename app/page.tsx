@@ -9,7 +9,7 @@ export default async function HomePage() {
 
   return (
     <>
-      <Header />
+      <Header winnersPageVisible={winnersPageVisible} />
       <main id="main-content">
         <LeaderboardView
           leaderboard={leaderboard}

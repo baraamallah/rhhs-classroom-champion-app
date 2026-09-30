@@ -20,7 +20,7 @@ import { LazyMotionProvider } from "@/components/providers/lazy-motion-provider"
 import { ThemeToggle } from "@/components/layout/theme-toggle"
 import { cn } from "@/lib/utils"
 
-export function Header() {
+export function Header({ winnersPageVisible }: { winnersPageVisible?: boolean } = {}) {
   const router = useRouter()
   const pathname = usePathname()
   const { setTheme, theme } = useTheme()
@@ -68,38 +68,39 @@ export function Header() {
   return (
     <LazyMotionProvider>
       <m.header
-        className="sticky top-0 z-50 h-(--app-header-height) border-b border-border/60 bg-background/80 dark:bg-card/85 backdrop-blur-md transition-colors duration-200 flex items-center"
+        className="sticky top-0 z-50 border-b border-border/60 bg-background/85 dark:bg-card/90 backdrop-blur-md transition-colors duration-200"
         initial={false}
         animate={{ y: 0 }}
         transition={{ duration: 0.3, ease: "easeOut" }}
       >
-        <div className="container mx-auto px-2 xs:px-3 sm:px-6 w-full">
-          <div className="flex items-center justify-between gap-1 xs:gap-2 sm:gap-4 relative">
+        <div className="container mx-auto px-3 sm:px-6 w-full">
+          {/* Main Bar: Brand on Left, Desktop Nav in Center, Actions on Right */}
+          <div className="flex items-center justify-between gap-2 sm:gap-4 h-13 md:h-16">
             {/* Left: Brand Logo & Title */}
             <Link
               href="/"
-              className="flex items-center gap-1.5 xs:gap-2 sm:gap-3 group shrink-0 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary rounded-lg p-0.5 z-10"
+              className="flex items-center gap-2 sm:gap-3 group shrink-0 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary rounded-lg p-0.5"
               aria-label="RHHS ECO Club Home"
             >
               <div className="relative shrink-0">
                 <m.div
-                  className="h-8 w-8 xs:h-9 xs:w-9 sm:h-11 sm:w-11 rounded-full p-1 bg-white dark:bg-muted/40 shadow-xs border border-emerald-500/20 group-hover:border-emerald-500/50 flex items-center justify-center transition-all duration-300 group-hover:shadow-emerald-500/20 group-hover:shadow-md"
-                  whileHover={{ scale: 1.08 }}
+                  className="h-8 w-8 xs:h-9 xs:w-9 sm:h-10 sm:w-10 rounded-full p-1 bg-white dark:bg-muted/40 shadow-2xs border border-emerald-500/20 group-hover:border-emerald-500/50 flex items-center justify-center transition-all duration-300 group-hover:shadow-emerald-500/20 group-hover:shadow-md"
+                  whileHover={{ scale: 1.06 }}
                   transition={{ type: "spring", stiffness: 350, damping: 20 }}
                 >
                   <Image
                     src="/Eco Champ.png"
                     alt="RHHS Eco Champ Logo"
-                    width={44}
-                    height={44}
-                    className="h-full w-full object-contain drop-shadow-xs"
+                    width={40}
+                    height={40}
+                    className="h-full w-full object-contain drop-shadow-2xs"
                     priority
                   />
                 </m.div>
               </div>
 
               <div className="flex flex-col min-w-0">
-                <span className="text-xs xs:text-sm sm:text-lg md:text-xl font-black tracking-tight bg-linear-to-r from-emerald-600 via-primary to-green-600 bg-clip-text text-transparent leading-none whitespace-nowrap">
+                <span className="text-xs xs:text-sm sm:text-base md:text-lg font-black tracking-tight bg-linear-to-r from-emerald-600 via-primary to-green-600 bg-clip-text text-transparent leading-none whitespace-nowrap">
                   RHHS ECO Club
                 </span>
                 <div className="flex items-center gap-1 mt-0.5">
@@ -111,34 +112,31 @@ export function Header() {
               </div>
             </Link>
 
-            {/* Navigation: Leaderboard, Winners, About Us (Same on phone and desktop!) */}
+            {/* Desktop / Tablet Navigation (Centered, Relaxed, No Collisions) */}
             <nav
-              className="flex items-center justify-center gap-1 xs:gap-1.5 sm:gap-2 md:gap-3 md:absolute md:left-1/2 md:-translate-x-1/2 z-10"
+              className="hidden md:flex items-center justify-center gap-2 lg:gap-3 mx-auto"
               aria-label="Primary Navigation"
             >
-              {/* Leaderboard Link */}
               <Link
                 href="/"
                 className={cn(
-                  "px-2 xs:px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[11px] xs:text-xs sm:text-sm font-semibold transition-colors inline-flex items-center whitespace-nowrap",
+                  "px-3 py-1.5 rounded-full text-xs sm:text-sm font-semibold transition-colors inline-flex items-center whitespace-nowrap",
                   pathname === "/"
-                    ? "bg-primary/10 text-primary font-bold"
+                    ? "bg-primary/10 text-primary font-bold shadow-2xs"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                 )}
               >
                 Leaderboard
               </Link>
 
-              {/* Winners Pill Button */}
-              <WinnersLink showOnMobile={true} />
+              <WinnersLink showOnMobile={false} initialVisible={winnersPageVisible} />
 
-              {/* About Us Link */}
               <Link
                 href="/about"
                 className={cn(
-                  "px-2 xs:px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[11px] xs:text-xs sm:text-sm font-semibold transition-colors inline-flex items-center whitespace-nowrap",
+                  "px-3 py-1.5 rounded-full text-xs sm:text-sm font-semibold transition-colors inline-flex items-center whitespace-nowrap",
                   pathname === "/about"
-                    ? "bg-primary/10 text-primary font-bold"
+                    ? "bg-primary/10 text-primary font-bold shadow-2xs"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                 )}
               >
@@ -146,12 +144,10 @@ export function Header() {
               </Link>
             </nav>
 
-            {/* Right: Actions (Theme Toggle + User / Auth Menu, Login HIDDEN on phone) */}
-            <div className="flex items-center gap-1 xs:gap-1.5 sm:gap-2.5 shrink-0 z-10 ml-auto md:ml-0">
-              {/* Theme Toggle: Visible on all devices */}
+            {/* Right: Actions (Theme Toggle + User / Auth Menu / Login) */}
+            <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
               <ThemeToggle />
 
-              {/* User / Auth Menu */}
               {!loading && (
                 <>
                   {user ? (
@@ -166,7 +162,7 @@ export function Header() {
                           <div className="h-5 w-5 rounded-full bg-primary/15 text-primary flex items-center justify-center font-bold text-xs">
                             {user.name ? user.name.charAt(0).toUpperCase() : "U"}
                           </div>
-                          <span className="max-w-17.5 xs:max-w-25 sm:max-w-32.5 truncate hidden xs:inline-block">
+                          <span className="max-w-16 xs:max-w-24 sm:max-w-32 truncate hidden xs:inline-block">
                             {user.name || "User"}
                           </span>
                         </Button>
@@ -210,25 +206,55 @@ export function Header() {
                       </DropdownMenuContent>
                     </DropdownMenu>
                   ) : (
-                    /* Login button: HIDDEN ON PHONE! Only visible on sm+ */
-                    <div className="hidden sm:flex items-center gap-1.5">
-                      <Button
-                        asChild
-                        variant="outline"
-                        size="sm"
-                        className="h-8 sm:h-9 px-3 rounded-full border-border/80 hover:border-primary/50 text-xs sm:text-sm font-medium gap-1.5 shadow-2xs"
-                      >
-                        <Link href="/login">
-                          <LogIn className="h-3.5 w-3.5 text-primary" />
-                          <span>Login</span>
-                        </Link>
-                      </Button>
-                    </div>
+                    /* Login button: VISIBLE & RELAXED ON ALL DEVICES */
+                    <Button
+                      asChild
+                      variant="outline"
+                      size="sm"
+                      className="h-8 sm:h-9 px-2.5 xs:px-3 rounded-full border-border/80 hover:border-primary/50 text-xs sm:text-sm font-semibold gap-1.5 shadow-2xs bg-card/60 hover:bg-primary/10 hover:text-primary transition-all active:scale-95 cursor-pointer"
+                    >
+                      <Link href="/login" aria-label="Sign in to platform">
+                        <LogIn className="h-3.5 w-3.5 text-primary shrink-0" />
+                        <span>Login</span>
+                      </Link>
+                    </Button>
                   )}
                 </>
               )}
             </div>
           </div>
+
+          {/* Mobile Secondary Navigation Row: Dedicated, relaxed space for Leaderboard, Winners, and About Us */}
+          <nav
+            className="flex md:hidden items-center justify-center gap-1.5 xs:gap-3 py-1.5 border-t border-border/40 w-full overflow-x-auto no-scrollbar"
+            aria-label="Mobile Navigation"
+          >
+            <Link
+              href="/"
+              className={cn(
+                "px-3 py-1.5 rounded-full text-xs font-semibold transition-all inline-flex items-center justify-center whitespace-nowrap min-h-8.5",
+                pathname === "/"
+                  ? "bg-primary text-primary-foreground shadow-2xs font-bold"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+              )}
+            >
+              Leaderboard
+            </Link>
+
+            <WinnersLink showOnMobile={true} initialVisible={winnersPageVisible} />
+
+            <Link
+              href="/about"
+              className={cn(
+                "px-3 py-1.5 rounded-full text-xs font-semibold transition-all inline-flex items-center justify-center whitespace-nowrap min-h-8.5",
+                pathname === "/about"
+                  ? "bg-primary text-primary-foreground shadow-2xs font-bold"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+              )}
+            >
+              About Us
+            </Link>
+          </nav>
         </div>
       </m.header>
     </LazyMotionProvider>

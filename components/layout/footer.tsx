@@ -44,6 +44,8 @@ export function Footer() {
                 alt="Rafic Hariri High School Logo"
                 width={120}
                 height={54}
+                loading="eager"
+                priority
                 className="h-8 xs:h-9 sm:h-11 w-auto object-contain opacity-80 group-hover:opacity-100 transition-opacity drop-shadow-2xs"
               />
             </a>
@@ -54,6 +56,8 @@ export function Footer() {
                 alt="Rafic Hariri Technical Institute Logo"
                 width={120}
                 height={54}
+                loading="eager"
+                priority
                 className="h-8 xs:h-9 sm:h-11 w-auto object-contain opacity-80 hover:opacity-100 transition-opacity drop-shadow-2xs"
               />
             </div>
@@ -64,6 +68,8 @@ export function Footer() {
                 alt="Eco Champ Logo"
                 width={120}
                 height={54}
+                loading="eager"
+                priority
                 className="h-8 xs:h-9 sm:h-11 w-auto object-contain opacity-80 hover:opacity-100 transition-opacity drop-shadow-2xs"
               />
             </div>

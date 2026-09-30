@@ -25,7 +25,11 @@ import {
   ListOrdered,
   Award,
 } from "lucide-react"
-import { getWinnersPageVisibility } from "@/app/actions/winners-page-actions"
+import {
+  setCachedWinnersVisibility,
+  fetchWinnersVisibility,
+  onWinnersVisibilityChange,
+} from "@/lib/winners-visibility"
 
 interface LeaderboardViewProps {
   leaderboard: ClassroomScore[]
@@ -38,7 +42,7 @@ export function LeaderboardView({
   leaderboard,
   calculationMode,
   winnerRevealMode,
-  winnersPageVisible = true,
+  winnersPageVisible = false,
 }: LeaderboardViewProps) {
   const [isWinnersVisible, setIsWinnersVisible] = useState(winnersPageVisible)
   const [activeDivision, setActiveDivision] = useState<string>("Pre-School")
@@ -46,18 +50,25 @@ export function LeaderboardView({
   const [viewMode, setViewMode] = useState<"podium" | "list">("podium")
 
   useEffect(() => {
-    let isMounted = true
-    async function checkVisibility() {
-      const result = await getWinnersPageVisibility()
-      if (isMounted && result.success && typeof result.visible === "boolean") {
-        setIsWinnersVisible(result.visible)
-      }
+    if (typeof winnersPageVisible === "boolean") {
+      setCachedWinnersVisibility(winnersPageVisible)
+      setIsWinnersVisible(winnersPageVisible)
     }
-    void checkVisibility()
+
+    const unsubscribe = onWinnersVisibilityChange((next) => {
+      setIsWinnersVisible(next)
+    })
+
+    if (typeof winnersPageVisible !== "boolean") {
+      void fetchWinnersVisibility().then((res) => {
+        setIsWinnersVisible(res)
+      })
+    }
+
     return () => {
-      isMounted = false
+      unsubscribe()
     }
-  }, [])
+  }, [winnersPageVisible])
 
 
   // Count per division
@@ -88,13 +99,15 @@ export function LeaderboardView({
 
   return (
     <LazyMotionProvider>
-      <div className="min-h-screen bg-linear-to-b from-background via-background to-primary/5 pb-20 relative">
-        {/* Ambient Top Glow Orbs */}
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl pointer-events-none -z-10" />
-        <div className="absolute top-20 right-1/4 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none -z-10" />
+      <div className="min-h-screen bg-linear-to-b from-background via-background to-primary/5 pb-20 relative overflow-x-clip">
+        {/* Ambient Top Glow Orbs - Contained to prevent horizontal expansion */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none -z-10">
+          <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl" />
+          <div className="absolute top-20 right-1/4 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl" />
+        </div>
 
         {/* Hero Section */}
-        <div className="container mx-auto px-4 pt-10 pb-6 relative overflow-hidden">
+        <div className="container mx-auto px-3 sm:px-6 pt-6 sm:pt-10 pb-6 relative">
           <m.div
             className="text-center mb-8 relative z-10 max-w-3xl mx-auto"
             initial={{ opacity: 0, y: 16 }}
@@ -115,7 +128,6 @@ export function LeaderboardView({
             <p className="text-sm xs:text-base sm:text-lg text-muted-foreground max-w-xl mx-auto font-medium leading-relaxed px-2">
               Celebrating daily environmental leadership, cleanliness, and eco-conscious habits across Rafic Hariri High School.
             </p>
-
 
             {/* Prominent Winners Transfer Button / Banner */}
             {isWinnersVisible && (
@@ -159,15 +171,15 @@ export function LeaderboardView({
               className="w-full max-w-4xl mx-auto mb-16 relative z-10"
             >
               {/* Division Navigation Tabs (Sticky) */}
-              <div className="sticky top-(--app-header-height) z-40 -mx-4 px-4 pb-3 pt-2 bg-background/85 dark:bg-background/90 backdrop-blur-md border-b border-border/40 mb-6 transition-all duration-200">
-                <div className="relative max-w-4xl mx-auto">
+              <div className="sticky top-(--app-header-height) z-40 pb-3 pt-2 bg-background/90 dark:bg-background/95 backdrop-blur-md border-b border-border/40 mb-6 transition-all duration-200">
+                <div className="relative max-w-4xl mx-auto px-1 sm:px-0">
                   <div className="flex justify-start sm:justify-center overflow-x-auto pb-1 no-scrollbar snap-x snap-mandatory scroll-smooth">
                     <TabsList className="inline-flex h-auto p-1 bg-muted/70 dark:bg-card/70 backdrop-blur-sm rounded-full border border-border/60 shadow-xs min-w-max gap-1">
                       {DIVISION_OPTIONS.map((option) => (
                         <TabsTrigger
                           key={option.value}
                           value={option.value}
-                          className="rounded-full px-3.5 xs:px-4 py-2 min-h-11 text-xs sm:text-sm font-semibold transition-all data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md snap-center flex items-center justify-center gap-1.5 cursor-pointer touch-manipulation"
+                          className="rounded-full px-3 xs:px-3.5 sm:px-4 py-1.5 sm:py-2 min-h-9.5 sm:min-h-11 text-xs sm:text-sm font-semibold transition-all data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md snap-center flex items-center justify-center gap-1.5 cursor-pointer touch-manipulation"
                         >
                           {getDivisionIcon(option.value)}
                           <span>{option.label}</span>
@@ -196,7 +208,7 @@ export function LeaderboardView({
                   {searchQuery && (
                     <button
                       onClick={() => setSearchQuery("")}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5 rounded-full"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5 rounded-full cursor-pointer"
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
@@ -204,27 +216,27 @@ export function LeaderboardView({
                 </div>
 
                 {/* View Switcher: Podium vs List */}
-                <div className="flex items-center gap-1 self-end sm:self-auto p-1 bg-muted/60 dark:bg-card/70 rounded-full border border-border/60 shadow-2xs">
+                <div className="flex items-center justify-center w-full sm:w-auto p-1 bg-muted/60 dark:bg-card/70 rounded-full border border-border/60 shadow-2xs">
                   <button
                     onClick={() => setViewMode("podium")}
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
+                    className={`flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
                       viewMode === "podium"
                         ? "bg-primary text-primary-foreground shadow-xs"
                         : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
-                    <Trophy className="w-3.5 h-3.5" />
+                    <Trophy className="w-3.5 h-3.5 shrink-0" />
                     <span>Podium Showcase</span>
                   </button>
                   <button
                     onClick={() => setViewMode("list")}
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
+                    className={`flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
                       viewMode === "list"
                         ? "bg-primary text-primary-foreground shadow-xs"
                         : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
-                    <ListOrdered className="w-3.5 h-3.5" />
+                    <ListOrdered className="w-3.5 h-3.5 shrink-0" />
                     <span>Full List</span>
                   </button>
                 </div>

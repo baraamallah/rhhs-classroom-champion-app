@@ -4,9 +4,12 @@
   "private": true,
   "scripts": {
     "build": "next build",
-    "dev": "next dev",
+    "dev": "node scripts/show-qr.js && next dev -H 0.0.0.0",
+    "dev:plain": "next dev -H 0.0.0.0",
     "lint": "eslint .",
-    "start": "next start"
+    "start": "node scripts/show-qr.js && next start -H 0.0.0.0",
+    "start:plain": "next start -H 0.0.0.0",
+    "qr": "node scripts/show-qr.js"
   },
   "dependencies": {
     "@emotion/is-prop-valid": "latest",
@@ -78,6 +81,7 @@
     "eslint": "^9.39.5",
     "eslint-config-next": "^16.2.6",
     "postcss": "^8.5.15",
+    "qrcode-terminal": "^0.12.0",
     "tailwindcss": "^4.1.9",
     "tw-animate-css": "1.3.3",
     "typescript": "^6.0.3"

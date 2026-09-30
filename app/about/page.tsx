@@ -156,47 +156,47 @@ function MissionSection() {
 }
 
 function HowItWorksSection() {
-    return (
-      <div className="mb-24 max-w-5xl mx-auto">
-        <div className="text-center mb-12">
-          <div className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-primary mb-2">
-            <ShieldCheck className="h-3.5 w-3.5" />
-            <span>Operational Process</span>
-          </div>
-          <h2 className="text-2xl xs:text-3xl sm:text-4xl font-black tracking-tight text-foreground">
-            How The System Works
-          </h2>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-1 max-w-md mx-auto">
-            An objective, closed-loop evaluation cycle from on-site visit to award ceremony.
-          </p>
+  return (
+    <div className="mb-24 max-w-5xl mx-auto">
+      <div className="text-center mb-12">
+        <div className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-primary mb-2">
+          <ShieldCheck className="h-3.5 w-3.5" />
+          <span>Operational Process</span>
         </div>
-
-        <div className="grid md:grid-cols-3 gap-6">
-          {appSteps.map((card, index) => (
-            <m.div
-              key={card.title}
-              className="relative bg-card/80 dark:bg-card/50 backdrop-blur-md border border-border/70 p-4 xs:p-5 sm:p-6 rounded-2xl xs:rounded-3xl shadow-xs hover:shadow-md hover:border-primary/50 transition-all duration-300 group"
-              initial={{ opacity: 0, y: 15 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: index * 0.1 }}
-            >
-              <div className="flex items-center justify-between mb-5">
-                <div className="h-11 w-11 bg-primary/10 group-hover:bg-primary/20 rounded-2xl flex items-center justify-center text-primary transition-colors">
-                  <card.icon className="h-5 w-5" />
-                </div>
-                <span className="text-2xl font-black text-muted-foreground/30 group-hover:text-primary/50 transition-colors">
-                  {card.step}
-                </span>
-              </div>
-              <h3 className="text-base font-bold text-foreground mb-2">{card.title}</h3>
-              <p className="text-xs text-muted-foreground leading-relaxed">{card.description}</p>
-            </m.div>
-          ))}
-        </div>
+        <h2 className="text-2xl xs:text-3xl sm:text-4xl font-black tracking-tight text-foreground">
+          How The System Works
+        </h2>
+        <p className="text-xs sm:text-sm text-muted-foreground mt-1 max-w-md mx-auto">
+          An objective, closed-loop evaluation cycle from on-site visit to award ceremony.
+        </p>
       </div>
-    )
-  }
+
+      <div className="grid md:grid-cols-3 gap-6">
+        {appSteps.map((card, index) => (
+          <m.div
+            key={card.title}
+            className="relative bg-card/80 dark:bg-card/50 backdrop-blur-md border border-border/70 p-4 xs:p-5 sm:p-6 rounded-2xl xs:rounded-3xl shadow-xs hover:shadow-md hover:border-primary/50 transition-all duration-300 group"
+            initial={{ opacity: 0, y: 15 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: index * 0.1 }}
+          >
+            <div className="flex items-center justify-between mb-5">
+              <div className="h-11 w-11 bg-primary/10 group-hover:bg-primary/20 rounded-2xl flex items-center justify-center text-primary transition-colors">
+                <card.icon className="h-5 w-5" />
+              </div>
+              <span className="text-2xl font-black text-muted-foreground/30 group-hover:text-primary/50 transition-colors">
+                {card.step}
+              </span>
+            </div>
+            <h3 className="text-base font-bold text-foreground mb-2">{card.title}</h3>
+            <p className="text-xs text-muted-foreground leading-relaxed">{card.description}</p>
+          </m.div>
+        ))}
+      </div>
+    </div>
+  )
+}
 
 function ScoringRulesSection() {
   return (
@@ -561,11 +561,10 @@ function TeamDropdown({
       >
         <div className="flex items-center gap-3">
           <div
-            className={`h-10 w-10 rounded-2xl flex items-center justify-center shrink-0 transition-transform ${
-              isGreen
-                ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
-                : "bg-primary/15 text-primary border border-primary/30"
-            }`}
+            className={`h-10 w-10 rounded-2xl flex items-center justify-center shrink-0 transition-transform ${isGreen
+              ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
+              : "bg-primary/15 text-primary border border-primary/30"
+              }`}
           >
             {isGreen ? <LeafIcon className="h-5 w-5" /> : <Code2 className="h-5 w-5" />}
           </div>
@@ -577,18 +576,16 @@ function TeamDropdown({
 
         <div className="flex items-center gap-2 shrink-0">
           <span
-            className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${
-              isGreen
-                ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20"
-                : "bg-primary/10 text-primary border border-primary/20"
-            }`}
+            className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${isGreen
+              ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20"
+              : "bg-primary/10 text-primary border border-primary/20"
+              }`}
           >
             {members.length} {members.length === 1 ? "Member" : "Members"}
           </span>
           <div
-            className={`h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground transition-transform duration-300 ${
-              isOpen ? "rotate-180 text-foreground bg-muted" : "bg-muted/60"
-            }`}
+            className={`h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground transition-transform duration-300 ${isOpen ? "rotate-180 text-foreground bg-muted" : "bg-muted/60"
+              }`}
           >
             <ChevronDown className="h-4 w-4" />
           </div>
@@ -618,11 +615,10 @@ function TeamDropdown({
                 >
                   <div className="flex items-center gap-3">
                     <div
-                      className={`h-9 w-9 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${
-                        isGreen
-                          ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30"
-                          : "bg-primary/15 text-primary border border-primary/30"
-                      }`}
+                      className={`h-9 w-9 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${isGreen
+                        ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30"
+                        : "bg-primary/15 text-primary border border-primary/30"
+                        }`}
                     >
                       {member.initials}
                     </div>
