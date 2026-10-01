@@ -17,11 +17,13 @@ export function WinnersLink({
   showOnMobile = true,
   variant = "pill",
   initialVisible,
+  onClick,
 }: {
   className?: string
   showOnMobile?: boolean
   variant?: "pill" | "text"
   initialVisible?: boolean
+  onClick?: () => void
 }) {
   const pathname = usePathname()
   const isActive = pathname === "/winners"
@@ -66,6 +68,7 @@ export function WinnersLink({
     return (
       <Link
         href="/winners"
+        onClick={onClick}
         className={cn(
           "text-xs sm:text-sm font-medium transition-colors flex items-center gap-1.5",
           isActive ? "text-amber-600 dark:text-amber-400 font-bold" : "text-muted-foreground hover:text-foreground",
@@ -82,6 +85,7 @@ export function WinnersLink({
   return (
     <Link
       href="/winners"
+      onClick={onClick}
       aria-label="View Monthly Champions and Winners"
       className={cn(
         "group relative inline-flex items-center justify-center gap-1.5 px-2.5 xs:px-3 sm:px-3.5 py-1.5 min-h-8.5 sm:min-h-9 text-xs sm:text-sm font-semibold rounded-full border transition-all duration-200 active:scale-95 shrink-0 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary",

@@ -74,28 +74,25 @@ export function AdminSidebar({ activeTab, onSelectTab, userRole }: AdminSidebarP
       {/* Mobile bottom navigation: optimized for daily workflow. */}
       <nav
         aria-label="Admin navigation"
-        className="lg:hidden fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 backdrop-blur-lg px-2 pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] pt-2 shadow-[0_-8px_24px_rgba(15,23,42,0.08)]"
+        className="lg:hidden fixed inset-x-0 bottom-0 z-50 border-t border-border bg-card/95 backdrop-blur-lg px-2 pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] pt-2 shadow-[0_-8px_24px_rgba(15,23,42,0.08)] pointer-events-auto"
       >
         <div className={`mx-auto grid max-w-sm md:max-w-md ${isStats ? "grid-cols-3" : "grid-cols-4"} gap-1`}>
           {mobilePrimaryItems.map((item) => {
             const Icon = item.icon
             const isActive = activeTab === item.id
             return (
-              <Link
+              <button
                 key={item.id}
-                href={`/admin/${item.id}`}
+                type="button"
                 aria-current={isActive ? "page" : undefined}
-                onClick={(e) => {
-                  e.preventDefault()
-                  onSelectTab(item.id)
-                }}
-                className={`flex min-h-13 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[10px] font-semibold transition-colors ${
-                  isActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                onClick={() => onSelectTab(item.id)}
+                className={`flex min-h-13 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[10px] font-semibold transition-colors cursor-pointer select-none touch-manipulation ${
+                  isActive ? "bg-primary/10 text-primary font-bold" : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
                 }`}
               >
                 <Icon className="h-5 w-5" />
                 <span className="max-w-full truncate">{item.label.split(" ")[0]}</span>
-              </Link>
+              </button>
             )
           })}
 
@@ -119,21 +116,20 @@ export function AdminSidebar({ activeTab, onSelectTab, userRole }: AdminSidebarP
                     const Icon = item.icon
                     const isActive = activeTab === item.id
                     return (
-                      <Link
+                      <button
                         key={item.id}
-                        href={`/admin/${item.id}`}
-                        onClick={(e) => {
-                          e.preventDefault()
+                        type="button"
+                        onClick={() => {
                           onSelectTab(item.id)
                           setMobileOpen(false)
                         }}
-                        className={`flex min-h-11 items-center gap-2.5 xs:gap-3 rounded-xl border px-3 py-2.5 text-left text-xs xs:text-sm font-medium transition-colors ${
+                        className={`flex min-h-11 items-center gap-2.5 xs:gap-3 rounded-xl border px-3 py-2.5 text-left text-xs xs:text-sm font-medium transition-colors cursor-pointer touch-manipulation ${
                           isActive ? "border-primary bg-primary/10 text-primary font-semibold" : "border-border hover:bg-muted/60"
                         }`}
                       >
                         <Icon className="h-4 w-4 shrink-0" />
                         <span className="truncate">{item.label}</span>
-                      </Link>
+                      </button>
                     )
                   })}
                 </div>
@@ -152,7 +148,7 @@ export function AdminSidebar({ activeTab, onSelectTab, userRole }: AdminSidebarP
       </nav>
 
       {/* Desktop Persistent Sidebar */}
-      <aside className="hidden lg:block w-64 shrink-0">
+      <aside className="hidden lg:block w-64 shrink-0 self-stretch">
         <div className="sticky top-20 bg-card/60 backdrop-blur-md border border-border/80 rounded-2xl p-3 shadow-xs space-y-4">
           <div className="px-3 py-1">
             <p className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">
@@ -166,15 +162,14 @@ export function AdminSidebar({ activeTab, onSelectTab, userRole }: AdminSidebarP
               const isActive = activeTab === item.id
 
               return (
-                <Link
+                <button
                   key={item.id}
-                  href={`/admin/${item.id}`}
-                  onClick={(e) => {
-                    e.preventDefault()
+                  type="button"
+                  onClick={() => {
                     onSelectTab(item.id)
                     setMobileOpen(false)
                   }}
-                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-medium transition-all text-left select-none ${
+                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-medium transition-all text-left select-none cursor-pointer ${
                     isActive
                       ? "bg-primary text-primary-foreground font-semibold shadow-xs"
                       : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
@@ -193,7 +188,7 @@ export function AdminSidebar({ activeTab, onSelectTab, userRole }: AdminSidebarP
                       {item.badge}
                     </span>
                   )}
-                </Link>
+                </button>
               )
             })}
           </div>

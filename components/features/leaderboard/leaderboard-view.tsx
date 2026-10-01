@@ -170,8 +170,8 @@ export function LeaderboardView({
               onValueChange={setActiveDivision}
               className="w-full max-w-4xl mx-auto mb-16 relative z-10"
             >
-              {/* Division Navigation Tabs (Sticky) */}
-              <div className="sticky top-(--app-header-height) z-40 pb-3 pt-2 bg-background/90 dark:bg-background/95 backdrop-blur-md border-b border-border/40 mb-6 transition-all duration-200">
+              {/* Division Navigation Tabs (Sticky, reactive to header autohide) */}
+              <div className="sticky top-(--header-top-offset) z-30 pb-3 pt-2 bg-background/90 dark:bg-background/95 backdrop-blur-md border-b border-border/40 mb-6 transition-[top] duration-300 ease-in-out">
                 <div className="relative max-w-4xl mx-auto px-1 sm:px-0">
                   <div className="flex justify-start sm:justify-center overflow-x-auto pb-1 no-scrollbar snap-x snap-mandatory scroll-smooth">
                     <TabsList className="inline-flex h-auto p-1 bg-muted/70 dark:bg-card/70 backdrop-blur-sm rounded-full border border-border/60 shadow-xs min-w-max gap-1">

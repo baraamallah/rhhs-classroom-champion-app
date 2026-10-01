@@ -349,17 +349,20 @@ function useSubmissionTrackingContent({ currentUser }: SubmissionTrackingProps) 
       const workbook = XLSX.utils.book_new()
 
       if (viewType === "daily") {
+        const submittedList = (submissionStats as any)?.submitted || []
+        const notSubmittedList = (submissionStats as any)?.notSubmitted || []
+
         const data = [
           ["Date", format(date, "PPPP")],
           ["Total Classrooms", filteredClassrooms.length],
-          ["Submitted", (submissionStats as any).submitted.length],
-          ["Not Submitted", (submissionStats as any).notSubmitted.length],
+          ["Submitted", submittedList.length],
+          ["Not Submitted", notSubmittedList.length],
           [],
           ["Status", "Classroom", "Grade", "Division", "Supervisor(s)", "Evaluation Time", "Score"]
         ]
 
         // Submitted
-        ;(submissionStats as any).submitted.forEach((c: Classroom) => {
+        submittedList.forEach((c: Classroom) => {
           const eval_ = evaluations.find(e => e.classroom_id === c.id)
           data.push([
             "Submitted",
@@ -373,7 +376,7 @@ function useSubmissionTrackingContent({ currentUser }: SubmissionTrackingProps) 
         })
 
         // Not Submitted
-        ;(submissionStats as any).notSubmitted.forEach((c: Classroom) => {
+        notSubmittedList.forEach((c: Classroom) => {
           data.push([
             "MISSING",
             c.name,
@@ -589,7 +592,11 @@ function useSubmissionTrackingContent({ currentUser }: SubmissionTrackingProps) 
                     className="pl-8"
                     value={format(date, viewType === "monthly" ? "yyyy-MM" : "yyyy-MM-dd")}
                     onChange={(e) => {
-                      const newDate = new Date(e.target.value)
+                      if (!e.target.value) return
+                      const val = e.target.value
+                      const newDate = viewType === "monthly"
+                        ? new Date(`${val}-01T12:00:00`)
+                        : new Date(`${val}T12:00:00`)
                       if (!isNaN(newDate.getTime())) {
                         setDate(newDate)
                       }
@@ -697,8 +704,8 @@ function useSubmissionTrackingContent({ currentUser }: SubmissionTrackingProps) 
                     </p>
                     <p className="text-2xl font-bold">
                       {viewType === "daily"
-                        ? (submissionStats as any).submitted.length
-                        : `${(submissionStats as any).avgRate.toFixed(1)}%`}
+                        ? ((submissionStats as any)?.submitted?.length ?? 0)
+                        : `${((submissionStats as any)?.avgRate ?? 0).toFixed(1)}%`}
                     </p>
                   </div>
                   <CheckCircle2 className="h-8 w-8 text-green-500 opacity-20" />
@@ -710,15 +717,15 @@ function useSubmissionTrackingContent({ currentUser }: SubmissionTrackingProps) 
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs font-semibold text-muted-foreground">
-                      {viewType === "daily" ? ((submissionStats as any).isNonWorkingDay ? "Status" : "Not Submitted") : "Target School Days"}
+                      {viewType === "daily" ? ((submissionStats as any)?.isNonWorkingDay ? "Status" : "Not Submitted") : "Target School Days"}
                     </p>
                     <p className="text-2xl font-bold">
                       {viewType === "daily"
-                        ? ((submissionStats as any).isNonWorkingDay ? "Excused" : (submissionStats as any).notSubmitted.length)
-                        : (submissionStats as any).classroomPerformance[0]?.totalDays || 0}
+                        ? ((submissionStats as any)?.isNonWorkingDay ? "Excused" : ((submissionStats as any)?.notSubmitted?.length ?? 0))
+                        : ((submissionStats as any)?.classroomPerformance?.[0]?.totalDays || 0)}
                     </p>
                   </div>
-                  {viewType === "daily" && (submissionStats as any).isNonWorkingDay ? (
+                  {viewType === "daily" && (submissionStats as any)?.isNonWorkingDay ? (
                     <CalendarOff className="h-8 w-8 text-blue-500 opacity-40" />
                   ) : (
                     <XCircle className="h-8 w-8 text-destructive opacity-20" />
@@ -729,7 +736,7 @@ function useSubmissionTrackingContent({ currentUser }: SubmissionTrackingProps) 
           </div>
 
           {/* Calendar Synced Notice */}
-          {(submissionStats as any).excludedExceptionsCount > 0 && viewType !== "daily" && (
+          {((submissionStats as any)?.excludedExceptionsCount ?? 0) > 0 && viewType !== "daily" && (
             <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-700 dark:text-blue-300 text-xs">
               <Calendar className="h-4 w-4 shrink-0" />
               <span>
@@ -778,10 +785,10 @@ function useSubmissionTrackingContent({ currentUser }: SubmissionTrackingProps) 
                   <div className="space-y-3">
                     <h3 className="text-sm font-semibold text-green-600 flex items-center gap-2">
                       <CheckCircle2 className="h-4 w-4" />
-                      Submitted ({(submissionStats as any).submitted.length})
+                      Submitted ({((submissionStats as any)?.submitted?.length ?? 0)})
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {(submissionStats as any).submitted
+                      {(((submissionStats as any)?.submitted as Classroom[]) || [])
                         .map((c: Classroom) => {
                           const eval_ = evaluations.find(e => e.classroom_id === c.id)
                           return { classroom: c, evaluation: eval_ }
@@ -818,14 +825,14 @@ function useSubmissionTrackingContent({ currentUser }: SubmissionTrackingProps) 
                   </div>
 
                   {/* Missing List - High Priority */}
-                  {!(submissionStats as any).isNonWorkingDay && (submissionStats as any).notSubmitted.length > 0 && (
+                  {!(submissionStats as any)?.isNonWorkingDay && ((submissionStats as any)?.notSubmitted?.length ?? 0) > 0 && (
                     <div className="space-y-3">
                       <h3 className="text-sm font-semibold text-destructive flex items-center gap-2">
                         <XCircle className="h-4 w-4" />
-                        Not Submitted ({(submissionStats as any).notSubmitted.length})
+                        Not Submitted ({((submissionStats as any)?.notSubmitted?.length ?? 0)})
                       </h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {(submissionStats as any).notSubmitted.map((c: Classroom) => (
+                        {(((submissionStats as any)?.notSubmitted as Classroom[]) || []).map((c: Classroom) => (
                           <div key={c.id} className="p-3 rounded-lg border border-destructive/20 bg-destructive/5 flex items-center justify-between transition-[background-color,border-color,color,box-shadow,opacity,transform] hover:bg-destructive/10">
                             <div>
                               <p className="font-semibold text-sm">{c.name}</p>

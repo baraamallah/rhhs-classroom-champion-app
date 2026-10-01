@@ -11,8 +11,28 @@ import type { ChecklistItem, User } from "@/lib/types"
 import { getChecklistItems, addChecklistItem, updateChecklistItem, deleteChecklistItem } from "@/lib/supabase-data"
 import { getAllUsers } from "@/app/actions/user-actions"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Pencil, Trash2, Plus, MoreVertical, LayoutList, GripVertical, CheckCircle2, AlertCircle } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
+
+export const STANDARD_CATEGORIES = [
+  "General",
+  "Pre-School",
+  "Elementary School",
+  "Middle School",
+  "High School",
+  "Technical Institute",
+  "Energy Conservation",
+  "Waste & Recycling",
+  "Cleanliness",
+  "Green Environment",
+] as const
 
 interface ChecklistManagerProps {
   currentUser: User
@@ -75,7 +95,23 @@ export function ChecklistManager({ currentUser }: ChecklistManagerProps) {
   }, [])
 
   const handleSave = async () => {
-    if (!formData || !formData.title || !formData.title.trim()) return
+    if (!formData || !formData.title || !formData.title.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Criterion title is required.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (!formData.points || formData.points <= 0) {
+      toast({
+        title: "Validation Error",
+        description: "Points value must be at least 1.",
+        variant: "destructive",
+      })
+      return
+    }
 
     try {
       const result = await addChecklistItem(
@@ -121,7 +157,24 @@ export function ChecklistManager({ currentUser }: ChecklistManagerProps) {
   }
 
   const handleUpdate = async () => {
-    if (!currentItem || !formData || !formData.title || !formData.title.trim()) return
+    if (!currentItem) return
+    if (!formData || !formData.title || !formData.title.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Criterion title is required.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (!formData.points || formData.points <= 0) {
+      toast({
+        title: "Validation Error",
+        description: "Points value must be at least 1.",
+        variant: "destructive",
+      })
+      return
+    }
 
     try {
       const result = await updateChecklistItem(
@@ -292,13 +345,38 @@ export function ChecklistManager({ currentUser }: ChecklistManagerProps) {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="category" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Category</Label>
-                  <Input
-                    id="category"
-                    value={formData.category}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    placeholder="e.g., Energy Conservation"
-                    className="bg-background"
-                  />
+                  <Select
+                    value={STANDARD_CATEGORIES.includes(formData.category as any) ? formData.category : "Custom"}
+                    onValueChange={(val) => {
+                      if (val === "Custom") {
+                        setFormData({ ...formData, category: "" })
+                      } else {
+                        setFormData({ ...formData, category: val })
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="w-full bg-background cursor-pointer">
+                      <SelectValue placeholder="Select category..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {STANDARD_CATEGORIES.map((cat) => (
+                        <SelectItem key={cat} value={cat}>
+                          {cat === "General" ? "General (All Classrooms)" : cat}
+                        </SelectItem>
+                      ))}
+                      <SelectItem value="Custom">Custom / Other Category...</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {(!STANDARD_CATEGORIES.includes(formData.category as any) || formData.category === "") && (
+                    <Input
+                      id="category-custom"
+                      value={formData.category}
+                      onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                      placeholder="Type custom category name..."
+                      className="bg-background mt-2"
+                      autoFocus
+                    />
+                  )}
                 </div>
                 <div className="md:col-span-2 space-y-2">
                   <Label htmlFor="description" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Description & Instructions</Label>
@@ -343,7 +421,36 @@ export function ChecklistManager({ currentUser }: ChecklistManagerProps) {
                 </div>
               </div>
               <div className="space-y-3">
-                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Assign to Supervisors</Label>
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    Assign to Supervisors ({formData.assignedSupervisorIds.length}/{supervisors.length})
+                  </Label>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setFormData({ ...formData, assignedSupervisorIds: supervisors.map(s => s.id) })}
+                      className="h-6 text-[11px] px-2 rounded-md cursor-pointer"
+                    >
+                      Select All
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setFormData({ ...formData, assignedSupervisorIds: [] })}
+                      className="h-6 text-[11px] px-2 rounded-md cursor-pointer"
+                    >
+                      Clear All
+                    </Button>
+                  </div>
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  {formData.assignedSupervisorIds.length === 0
+                    ? "✨ No supervisors selected: this criterion will be visible to all supervisors."
+                    : `Assigned to ${formData.assignedSupervisorIds.length} supervisor${formData.assignedSupervisorIds.length !== 1 ? "s" : ""}. Only assigned supervisors can evaluate this.`}
+                </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-48 overflow-y-auto p-4 border rounded-lg bg-background shadow-inner">
                   {supervisors.length === 0 ? (
                     <p className="text-sm text-muted-foreground col-span-full py-4 text-center">No supervisors available.</p>
@@ -425,13 +532,38 @@ export function ChecklistManager({ currentUser }: ChecklistManagerProps) {
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor={`edit-category-${item.id}`} className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Category</Label>
-                          <Input
-                            id={`edit-category-${item.id}`}
-                            value={formData.category}
-                            onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                            placeholder="e.g., energy, waste, cleanliness"
-                            className="bg-background"
-                          />
+                          <Select
+                            value={STANDARD_CATEGORIES.includes(formData.category as any) ? formData.category : "Custom"}
+                            onValueChange={(val) => {
+                              if (val === "Custom") {
+                                setFormData({ ...formData, category: "" })
+                              } else {
+                                setFormData({ ...formData, category: val })
+                              }
+                            }}
+                          >
+                            <SelectTrigger className="w-full bg-background cursor-pointer">
+                              <SelectValue placeholder="Select category..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {STANDARD_CATEGORIES.map((cat) => (
+                                <SelectItem key={cat} value={cat}>
+                                  {cat === "General" ? "General (All Classrooms)" : cat}
+                                </SelectItem>
+                              ))}
+                              <SelectItem value="Custom">Custom / Other Category...</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          {(!STANDARD_CATEGORIES.includes(formData.category as any) || formData.category === "") && (
+                            <Input
+                              id={`edit-category-custom-${item.id}`}
+                              value={formData.category}
+                              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                              placeholder="Type custom category name..."
+                              className="bg-background mt-2"
+                              autoFocus
+                            />
+                          )}
                         </div>
                         <div className="md:col-span-2 space-y-2">
                           <Label htmlFor={`edit-description-${item.id}`} className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Description & Instructions</Label>
@@ -469,7 +601,36 @@ export function ChecklistManager({ currentUser }: ChecklistManagerProps) {
                         </div>
                       </div>
                       <div className="space-y-3">
-                        <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Update Supervisor Assignments</Label>
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                          <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                            Update Supervisor Assignments ({formData.assignedSupervisorIds.length}/{supervisors.length})
+                          </Label>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setFormData({ ...formData, assignedSupervisorIds: supervisors.map(s => s.id) })}
+                              className="h-6 text-[11px] px-2 rounded-md cursor-pointer"
+                            >
+                              Select All
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setFormData({ ...formData, assignedSupervisorIds: [] })}
+                              className="h-6 text-[11px] px-2 rounded-md cursor-pointer"
+                            >
+                              Clear All
+                            </Button>
+                          </div>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground">
+                          {formData.assignedSupervisorIds.length === 0
+                            ? "✨ No supervisors selected: this criterion will be visible to all supervisors."
+                            : `Assigned to ${formData.assignedSupervisorIds.length} supervisor${formData.assignedSupervisorIds.length !== 1 ? "s" : ""}. Only assigned supervisors can evaluate this.`}
+                        </p>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-48 overflow-y-auto p-4 border rounded-lg bg-background shadow-inner">
                           {supervisors.length === 0 ? (
                             <p className="text-sm text-muted-foreground col-span-full py-4 text-center">No supervisors available.</p>

@@ -16,6 +16,15 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
   ClipboardCheck,
   Building2,
   Trophy,
@@ -29,6 +38,7 @@ import {
   Lock,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Sun,
   Check,
   CalendarOff,
@@ -56,6 +66,10 @@ function SupervisorDashboardContent({ currentUser }: SupervisorDashboardContentP
   // Backfill Modal State
   const [selectedCalendarDay, setSelectedCalendarDay] = useState<DayCalendarStatus | null>(null)
   const [isBackfillDialogOpen, setIsBackfillDialogOpen] = useState(false)
+
+  // Today's Classroom Queue Dropdown & Filter State
+  const [isQueueOpen, setIsQueueOpen] = useState(true)
+  const [queueFilter, setQueueFilter] = useState<"all" | "pending" | "done">("all")
 
   const loadData = async (monthDate: Date) => {
     if (!currentUser) return
@@ -348,106 +362,265 @@ function SupervisorDashboardContent({ currentUser }: SupervisorDashboardContentP
           </Card>
         </div>
 
-        {/* 3. TODAY'S CLASSROOM INSPECTIONS ACTION QUEUE */}
-        <Card className="rounded-2xl border-border shadow-xs overflow-hidden">
-          <CardHeader className="p-4 sm:p-5 border-b border-border/60 bg-muted/20">
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-base sm:text-lg font-bold flex items-center gap-2">
-                  <ClipboardCheck className="h-5 w-5 text-primary" /> Today&apos;s Classroom Queue
-                </CardTitle>
-                <CardDescription className="text-xs">
-                  {format(new Date(), "EEEE, MMMM d, yyyy")} &bull;{" "}
-                  {isTodayWorkingDay ? "Daily Working Inspection" : "Non-Working Day"}
-                </CardDescription>
-              </div>
-              <Badge variant="outline" className="text-xs">
-                {todayCompletedCount} / {totalAssignedCount} Done
-              </Badge>
-            </div>
-          </CardHeader>
+        {/* 3. TODAY'S CLASSROOM INSPECTIONS ACTION QUEUE (DROPDOWN COLLAPSIBLE & QUICK SELECTOR) */}
+        {(() => {
+          const pendingRooms = classrooms.filter((c) => !c.isEvaluatedToday)
+          const completedRooms = classrooms.filter((c) => c.isEvaluatedToday)
+          const displayedRooms =
+            queueFilter === "pending"
+              ? pendingRooms
+              : queueFilter === "done"
+              ? completedRooms
+              : classrooms
 
-          <CardContent className="p-3 sm:p-5">
-            {classrooms.length === 0 ? (
-              <div className="py-8 text-center text-xs text-muted-foreground">
-                No classrooms currently assigned to your supervisor account.
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {classrooms.map((room) => (
-                  <div
-                    key={room.id}
-                    className={cn(
-                      "p-3.5 rounded-2xl border transition-all flex flex-col justify-between gap-3 shadow-2xs",
-                      room.isEvaluatedToday
-                        ? "bg-card/70 border-border/70"
-                        : "bg-card border-primary/30 hover:border-primary/60 hover:shadow-xs"
-                    )}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="font-bold text-sm sm:text-base text-foreground truncate">
-                          {room.name}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Grade {room.grade} {room.division ? `• ${room.division}` : ""}
-                        </p>
-                      </div>
-
-                      {room.isEvaluatedToday ? (
-                        <Badge
-                          variant="outline"
-                          className="bg-emerald-500/10 text-emerald-600 border-emerald-500/30 text-[10px] shrink-0"
-                        >
-                          <Lock className="h-3 w-3 mr-1" /> Locked
-                        </Badge>
-                      ) : (
-                        <Badge
-                          variant="outline"
-                          className="bg-amber-500/10 text-amber-600 border-amber-500/30 text-[10px] shrink-0"
-                        >
-                          Pending
-                        </Badge>
-                      )}
+          return (
+            <Card className="rounded-2xl border-border shadow-xs overflow-hidden transition-all">
+              {/* Dropdown Header Trigger */}
+              <CardHeader
+                onClick={() => setIsQueueOpen((prev) => !prev)}
+                className="p-4 sm:p-5 border-b border-border/60 bg-muted/20 cursor-pointer hover:bg-muted/30 transition-colors select-none"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                      <ClipboardCheck className="h-5 w-5" />
                     </div>
-
-                    <div className="pt-2 border-t border-border/60 flex items-center justify-between">
-                      {room.isEvaluatedToday ? (
-                        <div className="text-xs">
-                          <span className="font-bold text-foreground">
-                            Score: {room.todayScore} / {room.todayMaxScore}
-                          </span>
-                        </div>
-                      ) : (
-                        <span className="text-[11px] text-muted-foreground">Not submitted today</span>
-                      )}
-
-                      {room.isEvaluatedToday ? (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleStartTodayEvaluation(room.id)}
-                          className="min-h-11 px-3 text-xs rounded-xl text-muted-foreground hover:text-foreground cursor-pointer"
-                        >
-                          View Record
-                        </Button>
-                      ) : (
-                        <Button
-                          size="sm"
-                          onClick={() => handleStartTodayEvaluation(room.id)}
-                          disabled={!isTodayWorkingDay}
-                          className="min-h-11 px-3.5 text-xs rounded-xl font-bold bg-primary hover:bg-primary/90 text-primary-foreground cursor-pointer"
-                        >
-                          Inspect Room <ArrowRight className="ml-1 h-3 w-3" />
-                        </Button>
-                      )}
+                    <div className="min-w-0">
+                      <CardTitle className="text-base sm:text-lg font-bold flex items-center gap-2 truncate">
+                        Today&apos;s Classroom Queue
+                      </CardTitle>
+                      <CardDescription className="text-xs truncate">
+                        {format(new Date(), "EEEE, MMMM d, yyyy")} &bull;{" "}
+                        {isTodayWorkingDay ? "Daily Working Inspection" : "Non-Working Day"}
+                      </CardDescription>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    {todayPendingCount > 0 ? (
+                      <Badge
+                        variant="outline"
+                        className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30 text-xs font-semibold"
+                      >
+                        {todayPendingCount} Pending
+                      </Badge>
+                    ) : (
+                      <Badge
+                        variant="outline"
+                        className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 text-xs font-semibold"
+                      >
+                        All Complete ✓
+                      </Badge>
+                    )}
+                    <Badge variant="outline" className="text-xs hidden sm:inline-flex">
+                      {todayCompletedCount} / {totalAssignedCount} Done
+                    </Badge>
+                    <div
+                      className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground"
+                      aria-label={isQueueOpen ? "Collapse queue" : "Expand queue"}
+                    >
+                      <ChevronDown
+                        className={cn(
+                          "h-5 w-5 transition-transform duration-300",
+                          isQueueOpen ? "rotate-180" : "rotate-0"
+                        )}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </CardHeader>
+
+              {/* Collapsible Dropdown Content */}
+              {isQueueOpen && (
+                <CardContent className="p-3 sm:p-5 space-y-4 animate-in fade-in-50 duration-200">
+                  {classrooms.length === 0 ? (
+                    <div className="py-8 text-center text-xs text-muted-foreground">
+                      No classrooms currently assigned to your supervisor account.
+                    </div>
+                  ) : (
+                    <>
+                      {/* Top Action Bar: Quick Classroom Selector Dropdown & Filter Pills */}
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pb-3 border-b border-border/50">
+                        {/* Quick Selection Dropdown */}
+                        <div className="w-full sm:w-80">
+                          <Select
+                            onValueChange={(classroomId) => {
+                              if (classroomId) {
+                                handleStartTodayEvaluation(classroomId)
+                              }
+                            }}
+                          >
+                            <SelectTrigger className="w-full h-10 rounded-xl bg-card border-border/80 shadow-2xs font-medium text-xs sm:text-sm">
+                              <SelectValue placeholder="Quick jump to classroom..." />
+                            </SelectTrigger>
+                            <SelectContent className="max-h-80">
+                              {pendingRooms.length > 0 && (
+                                <SelectGroup>
+                                  <SelectLabel className="text-amber-600 dark:text-amber-400 font-bold text-xs">
+                                    Pending Inspection ({pendingRooms.length})
+                                  </SelectLabel>
+                                  {pendingRooms.map((room) => (
+                                    <SelectItem key={room.id} value={room.id} className="cursor-pointer">
+                                      <span className="font-semibold text-foreground">{room.name}</span>
+                                      <span className="text-xs text-muted-foreground ml-2">Grade {room.grade}</span>
+                                    </SelectItem>
+                                  ))}
+                                </SelectGroup>
+                              )}
+                              {completedRooms.length > 0 && (
+                                <SelectGroup>
+                                  <SelectLabel className="text-emerald-600 dark:text-emerald-400 font-bold text-xs mt-2">
+                                    Completed Today ({completedRooms.length})
+                                  </SelectLabel>
+                                  {completedRooms.map((room) => (
+                                    <SelectItem key={room.id} value={room.id} className="cursor-pointer">
+                                      <span className="text-foreground">{room.name}</span>
+                                      <span className="text-xs text-emerald-600 dark:text-emerald-400 ml-2 font-bold">
+                                        Score: {room.todayScore}/{room.todayMaxScore}
+                                      </span>
+                                    </SelectItem>
+                                  ))}
+                                </SelectGroup>
+                              )}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        {/* Filter Tabs / Pills */}
+                        <div className="flex items-center gap-1 bg-muted/60 p-1 rounded-xl self-start sm:self-auto">
+                          <button
+                            type="button"
+                            onClick={() => setQueueFilter("all")}
+                            className={cn(
+                              "px-3 py-1 text-xs font-semibold rounded-lg transition-colors cursor-pointer",
+                              queueFilter === "all"
+                                ? "bg-card text-foreground shadow-2xs font-bold"
+                                : "text-muted-foreground hover:text-foreground"
+                            )}
+                          >
+                            All ({classrooms.length})
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setQueueFilter("pending")}
+                            className={cn(
+                              "px-3 py-1 text-xs font-semibold rounded-lg transition-colors cursor-pointer",
+                              queueFilter === "pending"
+                                ? "bg-amber-500/20 text-amber-700 dark:text-amber-300 font-bold"
+                                : "text-muted-foreground hover:text-foreground"
+                            )}
+                          >
+                            Pending ({todayPendingCount})
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setQueueFilter("done")}
+                            className={cn(
+                              "px-3 py-1 text-xs font-semibold rounded-lg transition-colors cursor-pointer",
+                              queueFilter === "done"
+                                ? "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-bold"
+                                : "text-muted-foreground hover:text-foreground"
+                            )}
+                          >
+                            Done ({todayCompletedCount})
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Filtered Classroom Cards Grid */}
+                      {displayedRooms.length === 0 ? (
+                        <div className="py-8 text-center text-xs text-muted-foreground">
+                          {queueFilter === "pending"
+                            ? "All classrooms have been inspected today! Great work."
+                            : "No classrooms in this filter."}
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                          {displayedRooms.map((room) => (
+                            <div
+                              key={room.id}
+                              className={cn(
+                                "p-3.5 rounded-2xl border transition-all flex flex-col justify-between gap-3 shadow-2xs",
+                                room.isEvaluatedToday
+                                  ? "bg-card/70 border-border/70"
+                                  : "bg-card border-primary/30 hover:border-primary/60 hover:shadow-xs"
+                              )}
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="min-w-0">
+                                  <p className="font-bold text-sm sm:text-base text-foreground truncate">
+                                    {room.name}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    Grade {room.grade} {room.division ? `• ${room.division}` : ""}
+                                  </p>
+                                </div>
+
+                                {room.isEvaluatedToday ? (
+                                  <Badge
+                                    variant="outline"
+                                    className="bg-emerald-500/10 text-emerald-600 border-emerald-500/30 text-[10px] shrink-0"
+                                  >
+                                    <Lock className="h-3 w-3 mr-1" /> Locked
+                                  </Badge>
+                                ) : (
+                                  <Badge
+                                    variant="outline"
+                                    className="bg-amber-500/10 text-amber-600 border-amber-500/30 text-[10px] shrink-0"
+                                  >
+                                    Pending
+                                  </Badge>
+                                )}
+                              </div>
+
+                              <div className="pt-2 border-t border-border/60 flex items-center justify-between">
+                                {room.isEvaluatedToday ? (
+                                  <div className="text-xs">
+                                    <span className="font-bold text-foreground">
+                                      Score: {room.todayScore} / {room.todayMaxScore}
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <span className="text-[11px] text-muted-foreground">Not submitted today</span>
+                                )}
+
+                                {room.isEvaluatedToday ? (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      handleStartTodayEvaluation(room.id)
+                                    }}
+                                    className="min-h-11 px-3 text-xs rounded-xl text-muted-foreground hover:text-foreground cursor-pointer"
+                                  >
+                                    View Record
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      handleStartTodayEvaluation(room.id)
+                                    }}
+                                    disabled={!isTodayWorkingDay}
+                                    className="min-h-11 px-3.5 text-xs rounded-xl font-bold bg-primary hover:bg-primary/90 text-primary-foreground cursor-pointer"
+                                  >
+                                    Inspect Room <ArrowRight className="ml-1 h-3 w-3" />
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </CardContent>
+              )}
+            </Card>
+          )
+        })()}
 
         {/* 4. SUPERVISOR MONTHLY INSPECTION CALENDAR (WITH BACKFILL ABILITY) */}
         <Card className="rounded-2xl border-border shadow-xs overflow-hidden">

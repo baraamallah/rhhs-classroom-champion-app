@@ -22,7 +22,6 @@ import {
   type EvaluationUndoLog,
 } from "@/app/actions/evaluation-actions"
 import type { Evaluation, Classroom } from "@/lib/types"
-import { LazyMotionProvider } from "@/components/providers/lazy-motion-provider"
 import {
   History,
   CheckCircle2,
@@ -66,7 +65,32 @@ export function SupervisorEvaluationsHistory({ supervisorId }: SupervisorEvaluat
   // Restore State
   const [restoringId, setRestoringId] = useState<string | null>(null)
 
-  const parentRef = useRef<HTMLDivElement>(null)
+  // TanStack Virtualizer state-based ref
+  const [scrollElement, setScrollElement] = useState<HTMLDivElement | null>(null)
+
+  const safeParseDate = (dateStr?: string | null) => {
+    if (!dateStr) return new Date()
+    try {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+        const [y, m, d] = dateStr.split("-").map(Number)
+        return new Date(y, m - 1, d, 12, 0, 0)
+      }
+      const d = new Date(dateStr)
+      return isNaN(d.getTime()) ? new Date() : d
+    } catch {
+      return new Date()
+    }
+  }
+
+  const formatDateSafe = (dateStr?: string | null) => {
+    if (!dateStr) return "N/A"
+    try {
+      const d = safeParseDate(dateStr)
+      return format(d, "EEEE, MMMM d, yyyy")
+    } catch {
+      return dateStr || "N/A"
+    }
+  }
 
   // 1. Fetch active evaluations
   const fetchEvaluations = async () => {
@@ -102,24 +126,27 @@ export function SupervisorEvaluationsHistory({ supervisorId }: SupervisorEvaluat
 
   // Virtualizer for evaluation records
   const filteredEvaluations = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase()
     return evaluations.filter((e) => {
       const name = e.classroom?.name || ""
       const grade = e.classroom?.grade || ""
-      const dateStr = format(parseISO(e.evaluation_date), "MMMM d yyyy")
-      const query = searchQuery.toLowerCase()
+      const formattedDate = formatDateSafe(e.evaluation_date).toLowerCase()
       return (
+        !query ||
         name.toLowerCase().includes(query) ||
         grade.toLowerCase().includes(query) ||
-        dateStr.toLowerCase().includes(query)
+        formattedDate.includes(query) ||
+        (e.evaluation_date || "").includes(query) ||
+        e.total_score.toString() === query
       )
     })
   }, [evaluations, searchQuery])
 
   const rowVirtualizer = useVirtualizer({
     count: filteredEvaluations.length,
-    getScrollElement: () => parentRef.current,
+    getScrollElement: () => scrollElement,
     estimateSize: () => 80,
-    overscan: 4,
+    overscan: 6,
   })
 
   // Handle Undo Evaluation Action
@@ -221,7 +248,7 @@ export function SupervisorEvaluationsHistory({ supervisorId }: SupervisorEvaluat
   }
 
   return (
-    <LazyMotionProvider>
+    <>
       <Card className="rounded-2xl border-border shadow-xs overflow-hidden">
         {/* Card Header with Tabs */}
         <CardHeader className="p-4 sm:p-5 border-b border-border/60 bg-muted/20">
@@ -361,7 +388,7 @@ export function SupervisorEvaluationsHistory({ supervisorId }: SupervisorEvaluat
                 </div>
               ) : (
                 <div
-                  ref={parentRef}
+                  ref={setScrollElement}
                   className="max-h-[60dvh] sm:max-h-120 overflow-y-auto rounded-xl border border-border/70 bg-card scrollbar-thin"
                   tabIndex={0}
                   aria-label="Supervisor evaluation history list"
@@ -377,7 +404,7 @@ export function SupervisorEvaluationsHistory({ supervisorId }: SupervisorEvaluat
                       const evaluation = filteredEvaluations[virtualRow.index]
                       if (!evaluation) return null
 
-                      const evalDate = parseISO(evaluation.evaluation_date)
+                      const evalDate = safeParseDate(evaluation.evaluation_date)
                       const evaluatedToday = isToday(evalDate)
                       const percentage =
                         evaluation.max_score > 0
@@ -412,7 +439,7 @@ export function SupervisorEvaluationsHistory({ supervisorId }: SupervisorEvaluat
                             <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
                               <span className="flex items-center gap-1 font-medium">
                                 <Calendar className="h-3 w-3 text-primary" />
-                                {format(evalDate, "EEEE, MMMM d, yyyy")}
+                                {formatDateSafe(evaluation.evaluation_date)}
                               </span>
                             </div>
                           </div>
@@ -626,7 +653,7 @@ export function SupervisorEvaluationsHistory({ supervisorId }: SupervisorEvaluat
                 </div>
                 <p className="text-xs text-muted-foreground">
                   Evaluation Date:{" "}
-                  <strong>{format(parseISO(selectedEvalToUndo.evaluation_date), "EEEE, MMMM d, yyyy")}</strong>
+                  <strong>{formatDateSafe(selectedEvalToUndo.evaluation_date)}</strong>
                 </p>
                 <p className="text-[11px] text-destructive mt-1 font-medium leading-relaxed">
                   ⚠️ This classroom will be <strong>unlocked</strong> for this date, and the points will be
@@ -670,7 +697,7 @@ export function SupervisorEvaluationsHistory({ supervisorId }: SupervisorEvaluat
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </LazyMotionProvider>
+    </>
   )
 }
 

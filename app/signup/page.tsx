@@ -84,7 +84,7 @@ export default function SignUpPage() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <header className="border-b border-border bg-white dark:bg-card/80 backdrop-blur-sm h-(--app-header-height) flex items-center">
+      <header className="border-b border-border bg-white dark:bg-card/80 backdrop-blur-sm h-16 flex items-center">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between">
             <Link href="/" className="flex items-center gap-3">

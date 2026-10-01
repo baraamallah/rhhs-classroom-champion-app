@@ -37,9 +37,10 @@ function mapEvaluationRows(data: any[]): Evaluation[] {
     classroom_id: row.classroom_id,
     supervisor_id: row.supervisor_id,
     evaluation_date: row.evaluation_date,
-    items: row.items,
+    items: row.items || {},
     total_score: row.total_score,
     max_score: row.max_score,
+    notes: row.notes,
     created_at: row.created_at,
     classroom: row.classrooms
       ? {
@@ -71,6 +72,7 @@ export async function getEvaluationsServer(forcePrimary = false): Promise<Evalua
         items,
         total_score,
         max_score,
+        notes,
         created_at,
         classrooms:classroom_id (
           name,
@@ -103,6 +105,9 @@ export async function getEvaluationsByDateRangeServer(
 ): Promise<Evaluation[]> {
   try {
     const supabase = getServerSupabase(forcePrimary)
+    const formattedStart = startDate.includes("T") ? startDate : `${startDate}T00:00:00.000Z`
+    const formattedEnd = endDate.includes("T") ? endDate : `${endDate}T23:59:59.999Z`
+
     const { data, error } = await supabase
       .from("evaluations")
       .select(`
@@ -110,8 +115,10 @@ export async function getEvaluationsByDateRangeServer(
         classroom_id,
         supervisor_id,
         evaluation_date,
+        items,
         total_score,
         max_score,
+        notes,
         created_at,
         classrooms:classroom_id (
           name,
@@ -123,8 +130,8 @@ export async function getEvaluationsByDateRangeServer(
           email
         )
       `)
-      .gte("evaluation_date", startDate)
-      .lte("evaluation_date", endDate)
+      .gte("evaluation_date", formattedStart)
+      .lte("evaluation_date", formattedEnd)
       .order("evaluation_date", { ascending: false })
 
     if (error) {

@@ -205,8 +205,10 @@ export async function getEvaluations(): Promise<Evaluation[]> {
         classroom_id,
         supervisor_id,
         evaluation_date,
+        items,
         total_score,
         max_score,
+        notes,
         created_at,
         classrooms:classroom_id (
           name,
@@ -235,6 +237,7 @@ export async function getEvaluations(): Promise<Evaluation[]> {
       items: row.items || {},
       total_score: row.total_score,
       max_score: row.max_score,
+      notes: row.notes,
       created_at: row.created_at,
       classroom: row.classrooms
         ? {
@@ -266,8 +269,10 @@ export async function getEvaluationsBySupervisor(supervisorId: string): Promise<
         classroom_id,
         supervisor_id,
         evaluation_date,
+        items,
         total_score,
         max_score,
+        notes,
         created_at,
         classrooms:classroom_id (
           name,
@@ -297,6 +302,7 @@ export async function getEvaluationsBySupervisor(supervisorId: string): Promise<
       items: row.items || {},
       total_score: row.total_score,
       max_score: row.max_score,
+      notes: row.notes,
       created_at: row.created_at,
       classroom: row.classrooms
         ? {
@@ -321,6 +327,9 @@ export async function getEvaluationsBySupervisor(supervisorId: string): Promise<
 export async function getEvaluationsByDateRange(startDate: string, endDate: string): Promise<Evaluation[]> {
   try {
     const supabase = createClient()
+    const formattedStart = startDate.includes("T") ? startDate : `${startDate}T00:00:00.000Z`
+    const formattedEnd = endDate.includes("T") ? endDate : `${endDate}T23:59:59.999Z`
+
     const { data, error } = await supabase
       .from("evaluations")
       .select(`
@@ -328,8 +337,10 @@ export async function getEvaluationsByDateRange(startDate: string, endDate: stri
         classroom_id,
         supervisor_id,
         evaluation_date,
+        items,
         total_score,
         max_score,
+        notes,
         created_at,
         classrooms:classroom_id (
           name,
@@ -341,8 +352,8 @@ export async function getEvaluationsByDateRange(startDate: string, endDate: stri
           email
         )
       `)
-      .gte("evaluation_date", startDate)
-      .lte("evaluation_date", endDate)
+      .gte("evaluation_date", formattedStart)
+      .lte("evaluation_date", formattedEnd)
       .order("evaluation_date", { ascending: false })
 
     if (error) {
@@ -360,6 +371,7 @@ export async function getEvaluationsByDateRange(startDate: string, endDate: stri
       items: row.items || {},
       total_score: row.total_score,
       max_score: row.max_score,
+      notes: row.notes,
       created_at: row.created_at,
       classroom: row.classrooms
         ? {
@@ -386,7 +398,7 @@ export async function getArchivedEvaluationsList(): Promise<Evaluation[]> {
     const supabase = createClient()
     const { data: archiveData, error } = await supabase
       .from("archive_evaluations")
-      .select("id, classroom_id, classroom_name, classroom_grade, classroom_division, supervisor_id, supervisor_name, evaluation_date, total_score, max_score, created_at, archived_at")
+      .select("id, classroom_id, classroom_name, classroom_grade, classroom_division, supervisor_id, supervisor_name, evaluation_date, items, total_score, max_score, notes, created_at, archived_at")
       .order("archived_at", { ascending: false })
 
     if (error) {
@@ -433,7 +445,9 @@ export async function getArchivedEvaluationsList(): Promise<Evaluation[]> {
         items: row.items || {},
         total_score: row.total_score,
         max_score: row.max_score,
+        notes: row.notes,
         created_at: row.created_at,
+        archived_at: row.archived_at,
         is_archived: true,
         classroom: {
           name: classroomName,

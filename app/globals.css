@@ -75,15 +75,15 @@
 }
 
 :root {
-  --app-header-height: 6.25rem;
+  --app-header-height: 4rem;
+  --header-top-offset: 4rem;
   --mobile-bottom-nav-height: calc(3.75rem + env(safe-area-inset-bottom, 0px));
   --mobile-fab-height: calc(4.5rem + env(safe-area-inset-bottom, 0px));
 }
 
-@media (min-width: 768px) {
-  :root {
-    --app-header-height: 4rem;
-  }
+/* Ensure Radix UI dropdowns/dialogs never permanently trap pointer-events on body during page transitions */
+body {
+  pointer-events: auto !important;
 }
 
 @theme inline {

@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
+import { useAuth } from "@/components/providers/auth-provider"
 import { getChecklistItems } from "@/lib/supabase-data"
 import {
   submitEvaluation,
@@ -50,6 +51,7 @@ export function EvaluationForm({
   onChangeDate,
   onBackToDashboard,
 }: EvaluationFormProps) {
+  const { user: authUser } = useAuth()
   const todayStr = format(new Date(), "yyyy-MM-dd")
   const [targetDate, setTargetDate] = useState<string>(initialDate || todayStr)
   const [checklistItems, setChecklistItems] = useState<ChecklistItem[]>([])
@@ -133,10 +135,25 @@ export function EvaluationForm({
     }
   }
 
-  // Filter checklist items to those applicable to this classroom's division (or common)
+  // Filter checklist items to those applicable to this classroom's division and assigned supervisor
   const applicableChecklistItems = useMemo(() => {
     const classDiv = (classroom.division || "").trim().toLowerCase()
+    const effectiveUserId = user?.id || authUser?.id
+    const effectiveUserRole = user?.role || authUser?.role
+
     return checklistItems.filter((item) => {
+      // 1. Supervisor assignment filter:
+      // If item has assigned supervisors, only include if the logged-in supervisor is assigned to it.
+      // (Admins and super_admins can see all criteria for audits/inspections).
+      // If assigned_supervisors is empty or undefined, it applies to all supervisors.
+      if (item.assigned_supervisors && item.assigned_supervisors.length > 0) {
+        if (effectiveUserRole !== "admin" && effectiveUserRole !== "super_admin") {
+          const isAssigned = item.assigned_supervisors.some((s) => s.id === effectiveUserId)
+          if (!isAssigned) return false
+        }
+      }
+
+      // 2. Division / category filter:
       const cat = (item.category || "").trim().toLowerCase()
       // If item is assigned to "all", "general", legacy categories, or empty, it applies to all classrooms
       if (
@@ -157,7 +174,7 @@ export function EvaluationForm({
       if (cat.includes("tech") && classDiv.includes("tech")) return true
       return false
     })
-  }, [checklistItems, classroom.division])
+  }, [checklistItems, classroom.division, user?.id, user?.role, authUser?.id, authUser?.role])
 
   const calculateTotalScore = () => {
     return checkedItems.reduce((total, itemId) => {
@@ -502,7 +519,7 @@ export function EvaluationForm({
                   {totalScore} <span className="text-xs text-muted-foreground">/ {maxScore}</span>
                 </div>
                 <div className="text-[10px] text-muted-foreground">
-                  {completedCount}/{checklistItems.length} passed
+                  {completedCount}/{applicableChecklistItems.length} passed
                 </div>
               </div>
 
