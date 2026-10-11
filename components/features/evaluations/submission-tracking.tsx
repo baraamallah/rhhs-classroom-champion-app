@@ -29,7 +29,12 @@ import { cn } from "@/lib/utils"
 import { getDivisionDisplayName, DIVISION_OPTIONS } from "@/lib/division-display"
 import { useToast } from "@/hooks/use-toast"
 import Link from "next/link"
-import * as XLSX from "xlsx"
+import {
+  buildDailyTrackingWorkbook,
+  buildWeeklyTrackingWorkbook,
+  buildMonthlyTrackingWorkbook,
+} from "@/lib/excel/submission-tracking-excel"
+import { downloadWorkbookBuffer } from "@/lib/excel/excel-design-tokens"
 
 interface SubmissionTrackingProps {
   currentUser?: User
@@ -331,147 +336,37 @@ function useSubmissionTrackingContent({ currentUser }: SubmissionTrackingProps) 
   const handleExportExcel = async () => {
     setExporting(true)
     try {
-      generateExcel()
-    } catch (error) {
-      console.error("Export error:", error)
-      toast({
-        title: "Export Error",
-        description: "Failed to export Excel file",
-        variant: "destructive",
-      })
-    } finally {
-      setExporting(false)
-    }
-  }
-
-  const generateExcel = () => {
-    try {
-      const workbook = XLSX.utils.book_new()
+      let workbook: any
+      let fileName = ""
 
       if (viewType === "daily") {
         const submittedList = (submissionStats as any)?.submitted || []
         const notSubmittedList = (submissionStats as any)?.notSubmitted || []
-
-        const data = [
-          ["Date", format(date, "PPPP")],
-          ["Total Classrooms", filteredClassrooms.length],
-          ["Submitted", submittedList.length],
-          ["Not Submitted", notSubmittedList.length],
-          [],
-          ["Status", "Classroom", "Grade", "Division", "Supervisor(s)", "Evaluation Time", "Score"]
-        ]
-
-        // Submitted
-        submittedList.forEach((c: Classroom) => {
-          const eval_ = evaluations.find(e => e.classroom_id === c.id)
-          data.push([
-            "Submitted",
-            c.name,
-            c.grade,
-            getDivisionDisplayName(c.division),
-            c.supervisors?.map(s => s.name).join(", ") || "None",
-            eval_ ? format(new Date(eval_.created_at || ""), "p") : "N/A",
-            eval_?.total_score || 0
-          ])
+        workbook = await buildDailyTrackingWorkbook({
+          date,
+          classrooms: filteredClassrooms,
+          evaluations,
+          submittedList,
+          notSubmittedList,
         })
-
-        // Not Submitted
-        notSubmittedList.forEach((c: Classroom) => {
-          data.push([
-            "MISSING",
-            c.name,
-            c.grade,
-            getDivisionDisplayName(c.division),
-            c.supervisors?.map(s => s.name).join(", ") || "None",
-            "N/A",
-            0
-          ])
-        })
-
-        const worksheet = XLSX.utils.aoa_to_sheet(data)
-        XLSX.utils.book_append_sheet(workbook, worksheet, "Daily Tracking")
-        const fileName = `Submission_Tracking_${format(date, "yyyy-MM-dd")}.xlsx`
-        XLSX.writeFile(workbook, fileName)
-
+        fileName = `RHHS_Daily_Submission_Audit_${format(date, "yyyy-MM-dd")}.xlsx`
       } else if (viewType === "weekly") {
-        const start = startOfWeek(date, { weekStartsOn: 1 })
-        const workDays = Array.from({ length: 5 }, (_, i) => addDays(start, i))
-
-        const headers = ["Classroom", "Grade", "Division", "Supervisor(s)", "Total Submitted"]
-        workDays.forEach(d => {
-          headers.push(format(d, "EEEE (MMM d)"))
-        })
-
-        const data = [
-          ["Week of", `${format(start, "PPP")} to ${format(addDays(start, 4), "PPP")}`],
-          [],
-          headers
-        ]
-
-        sortedClassroomPerformance.forEach((p: any) => {
-          const row = [
-            p.classroom.name,
-            p.classroom.grade,
-            getDivisionDisplayName(p.classroom.division),
-            p.classroom.supervisors?.map((s: any) => s.name).join(", ") || "None",
-            `${p.submittedCount}/${p.totalDays}`
-          ]
-
-          p.workDays.forEach((day: any) => {
-            row.push(day.isException ? "EXCUSED" : (day.isSubmitted ? "YES" : "NO"))
-          })
-          data.push(row)
-        })
-
-        const worksheet = XLSX.utils.aoa_to_sheet(data)
-        XLSX.utils.book_append_sheet(workbook, worksheet, "Weekly Tracking")
-        const fileName = `Submission_Tracking_${format(date, "yyyy-'W'ww")}.xlsx`
-        XLSX.writeFile(workbook, fileName)
-
+        workbook = await buildWeeklyTrackingWorkbook(date, filteredClassrooms, evaluations)
+        const weekStart = startOfWeek(date, { weekStartsOn: 1 })
+        fileName = `RHHS_Green_Rankings_Week_${format(weekStart, "yyyy-MM-dd")}.xlsx`
       } else if (viewType === "monthly") {
         const daysInMonth = eachDayOfInterval({
           start: startOfMonth(date),
-          end: endOfMonth(date)
+          end: endOfMonth(date),
         })
-
-        const workdays = daysInMonth.filter(d => isWorkingSchoolDay(d))
-        const headers = ["Classroom", "Grade", "Division", "Supervisor(s)", "Total Submitted", "Total Workdays", "Submission Rate %"]
-        workdays.forEach(d => {
-          headers.push(format(d, "MMM d"))
+        const workdays = daysInMonth.filter((d) => isWorkingSchoolDay(d))
+        workbook = await buildMonthlyTrackingWorkbook({
+          date,
+          classrooms: filteredClassrooms,
+          workdays,
+          performanceList: sortedClassroomPerformance,
         })
-
-        const data = [
-          ["Month", format(date, "MMMM yyyy")],
-          [],
-          headers
-        ]
-
-        sortedClassroomPerformance.forEach((p: any) => {
-          const row = [
-            p.classroom.name,
-            p.classroom.grade,
-            getDivisionDisplayName(p.classroom.division),
-            p.classroom.supervisors?.map((s: any) => s.name).join(", ") || "None",
-            p.submittedCount,
-            p.totalDays,
-            `${p.rate.toFixed(1)}%`
-          ]
-
-          workdays.forEach(d => {
-            const hasEval = evaluations.some(e =>
-              e.classroom_id === p.classroom.id &&
-              isSameDay(new Date(e.evaluation_date), d)
-            )
-            row.push(hasEval ? "YES" : "NO")
-          })
-          data.push(row)
-        })
-
-        const worksheet = XLSX.utils.aoa_to_sheet(data)
-        XLSX.utils.book_append_sheet(workbook, worksheet, "Monthly Tracking")
-        const fileName = `Submission_Tracking_${format(date, "yyyy-MM")}.xlsx`
-        XLSX.writeFile(workbook, fileName)
-
+        fileName = `RHHS_Monthly_Submission_Audit_${format(date, "yyyy-MM")}.xlsx`
       } else {
         // Custom Date Range Export
         let startD = new Date(customStartDate)
@@ -481,59 +376,34 @@ function useSubmissionTrackingContent({ currentUser }: SubmissionTrackingProps) 
 
         const customDays = eachDayOfInterval({
           start: startD,
-          end: endD
+          end: endD,
         })
-
-        const workdays = customDays.filter(d => isWorkingSchoolDay(d))
-        const headers = ["Classroom", "Grade", "Division", "Supervisor(s)", "Total Submitted", "Total Workdays", "Submission Rate %"]
-        workdays.forEach(d => {
-          headers.push(format(d, "MMM d"))
+        const workdays = customDays.filter((d) => isWorkingSchoolDay(d))
+        workbook = await buildMonthlyTrackingWorkbook({
+          date: startD,
+          classrooms: filteredClassrooms,
+          workdays,
+          performanceList: sortedClassroomPerformance,
         })
-
-        const data = [
-          ["Period", `${format(startD, "PPP")} to ${format(endD, "PPP")}`],
-          [],
-          headers
-        ]
-
-        sortedClassroomPerformance.forEach((p: any) => {
-          const row = [
-            p.classroom.name,
-            p.classroom.grade,
-            getDivisionDisplayName(p.classroom.division),
-            p.classroom.supervisors?.map((s: any) => s.name).join(", ") || "None",
-            p.submittedCount,
-            p.totalDays,
-            `${p.rate.toFixed(1)}%`
-          ]
-
-          workdays.forEach(d => {
-            const hasEval = evaluations.some(e =>
-              e.classroom_id === p.classroom.id &&
-              isSameDay(new Date(e.evaluation_date), d)
-            )
-            row.push(hasEval ? "YES" : "NO")
-          })
-          data.push(row)
-        })
-
-        const worksheet = XLSX.utils.aoa_to_sheet(data)
-        XLSX.utils.book_append_sheet(workbook, worksheet, "Custom Tracking")
-        const fileName = `Submission_Tracking_Custom_${format(startD, "yyyy-MM-dd")}_to_${format(endD, "yyyy-MM-dd")}.xlsx`
-        XLSX.writeFile(workbook, fileName)
+        fileName = `RHHS_Custom_Submission_Audit_${format(startD, "yyyy-MM-dd")}_to_${format(endD, "yyyy-MM-dd")}.xlsx`
       }
 
+      const buffer = await workbook.xlsx.writeBuffer()
+      downloadWorkbookBuffer(buffer, fileName)
+
       toast({
-        title: "Export Successful",
-        description: "Exported submission tracking data successfully.",
+        title: "Export Complete",
+        description: `Exported ${fileName} with per-division sheets.`,
       })
-    } catch (error) {
+    } catch (error: any) {
       console.error("Excel generation error:", error)
       toast({
         title: "Export Failed",
-        description: "Failed to generate Excel file",
+        description: error?.message || "Failed to generate Excel file",
         variant: "destructive",
       })
+    } finally {
+      setExporting(false)
     }
   }
 

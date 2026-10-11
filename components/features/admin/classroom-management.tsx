@@ -320,10 +320,9 @@ export function ClassroomManagement({ currentUser }: ClassroomManagementProps) {
   return (
     <div className="space-y-6">
       <AdminPageHeader
-        badge="Campus Directory"
-        badgeLabel="Divisions & Supervisor Assignments"
-        title="Classrooms & Divisions"
-        description="Register classrooms, organize grade divisions, and assign faculty supervisors across campus."
+        badge="Classrooms"
+        title="Classroom Management"
+        description="Manage classrooms, grade divisions, and faculty supervisor assignments."
         action={
           !isAdding && !editingId ? (
             <Button

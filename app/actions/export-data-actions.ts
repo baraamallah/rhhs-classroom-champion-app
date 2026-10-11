@@ -4,6 +4,9 @@ import { createAdminClient } from "@/lib/supabase/server"
 import { getSessionFromCookies, clearSessionCookie } from "@/lib/auth/session"
 import { calculateLeaderboard } from "@/lib/utils-leaderboard"
 import { DIVISION_OPTIONS, getDivisionDisplayName } from "@/lib/division-display"
+import { buildWeeklyRankingsWorkbook } from "@/lib/excel/weekly-rankings-builder"
+import { buildMasterExcelWorkbook } from "@/lib/excel/master-export-builder"
+import { format, startOfWeek, addDays } from "date-fns"
 
 type UserRole = "super_admin" | "admin" | "supervisor" | "viewer" | "stats"
 
@@ -335,10 +338,107 @@ export async function exportDataAsExcel() {
       })
     }
 
-    return { success: true, sheets }
+    let base64: string | undefined
+    const fileName = `RHHS-Classroom-Champion-Master-Report-${format(new Date(), "yyyy-MM-dd")}.xlsx`
+
+    try {
+      const styledWb = await buildMasterExcelWorkbook({
+        evaluations: evaluations || [],
+        archivedEvals: archivedEvals || [],
+        classrooms: classrooms || [],
+        supervisors: supervisors || [],
+        winners: winners || [],
+      })
+      const buffer = await styledWb.xlsx.writeBuffer()
+      base64 = Buffer.from(buffer).toString("base64")
+    } catch (styledErr) {
+      console.warn("[exportDataAsExcel] Could not generate styled ExcelJS buffer, fallback to sheets:", styledErr)
+    }
+
+    return { success: true, sheets, base64, fileName }
   } catch (dbError: any) {
     console.error("[exportDataAsExcel] Error:", dbError)
     return { success: false, error: `Failed to export data: ${dbError.message || "Unknown error"}` }
+  }
+}
+
+/**
+ * Exports Weekly Green Rankings workbook matching RHHS_Green_App_October_Week_2_Rankings_Shaded.xlsx
+ * Includes:
+ * 1. "All Divisions" master rankings tab
+ * 2. "Greenest Winners" winners summary & methodology tab
+ * 3. Dedicated tab for every individual academic division
+ */
+export async function exportWeeklyGreenReport({
+  startDate,
+  endDate,
+  weekPreset,
+}: {
+  startDate?: string
+  endDate?: string
+  weekPreset?: "current-week" | "last-week" | "custom"
+} = {}) {
+  const { currentUser, error } = await requireAdmin()
+  if (error || !currentUser) {
+    return { success: false, error }
+  }
+
+  const supabase = await createAdminClient()
+
+  try {
+    const now = new Date()
+    let startD: Date
+
+    if (weekPreset === "last-week") {
+      const prevWeekDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+      startD = startOfWeek(prevWeekDate, { weekStartsOn: 1 })
+    } else if (weekPreset === "custom" && startDate) {
+      const [y, m, d] = startDate.split("-").map(Number)
+      startD = startOfWeek(new Date(y, m - 1, d), { weekStartsOn: 1 })
+    } else {
+      startD = startOfWeek(now, { weekStartsOn: 1 })
+    }
+
+    const days = Array.from({ length: 5 }, (_, i) => addDays(startD, i))
+    const startStr = format(days[0], "yyyy-MM-dd")
+    const endStr = format(days[4], "yyyy-MM-dd")
+
+    const [{ data: evaluations, error: evalErr }, { data: classrooms, error: classErr }] =
+      await Promise.all([
+        supabase
+          .from("evaluations")
+          .select("id, classroom_id, evaluation_date, total_score, max_score, created_at, classrooms:classroom_id (id, name, grade, division)")
+          .gte("evaluation_date", `${startStr}T00:00:00.000Z`)
+          .lte("evaluation_date", `${endStr}T23:59:59.999Z`)
+          .order("evaluation_date", { ascending: true }),
+        supabase
+          .from("classrooms")
+          .select("id, name, grade, division, is_active")
+          .eq("is_active", true)
+          .order("name", { ascending: true }),
+      ])
+
+    if (evalErr) throw new Error(evalErr.message)
+    if (classErr) throw new Error(classErr.message)
+
+    const workbook = await buildWeeklyRankingsWorkbook({
+      evaluations: (evaluations || []) as any,
+      classrooms: (classrooms || []) as any,
+      workDays: days,
+    })
+
+    const buffer = await workbook.xlsx.writeBuffer()
+    const base64 = Buffer.from(buffer).toString("base64")
+    const fileName = `RHHS_Green_App_Rankings_${startStr}_to_${endStr}_Shaded.xlsx`
+
+    return {
+      success: true,
+      base64,
+      fileName,
+    }
+  } catch (err: any) {
+    console.error("[exportWeeklyGreenReport] Error:", err)
+    return { success: false, error: err.message || "Failed to generate weekly green report" }
   }
 }
 

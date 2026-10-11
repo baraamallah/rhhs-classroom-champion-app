@@ -136,10 +136,9 @@ export function DataManagementPanel() {
   return (
     <div className="space-y-6">
       <AdminPageHeader
-        badge="Core Administration"
-        badgeLabel="Data Operations & System Control"
-        title="System & Settings"
-        description="Configure global runtime controls, manage default display months, and oversee evaluation lifecycle archives."
+        badge="System"
+        title="System Settings"
+        description="Configure runtime controls, default display months, and evaluation archiving."
       />
 
       <GlobalSystemControls

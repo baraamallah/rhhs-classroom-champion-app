@@ -9,10 +9,16 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
 import { useExcelWorker } from "@/lib/workers/use-excel-worker"
-import { exportAllDataAsZip, exportDataAsExcel } from "@/app/actions/export-data-actions"
+import {
+  exportAllDataAsZip,
+  exportDataAsExcel,
+  exportWeeklyGreenReport,
+} from "@/app/actions/export-data-actions"
+import { downloadWorkbookBuffer } from "@/lib/excel/excel-design-tokens"
+import { buildFilteredEvaluationsWorkbook } from "@/lib/excel/master-export-builder"
 import { getEvaluationsByDateRange, getClassrooms } from "@/lib/supabase-data"
 import { DIVISION_OPTIONS } from "@/lib/division-display"
-import { format, startOfMonth, endOfMonth, subMonths } from "date-fns"
+import { format, startOfMonth, endOfMonth, subMonths, startOfWeek } from "date-fns"
 import {
   Download,
   FileSpreadsheet,
@@ -23,8 +29,9 @@ import {
   Layers,
   Database,
   Loader2,
-  FileText,
   Sparkles,
+  Trophy,
+  Award,
 } from "lucide-react"
 
 export function ExportManagement() {
@@ -32,7 +39,14 @@ export function ExportManagement() {
   const { exportSheets, isExporting: isWorkerExporting, exportProgress } = useExcelWorker()
   const [exportingZip, setExportingZip] = useState(false)
   const [exportingExcel, setExportingExcel] = useState(false)
+  const [exportingWeekly, setExportingWeekly] = useState(false)
   const [exportingCustom, setExportingCustom] = useState(false)
+
+  // Weekly export filter states
+  const [weeklyPreset, setWeeklyPreset] = useState<"current-week" | "last-week" | "custom">("current-week")
+  const [weeklyStartDate, setWeeklyStartDate] = useState(() =>
+    format(startOfWeek(new Date(), { weekStartsOn: 1 }), "yyyy-MM-dd")
+  )
 
   // Custom export filter states
   const [dateRangePreset, setDateRangePreset] = useState<"current-month" | "last-month" | "custom">("current-month")
@@ -82,12 +96,51 @@ export function ExportManagement() {
     })
   }
 
-  // 1. Export Master Excel Workbook via Web Worker
+  // 1. Export Weekly Green Rankings (Benchmark Shaded Format with Per-Division Sheets)
+  const handleExportWeeklyGreenRankings = async () => {
+    setExportingWeekly(true)
+    try {
+      const result = await exportWeeklyGreenReport({
+        startDate: weeklyStartDate,
+        weekPreset: weeklyPreset,
+      })
+
+      if (!result.success || !result.base64) {
+        toast({
+          title: "Export Failed",
+          description: result.error || "Failed to generate weekly green report",
+          variant: "destructive",
+        })
+        return
+      }
+
+      const binary = atob(result.base64)
+      const bytes = new Uint8Array(binary.length)
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+      downloadWorkbookBuffer(bytes.buffer, result.fileName || "RHHS_Green_App_Rankings_Shaded.xlsx")
+
+      toast({
+        title: "Shaded Excel Export Ready",
+        description: `Downloaded ${result.fileName} with per-division sheets and winners summary.`,
+      })
+    } catch (err: any) {
+      console.error("Weekly export error:", err)
+      toast({
+        title: "Export Error",
+        description: err.message || "Failed to generate weekly report",
+        variant: "destructive",
+      })
+    } finally {
+      setExportingWeekly(false)
+    }
+  }
+
+  // 2. Export Master Excel Workbook (Unified Styling & Division Sheets)
   const handleExportMasterExcel = async () => {
     setExportingExcel(true)
     try {
       const result = await exportDataAsExcel()
-      if (!result.success || !result.sheets) {
+      if (!result.success) {
         toast({
           title: "Export Failed",
           description: result.error || "Failed to compile Excel data",
@@ -96,8 +149,26 @@ export function ExportManagement() {
         return
       }
 
-      const fileName = `RHHS-Classroom-Champion-Master-Report-${format(new Date(), "yyyy-MM-dd")}.xlsx`
-      await exportSheets(result.sheets, fileName)
+      if (result.base64) {
+        const binary = atob(result.base64)
+        const bytes = new Uint8Array(binary.length)
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+        downloadWorkbookBuffer(
+          bytes.buffer,
+          result.fileName || `RHHS-Classroom-Champion-Master-Report-${format(new Date(), "yyyy-MM-dd")}.xlsx`
+        )
+        toast({
+          title: "Master Excel Ready",
+          description: `Downloaded ${result.fileName} with per-division sheets.`,
+        })
+        return
+      }
+
+      // Fallback to web worker if base64 not available
+      if (result.sheets) {
+        const fileName = `RHHS-Classroom-Champion-Master-Report-${format(new Date(), "yyyy-MM-dd")}.xlsx`
+        await exportSheets(result.sheets, fileName)
+      }
     } catch (err: any) {
       console.error("Excel generation error:", err)
       toast({
@@ -110,7 +181,7 @@ export function ExportManagement() {
     }
   }
 
-  // 2. Export Complete System ZIP Backup
+  // 3. Export Complete System ZIP Backup
   const handleExportSystemBackupZip = async () => {
     setExportingZip(true)
     try {
@@ -157,7 +228,7 @@ export function ExportManagement() {
     }
   }
 
-  // 3. Export Filtered Evaluations
+  // 4. Export Filtered Evaluations with Shaded Styling & Per-Division Tabs
   const handleExportCustomEvaluations = async () => {
     setExportingCustom(true)
     try {
@@ -185,54 +256,22 @@ export function ExportManagement() {
         return
       }
 
-      const XLSX = await loadScript("https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js", "XLSX")
-      const workbook = XLSX.utils.book_new()
-
-      const headers = [
-        "Evaluation ID",
-        "Date",
-        "Classroom",
-        "Grade",
-        "Division",
-        "Supervisor Name",
-        "Supervisor Email",
-        "Total Score",
-        "Max Score",
-        "Percentage",
-        "Submitted At",
-      ]
-
-      const rows = filtered.map((e) => {
-        const room = classroomMap.get(e.classroom_id) || e.classroom
-        const pct = e.max_score > 0 ? `${Math.round((e.total_score / e.max_score) * 100)}%` : "N/A"
-        return [
-          e.id,
-          e.evaluation_date,
-          room?.name || "Unknown",
-          room?.grade || "",
-          room?.division || "",
-          e.supervisor?.name || "Unknown",
-          e.supervisor?.email || "",
-          e.total_score,
-          e.max_score,
-          pct,
-          e.created_at ? format(new Date(e.created_at), "yyyy-MM-dd HH:mm") : "",
-        ]
+      const workbook = await buildFilteredEvaluationsWorkbook({
+        evaluations: filtered,
+        classrooms,
+        startDate,
+        endDate,
+        selectedDivision,
       })
 
-      const sheet = {
-        name: "Evaluations",
-        headers,
-        rows,
-        stats: [
-          { label: "Date Range", value: `${startDate} to ${endDate}` },
-          { label: "Division Filter", value: selectedDivision === "all" ? "All Divisions" : selectedDivision },
-          { label: "Total Records", value: filtered.length },
-        ],
-      }
-
+      const buffer = await workbook.xlsx.writeBuffer()
       const fileName = `RHHS-Evaluations-${startDate}-to-${endDate}.xlsx`
-      await exportSheets([sheet], fileName)
+      downloadWorkbookBuffer(buffer, fileName)
+
+      toast({
+        title: "Export Ready",
+        description: `Downloaded ${fileName} with per-division sheets.`,
+      })
     } catch (err: any) {
       console.error("Custom export error:", err)
       toast({
@@ -248,26 +287,105 @@ export function ExportManagement() {
   return (
     <div className="space-y-8 animate-in fade-in-50 duration-300">
       <AdminPageHeader
-        title="Data Exports & Reporting Hub"
-        description="Generate comprehensive Excel workbooks, full database backup archives, and targeted evaluation reports."
+        title="Data Exports"
+        description="Download weekly green rankings, master spreadsheets, and database backups."
         badge="Export Center"
       />
 
-      {/* Quick Overview KPI Cards */}
+      {/* Featured Card: Weekly Green Rankings Report (Benchmark Shaded Format) */}
+      <Card className="border-emerald-500/30 bg-gradient-to-br from-emerald-500/5 via-card/80 to-teal-500/5 backdrop-blur-md shadow-sm relative overflow-hidden">
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-teal-600 via-emerald-500 to-green-600" />
+        <CardHeader className="pb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="p-3 rounded-2xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 ring-1 ring-emerald-500/20">
+                <Trophy className="h-6 w-6" />
+              </div>
+              <div>
+                <CardTitle className="text-lg font-bold flex items-center gap-2">
+                  Weekly Green Rankings Report
+                  <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 ring-1 ring-emerald-500/30">
+                    Shaded Excel
+                  </span>
+                </CardTitle>
+                <CardDescription className="text-xs mt-1">
+                  Mon–Fri performance with Greenest winners, dynamic formulas, and dedicated division tabs in one file.
+                </CardDescription>
+              </div>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-5 pt-0">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-end bg-background/50 p-4 rounded-xl border border-border/50">
+            <div className="space-y-2">
+              <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Week Preset
+              </Label>
+              <Select
+                value={weeklyPreset}
+                onValueChange={(val: any) => setWeeklyPreset(val)}
+              >
+                <SelectTrigger className="bg-background rounded-xl">
+                  <SelectValue placeholder="Select week" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="current-week">Current School Week (Mon–Fri)</SelectItem>
+                  <SelectItem value="last-week">Previous School Week (Mon–Fri)</SelectItem>
+                  <SelectItem value="custom">Custom Week Starting Monday</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {weeklyPreset === "custom" && (
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Week Start Date (Monday)
+                </Label>
+                <Input
+                  type="date"
+                  value={weeklyStartDate}
+                  onChange={(e) => setWeeklyStartDate(e.target.value)}
+                  className="bg-background rounded-xl"
+                />
+              </div>
+            )}
+
+            <div className="sm:col-span-1 flex items-end">
+              <Button
+                onClick={handleExportWeeklyGreenRankings}
+                disabled={exportingWeekly}
+                className="w-full rounded-xl gap-2 font-semibold shadow-xs cursor-pointer bg-emerald-600 hover:bg-emerald-700 text-white"
+              >
+                {exportingWeekly ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" /> Compiling All Division Sheets...
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-4 w-4" /> Download Shaded Rankings (.xlsx)
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Grid: Master Excel Workbook & System Database Backup */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="border-border/60 bg-card/60 backdrop-blur-md shadow-xs hover:border-primary/40 transition-colors">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+              <div className="p-2.5 rounded-xl bg-primary/10 text-primary">
                 <FileSpreadsheet className="h-5 w-5" />
               </div>
-              <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                Multi-Sheet
+              <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                Full Database
               </span>
             </div>
             <CardTitle className="text-base font-bold mt-2">Master Excel Workbook</CardTitle>
             <CardDescription className="text-xs">
-              Complete cross-tabular spreadsheet containing Classrooms, Staff, Rubrics, Evaluations, and KPI analytics.
+              Complete spreadsheet of Classrooms, Supervisors, Evaluations, KPIs, and division tabs.
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-0">
@@ -296,12 +414,12 @@ export function ExportManagement() {
                 <Archive className="h-5 w-5" />
               </div>
               <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400">
-                Full Database
+                JSON Tables
               </span>
             </div>
             <CardTitle className="text-base font-bold mt-2">System Database Backup</CardTitle>
             <CardDescription className="text-xs">
-              Direct JSON database dumps for all tables in a single compressed ZIP archive for backup and compliance.
+              Direct JSON database dumps for all tables in a single compressed ZIP archive.
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-0">
@@ -317,7 +435,7 @@ export function ExportManagement() {
                 </>
               ) : (
                 <>
-                  <Database className="h-4 w-4" /> Download System Backup (.zip)
+                  <Database className="h-4 w-4" /> Download Backup (.zip)
                 </>
               )}
             </Button>
@@ -335,7 +453,7 @@ export function ExportManagement() {
             <div>
               <CardTitle className="text-lg font-bold">Custom Evaluations Export</CardTitle>
               <CardDescription className="text-xs">
-                Filter evaluation records by date range and division to download tailored reports.
+                Filter evaluation records by date and division to generate customized Excel sheets.
               </CardDescription>
             </div>
           </div>
@@ -400,7 +518,7 @@ export function ExportManagement() {
                   <SelectValue placeholder="All Divisions" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Divisions</SelectItem>
+                  <SelectItem value="all">All Divisions (Includes Individual Tabs)</SelectItem>
                   {DIVISION_OPTIONS.map((opt) => (
                     <SelectItem key={opt.value} value={opt.value}>
                       {opt.label}
@@ -414,7 +532,7 @@ export function ExportManagement() {
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-border/40">
             <p className="text-xs text-muted-foreground flex items-center gap-1.5">
               <Sparkles className="h-3.5 w-3.5 text-primary" />
-              Exports include classroom name, division, supervisor, score percentages, and timestamps.
+              Exports include classroom name, division, supervisor, score percentages, and timestamps in shaded format.
             </p>
             <Button
               onClick={handleExportCustomEvaluations}

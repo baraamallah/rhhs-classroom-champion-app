@@ -28,16 +28,16 @@ export interface NavItem {
 }
 
 export const ADMIN_NAV_ITEMS: NavItem[] = [
-  { id: "classrooms", label: "Classrooms & Divisions", icon: Building2 },
-  { id: "users", label: "Staff & Assignments", icon: Users },
-  { id: "checklist", label: "Checklist Rubrics", icon: ClipboardList },
-  { id: "evaluations", label: "Evaluations Log", icon: FileText },
-  { id: "tracking", label: "Submission Tracking", icon: BarChart3 },
-  { id: "calendar", label: "School Calendar", icon: Calendar, badge: "Daily" },
-  { id: "statistics", label: "Score Analytics", icon: LineChart },
-  { id: "exports", label: "Data Exports & Hub", icon: Download, badge: "Hub" },
-  { id: "academic-archives", label: "New Year Archive", icon: Archive, badge: "New" },
-  { id: "system", label: "System & Settings", icon: Database },
+  { id: "classrooms", label: "Classrooms", icon: Building2 },
+  { id: "users", label: "Staff & Users", icon: Users },
+  { id: "checklist", label: "Rubrics", icon: ClipboardList },
+  { id: "evaluations", label: "Evaluations", icon: FileText },
+  { id: "tracking", label: "Tracking", icon: BarChart3 },
+  { id: "calendar", label: "Calendar", icon: Calendar },
+  { id: "statistics", label: "Analytics", icon: LineChart },
+  { id: "exports", label: "Data Exports", icon: Download },
+  { id: "academic-archives", label: "New Year Archive", icon: Archive },
+  { id: "system", label: "System Settings", icon: Database },
 ]
 
 export const STATS_ALLOWED_TAB_IDS = ["tracking", "statistics", "exports"]
