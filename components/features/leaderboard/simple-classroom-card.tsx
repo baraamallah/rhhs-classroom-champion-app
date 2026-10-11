@@ -91,18 +91,18 @@ export function SimpleClassroomCard({
                   {classroom.classroom.name}
                 </h3>
                 {isChampion && (
-                  <span className="inline-flex items-center gap-1 text-[9px] xs:text-[10px] font-extrabold uppercase tracking-wider px-1.5 xs:px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30 shrink-0">
-                    <TrophyIcon className="h-2.5 w-2.5 xs:h-3 xs:w-3" />
+                  <span className="inline-flex items-center gap-1 text-[9px] xs:text-[10px] font-extrabold uppercase tracking-wider px-1.5 xs:px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-900 dark:text-amber-200 border border-amber-500/40 shrink-0">
+                    <TrophyIcon className="h-2.5 w-2.5 xs:h-3 xs:w-3 text-amber-600 dark:text-amber-300" />
                     Champion
                   </span>
                 )}
                 {isRunnerUp && (
-                  <span className="text-[9px] xs:text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-slate-500/15 text-slate-600 dark:text-slate-300 border border-slate-500/20 shrink-0">
+                  <span className="text-[9px] xs:text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-slate-200/80 dark:bg-slate-700/70 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-600 shrink-0">
                     2nd Place
                   </span>
                 )}
                 {isThirdPlace && (
-                  <span className="text-[9px] xs:text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-amber-700/15 text-amber-700 dark:text-amber-400 border border-amber-700/20 shrink-0">
+                  <span className="text-[9px] xs:text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-orange-100/90 dark:bg-amber-950/80 text-amber-950 dark:text-amber-200 border border-amber-600/30 dark:border-amber-700/50 shrink-0">
                     3rd Place
                   </span>
                 )}
@@ -162,7 +162,7 @@ export function SimpleClassroomCard({
                   <span
                     className={cn(
                       "text-xl xs:text-2xl sm:text-3xl font-black tracking-tight",
-                      isChampion ? "text-amber-600 dark:text-amber-400" : scoreColor
+                      isChampion ? "text-amber-700 dark:text-amber-400" : scoreColor
                     )}
                   >
                     <AnimatedCounter value={classroom.totalScore} />

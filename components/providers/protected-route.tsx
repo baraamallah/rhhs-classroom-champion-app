@@ -17,7 +17,7 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
   const accessError = !loading
     ? !user
       ? "You need to sign in to continue."
-      : !allowedRoles.includes(user.role)
+      : !allowedRoles.map((r) => r.toLowerCase()).includes((user.role || "").toLowerCase() as any)
         ? "You don't have permission to access this page."
         : null
     : null

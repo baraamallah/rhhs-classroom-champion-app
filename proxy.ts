@@ -23,11 +23,12 @@ export async function proxy(request: NextRequest) {
     const url = request.nextUrl.clone()
 
     // Redirect based on role
-    if (session.role === "super_admin" || session.role === "admin") {
+    const role = session.role ? String(session.role).trim().toLowerCase() : ""
+    if (role === "super_admin" || role === "admin") {
       url.pathname = "/admin"
-    } else if (session.role === "supervisor") {
+    } else if (role === "supervisor") {
       url.pathname = "/supervisor"
-    } else if (session.role === "stats") {
+    } else if (role === "stats") {
       url.pathname = "/admin/tracking"
     } else {
       url.pathname = "/"

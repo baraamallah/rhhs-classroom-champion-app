@@ -38,23 +38,34 @@ export function LoginForm() {
         throw new Error(data.error || "Invalid email or password")
       }
 
-      const data = (await response.json()) as { role: string }
+      const data = (await response.json()) as { role?: string }
+      const role = data.role ? String(data.role).trim().toLowerCase() : ""
 
-      // Re-fetch the user so AuthProvider's cached state is updated
-      // before navigating — ProtectedRoute reads from this state
-      await refresh()
-
-      setLoading(false)
-
-      if (data.role === "super_admin" || data.role === "admin") {
-        router.replace("/admin")
-      } else if (data.role === "stats") {
-        router.replace("/admin/tracking")
-      } else if (data.role === "supervisor") {
-        router.replace("/supervisor")
-      } else {
-        router.replace("/")
+      // Check for redirect query param safely without triggering Suspense requirement
+      let redirectParam: string | null = null
+      if (typeof window !== "undefined") {
+        redirectParam = new URLSearchParams(window.location.search).get("redirect")
       }
+
+      // Explicitly map role to control panel destination
+      let destination = "/"
+      if (role === "super_admin" || role === "admin") {
+        destination = redirectParam && redirectParam.startsWith("/admin") ? redirectParam : "/admin"
+      } else if (role === "stats") {
+        destination = redirectParam && redirectParam.startsWith("/admin/tracking") ? redirectParam : "/admin/tracking"
+      } else if (role === "supervisor") {
+        // Supervisors ALWAYS open their control panel directly
+        destination = redirectParam && redirectParam.startsWith("/supervisor") ? redirectParam : "/supervisor"
+      } else if (redirectParam && redirectParam.startsWith("/") && redirectParam !== "/login" && redirectParam !== "/") {
+        destination = redirectParam
+      }
+
+      // Update auth context state in parallel
+      await refresh().catch(() => {})
+
+      // Use window.location.replace to ensure full session-cookie synchronization,
+      // preventing any client router race conditions or accidental redirects to the leaderboard
+      window.location.replace(destination)
     } catch (err: any) {
       console.error("Login error:", err)
       setError(err.message || "Invalid email or password")

@@ -4,6 +4,7 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
+  color-scheme: light;
   --background: oklch(0.98 0.01 140);
   --foreground: oklch(0.25 0.03 150);
   --card: oklch(1 0 0);
@@ -40,6 +41,7 @@
 }
 
 .dark {
+  color-scheme: dark;
   --background: oklch(0.15 0.02 150);
   --foreground: oklch(0.95 0.01 140);
   --card: oklch(0.18 0.02 150);
@@ -135,6 +137,9 @@ body {
   body {
     max-width: 100%;
     overflow-x: clip;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
   }
   body {
     @apply bg-background text-foreground;
@@ -197,6 +202,22 @@ body {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+@media (inverted-colors: inverted) {
+  /* Protect photographic emblems and media from unwanted double-inversion on phones/tablets */
+  img,
+  picture,
+  video {
+    filter: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .border,
+  [class*="border-"] {
+    forced-color-adjust: auto;
   }
 }
 

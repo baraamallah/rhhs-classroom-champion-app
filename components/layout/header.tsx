@@ -123,9 +123,10 @@ export function Header({ winnersPageVisible }: { winnersPageVisible?: boolean } 
 
   const getControlPanelLink = () => {
     if (!user) return "/"
-    if (user.role === "super_admin" || user.role === "admin") return "/admin"
-    if (user.role === "stats") return "/admin/tracking"
-    if (user.role === "supervisor") return "/supervisor"
+    const role = user.role ? String(user.role).trim().toLowerCase() : ""
+    if (role === "super_admin" || role === "admin") return "/admin"
+    if (role === "stats") return "/admin/tracking"
+    if (role === "supervisor") return "/supervisor"
     return "/"
   }
 

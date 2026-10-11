@@ -100,10 +100,10 @@ export function LeaderboardView({
   return (
     <LazyMotionProvider>
       <div className="min-h-screen bg-linear-to-b from-background via-background to-primary/5 pb-20 relative overflow-x-clip">
-        {/* Ambient Top Glow Orbs - Contained to prevent horizontal expansion */}
+        {/* Ambient Top Glow Orbs - Clean contrast in light and dark modes */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none -z-10">
-          <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl" />
-          <div className="absolute top-20 right-1/4 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl" />
+          <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/5 dark:bg-primary/10 rounded-full blur-3xl" />
+          <div className="absolute top-20 right-1/4 w-96 h-96 bg-amber-500/5 dark:bg-amber-500/10 rounded-full blur-3xl" />
         </div>
 
         {/* Hero Section */}
@@ -114,14 +114,8 @@ export function LeaderboardView({
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: "easeOut" }}
           >
-            {/* Sustainability Badge Chip */}
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-primary/30 bg-primary/10 text-primary text-xs font-semibold mb-4 shadow-2xs">
-              <LeafIcon className="h-3.5 w-3.5 shrink-0" />
-              <span>Official School Sustainability Competition</span>
-            </div>
-
             {/* Main Headline */}
-            <h1 className="text-3xl xs:text-4xl sm:text-5xl md:text-6xl font-black tracking-tight bg-linear-to-r from-emerald-600 via-primary to-green-600 bg-clip-text text-transparent mb-3">
+            <h1 className="text-3xl xs:text-4xl sm:text-5xl md:text-6xl font-black tracking-tight bg-linear-to-r from-emerald-700 via-primary to-green-700 dark:from-emerald-300 dark:via-primary dark:to-green-400 bg-clip-text text-transparent mb-3">
               Green Classrooms
             </h1>
 

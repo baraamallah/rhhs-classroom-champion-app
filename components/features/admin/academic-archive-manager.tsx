@@ -219,7 +219,7 @@ export function AcademicArchiveManager() {
                 </div>
               </div>
 
-              {/* Division Champions Podium */}
+              {/* Division Champions Showcase */}
               {selectedArchive.division_champions && (
                 <div className="mt-4 pt-4 border-t border-border grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
                   {Object.entries(selectedArchive.division_champions).map(([division, champ]: [string, any]) => (
