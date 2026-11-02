@@ -409,7 +409,7 @@ export function AcademicArchiveManager() {
               <Sparkles className="h-5 w-5 text-primary" /> Create New Year Archive
             </DialogTitle>
             <DialogDescription className="text-xs leading-relaxed">
-              This action snapshots current leaderboards and stores all evaluations into a permanent archive file, resetting live evaluations for the new year.
+              This action snapshots current leaderboards and stores all evaluations into a permanent archive file, preserving the original evaluation dates and monthly scores.
             </DialogDescription>
           </DialogHeader>
 
@@ -463,7 +463,7 @@ export function AcademicArchiveManager() {
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Archiving...
                   </>
                 ) : (
-                  "Archive & Reset Live Board"
+                  "Archive Evaluations"
                 )}
               </Button>
             </DialogFooter>

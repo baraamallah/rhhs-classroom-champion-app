@@ -1,7 +1,8 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { createClient, createAdminClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/server"
+import { readMonthlyRankings, includeRecordedWinnerScores } from "@/lib/evaluation-history"
 import { getSessionFromCookies, clearSessionCookie } from "@/lib/auth/session"
 
 type UserRole = "super_admin" | "admin" | "supervisor" | "viewer"
@@ -61,8 +62,8 @@ export async function declareMonthlyWinner(
     return { success: false, error: "Missing required fields" }
   }
 
-  if (month < 1 || month > 12) {
-    return { success: false, error: "Month must be between 1 and 12" }
+  if (!Number.isInteger(year) || year < 1 || year > 9999 || !Number.isInteger(month) || month < 1 || month > 12) {
+    return { success: false, error: "Select a valid year and month" }
   }
 
   const validDivisions = ['Pre-School', 'Elementary', 'Middle School', 'High School', 'Technical Institute']
@@ -73,6 +74,16 @@ export async function declareMonthlyWinner(
   const supabase = await createAdminClient()
 
   try {
+    // Freeze the server-calculated monthly total, rather than trusting UI values.
+    const rankings = await getTopClassroomsByDivision(division, year, month)
+    if (!rankings.success) {
+      return { success: false, error: "Failed to verify the monthly score" }
+    }
+    const score = rankings.data.find((entry) => entry.classroom.id === classroomId)
+    if (!score) {
+      return { success: false, error: "This classroom has no evaluations in the selected division and month" }
+    }
+
     // Check if winner already exists for this division/month/year
     const { data: existing, error: checkError } = await supabase
       .from("monthly_winners")
@@ -101,9 +112,9 @@ export async function declareMonthlyWinner(
       division,
       year,
       month,
-      total_score: totalScore,
-      average_score: averageScore,
-      evaluation_count: evaluationCount,
+      total_score: score.totalScore,
+      average_score: score.averageScore,
+      evaluation_count: score.evaluationCount,
       declared_by: currentUser.id,
       notes: notes || null,
     }
@@ -187,9 +198,10 @@ export async function getMonthlyWinners(year?: number, month?: number) {
       return { success: false, error: `Failed to fetch winners: ${fetchError.message}`, data: [] }
     }
 
-    const formattedData = (data || []).map((row: any) => {
-      const clsName = row.classrooms?.name || row.classroom_name || "Unknown Classroom"
-      const clsGrade = row.classrooms?.grade || row.classroom_grade || ""
+    const scoredData = await includeRecordedWinnerScores(supabase, data || [])
+    const formattedData = scoredData.map((row: any) => {
+      const clsName = row.classroom_name || row.classrooms?.name || "Unknown Classroom"
+      const clsGrade = row.classroom_grade || row.classrooms?.grade || ""
       const clsDivision = row.classrooms?.division || row.division
 
       return {
@@ -248,65 +260,7 @@ export async function getTopClassroomsByDivision(division: string, year: number,
   const supabase = await createAdminClient()
 
   try {
-    // Get all evaluations for the specified month and division
-    const startDate = new Date(year, month - 1, 1).toISOString()
-    const endDate = new Date(year, month, 0, 23, 59, 59).toISOString()
-
-    const { data: evaluations, error: evalError } = await supabase
-      .from("evaluations")
-      .select(`
-        *,
-        classrooms:classroom_id (
-          id,
-          name,
-          grade,
-          division
-        )
-      `)
-      .gte("evaluation_date", startDate)
-      .lte("evaluation_date", endDate)
-
-    if (evalError) {
-      console.error("[getTopClassroomsByDivision] Fetch error:", evalError)
-      return { success: false, error: `Failed to fetch evaluations: ${evalError.message}`, data: [] }
-    }
-
-    // Filter by division and calculate scores
-    const divisionEvaluations = (evaluations || []).filter(
-      (e: any) => e.classrooms?.division === division
-    )
-
-    // Group by classroom and calculate totals
-    const classroomScores = new Map<string, {
-      classroom: any
-      totalScore: number
-      evaluationCount: number
-      averageScore: number
-    }>()
-
-    divisionEvaluations.forEach((evaluation: any) => {
-      if (!evaluation.classrooms) return
-
-      const classroomId = evaluation.classroom_id
-      const existing = classroomScores.get(classroomId) || {
-        classroom: evaluation.classrooms,
-        totalScore: 0,
-        evaluationCount: 0,
-        averageScore: 0,
-      }
-
-      existing.totalScore += evaluation.total_score
-      existing.evaluationCount += 1
-      existing.averageScore = existing.totalScore / existing.evaluationCount
-
-      classroomScores.set(classroomId, existing)
-    })
-
-    // Convert to array and sort by total score
-    const sortedClassrooms = Array.from(classroomScores.values())
-      .sort((a, b) => b.totalScore - a.totalScore)
-
-    return { success: true, data: sortedClassrooms }
+    return { success: true, data: await readMonthlyRankings(supabase, division, year, month) }
   } catch (dbError: any) {
     console.error("[getTopClassroomsByDivision] Unexpected error:", dbError)
     return { success: false, error: "Failed to calculate top classrooms", data: [] }

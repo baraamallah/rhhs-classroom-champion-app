@@ -1,6 +1,7 @@
 "use server"
 
-import { createClient, createAdminClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/server"
+import { readMonthlyRankings, includeRecordedWinnerScores } from "@/lib/evaluation-history"
 
 export async function getPublicMonthlyWinners(year?: number, month?: number) {
   // Use admin client for public access (bypasses RLS)
@@ -10,7 +11,7 @@ export async function getPublicMonthlyWinners(year?: number, month?: number) {
     let query = supabase
       .from("monthly_winners")
       .select(`
-        *,
+        id, classroom_id, classroom_name, classroom_grade, division, year, month, total_score, average_score, evaluation_count,
         classrooms:classroom_id (
           id,
           name,
@@ -36,13 +37,20 @@ export async function getPublicMonthlyWinners(year?: number, month?: number) {
       return { success: false, error: `Failed to fetch winners: ${fetchError.message}`, data: [] }
     }
 
-    const formattedData = (data || []).map((row: any) => {
-      const clsName = row.classrooms?.name || row.classroom_name || "Unknown Classroom"
-      const clsGrade = row.classrooms?.grade || row.classroom_grade || ""
+    const scoredData = await includeRecordedWinnerScores(supabase, data || [])
+    const formattedData = scoredData.map((row: any) => {
+      const clsName = row.classroom_name || row.classrooms?.name || "Unknown Classroom"
+      const clsGrade = row.classroom_grade || row.classrooms?.grade || ""
       const clsDivision = row.classrooms?.division || row.division
+
+      const totalScore = Number(row.total_score)
+      if (row.total_score == null || !Number.isFinite(totalScore)) {
+        throw new Error("Invalid recorded winner score")
+      }
 
       return {
         ...row,
+        total_score: totalScore,
         classroom_name: clsName,
         classroom_grade: clsGrade,
         classrooms: {
@@ -66,65 +74,7 @@ export async function getPublicTopClassroomsByDivision(division: string, year: n
   const supabase = await createAdminClient()
 
   try {
-    // Get all evaluations for the specified month and division
-    const startDate = new Date(year, month - 1, 1).toISOString()
-    const endDate = new Date(year, month, 0, 23, 59, 59).toISOString()
-
-    const { data: evaluations, error: evalError } = await supabase
-      .from("evaluations")
-      .select(`
-        *,
-        classrooms:classroom_id (
-          id,
-          name,
-          grade,
-          division
-        )
-      `)
-      .gte("evaluation_date", startDate)
-      .lte("evaluation_date", endDate)
-
-    if (evalError) {
-      console.error("[getPublicTopClassroomsByDivision] Fetch error:", evalError)
-      return { success: false, error: `Failed to fetch evaluations: ${evalError.message}`, data: [] }
-    }
-
-    // Filter by division and calculate scores
-    const divisionEvaluations = (evaluations || []).filter(
-      (e: any) => e.classrooms?.division === division
-    )
-
-    // Group by classroom and calculate totals
-    const classroomScores = new Map<string, {
-      classroom: any
-      totalScore: number
-      evaluationCount: number
-      averageScore: number
-    }>()
-
-    divisionEvaluations.forEach((evaluation: any) => {
-      if (!evaluation.classrooms) return
-
-      const classroomId = evaluation.classroom_id
-      const existing = classroomScores.get(classroomId) || {
-        classroom: evaluation.classrooms,
-        totalScore: 0,
-        evaluationCount: 0,
-        averageScore: 0,
-      }
-
-      existing.totalScore += evaluation.total_score
-      existing.evaluationCount += 1
-      existing.averageScore = existing.totalScore / existing.evaluationCount
-
-      classroomScores.set(classroomId, existing)
-    })
-
-    // Convert to array and sort by total score
-    const sortedClassrooms = Array.from(classroomScores.values())
-      .sort((a, b) => b.totalScore - a.totalScore)
-
-    return { success: true, data: sortedClassrooms }
+    return { success: true, data: await readMonthlyRankings(supabase, division, year, month) }
   } catch (dbError: any) {
     console.error("[getPublicTopClassroomsByDivision] Unexpected error:", dbError)
     return { success: false, error: "Failed to calculate top classrooms", data: [] }

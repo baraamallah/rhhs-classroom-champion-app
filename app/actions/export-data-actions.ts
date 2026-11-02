@@ -2,6 +2,7 @@
 
 import { createAdminClient } from "@/lib/supabase/server"
 import { getSessionFromCookies, clearSessionCookie } from "@/lib/auth/session"
+import { readEvaluationHistory } from "@/lib/evaluation-history"
 import { calculateLeaderboard } from "@/lib/utils-leaderboard"
 import { DIVISION_OPTIONS, getDivisionDisplayName } from "@/lib/division-display"
 import { buildWeeklyRankingsWorkbook } from "@/lib/excel/weekly-rankings-builder"
@@ -403,14 +404,12 @@ export async function exportWeeklyGreenReport({
     const startStr = format(days[0], "yyyy-MM-dd")
     const endStr = format(days[4], "yyyy-MM-dd")
 
-    const [{ data: evaluations, error: evalErr }, { data: classrooms, error: classErr }] =
+    const [history, { data: classrooms, error: classErr }] =
       await Promise.all([
-        supabase
-          .from("evaluations")
-          .select("id, classroom_id, evaluation_date, total_score, max_score, created_at, classrooms:classroom_id (id, name, grade, division)")
-          .gte("evaluation_date", `${startStr}T00:00:00.000Z`)
-          .lte("evaluation_date", `${endStr}T23:59:59.999Z`)
-          .order("evaluation_date", { ascending: true }),
+        readEvaluationHistory(supabase, {
+          start: `${startStr}T00:00:00.000Z`, end: `${endStr}T23:59:59.999Z`,
+          endInclusive: true, includeArchives: true,
+        }),
         supabase
           .from("classrooms")
           .select("id, name, grade, division, is_active")
@@ -418,11 +417,10 @@ export async function exportWeeklyGreenReport({
           .order("name", { ascending: true }),
       ])
 
-    if (evalErr) throw new Error(evalErr.message)
     if (classErr) throw new Error(classErr.message)
 
     const workbook = await buildWeeklyRankingsWorkbook({
-      evaluations: (evaluations || []) as any,
+      evaluations: history.map((evaluation) => ({ ...evaluation, classrooms: evaluation.classroom })) as any,
       classrooms: (classrooms || []) as any,
       workDays: days,
     })

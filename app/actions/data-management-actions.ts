@@ -1,9 +1,11 @@
 "use server"
 
-import { revalidatePath } from "next/cache"
+import { revalidatePath, revalidateTag } from "next/cache"
 import { createAdminClient } from "@/lib/supabase/server"
 import { getSessionFromCookies, clearSessionCookie } from "@/lib/auth/session"
 import { calculateLeaderboard } from "@/lib/utils-leaderboard"
+import { getCurrentMonthPeriod } from "@/lib/month-period"
+import { archiveCompletedMonths } from "@/lib/monthly-archive"
 
 type UserRole = "super_admin" | "admin" | "supervisor" | "viewer"
 
@@ -63,88 +65,12 @@ export async function archiveAndReset() {
   const supabase = await createAdminClient()
 
   try {
-    // Attempt atomic database-level monthly archive RPC
-    const { data: rpcData, error: rpcError } = await supabase.rpc("archive_monthly_evaluations", {
-      p_archived_at: new Date().toISOString(),
-    })
-
-    if (!rpcError && rpcData?.success) {
-      revalidatePath("/", "layout")
-      revalidatePath("/admin")
-      return {
-        success: true,
-        message: `Successfully archived ${rpcData.archived_count || 0} evaluations. Classrooms preserved.`,
-      }
-    }
-
-    console.warn("[archiveAndReset] RPC unavailable, falling back to batched transfer:", rpcError?.message)
-
-    // Fallback: fetch with classroom & supervisor details
-    const { data: evaluations, error: evalFetchError } = await supabase
-      .from("evaluations")
-      .select(`
-        *,
-        classrooms:classroom_id (name, grade, division),
-        users:supervisor_id (name)
-      `)
-
-    if (evalFetchError) {
-      console.error("[archiveAndReset] Failed to fetch evaluations:", evalFetchError)
-      return { success: false, error: `Failed to fetch evaluations for archiving: ${evalFetchError.message}` }
-    }
-
-    if (evaluations && evaluations.length > 0) {
-      const nowIso = new Date().toISOString()
-      const evaluationsToArchive = evaluations.map((ev: any) => ({
-        id: ev.id,
-        classroom_id: ev.classroom_id,
-        classroom_name: ev.classrooms?.name || "Unknown",
-        classroom_grade: ev.classrooms?.grade || "",
-        classroom_division: ev.classrooms?.division || "",
-        supervisor_id: ev.supervisor_id,
-        supervisor_name: ev.users?.name || "Unknown",
-        evaluation_date: ev.evaluation_date,
-        items: ev.items || {},
-        total_score: ev.total_score,
-        max_score: ev.max_score,
-        notes: ev.notes || null,
-        created_at: ev.created_at,
-        archived_at: nowIso,
-      }))
-
-      // Chunk batches for safe upsert (avoid 16KB HTTP headers limit)
-      const chunks = chunkArray(evaluationsToArchive, 40)
-      for (const chunk of chunks) {
-        const { error: archiveEvalError } = await supabase
-          .from("archive_evaluations")
-          .upsert(chunk, { onConflict: "id" })
-
-        if (archiveEvalError) {
-          console.error("Archive evaluations error:", archiveEvalError)
-          return { success: false, error: `Failed to archive evaluations: ${archiveEvalError.message}` }
-        }
-      }
-
-      // Chunk IDs for safe deletion
-      const idChunks = chunkArray(evaluations.map((e: any) => e.id), 40)
-      for (const idChunk of idChunks) {
-        const { error: deleteEvalError } = await supabase
-          .from("evaluations")
-          .delete()
-          .in("id", idChunk)
-
-        if (deleteEvalError) {
-          console.error("[archiveAndReset] Failed to delete evaluations:", deleteEvalError)
-          return { success: false, error: `Failed to delete evaluations: ${deleteEvalError.message}` }
-        }
-      }
-    }
-
+    const result = await archiveCompletedMonths(supabase)
+    revalidateTag("leaderboard", { expire: 0 })
     revalidatePath("/", "layout")
-    revalidatePath("/admin")
     return {
       success: true,
-      message: `Successfully archived ${evaluations?.length || 0} evaluations. Classrooms preserved.`,
+      message: `Archived ${result.count} evaluations from completed months. Current-month scores and historical results are preserved.`,
     }
   } catch (dbError: any) {
     console.error("[data-management-actions] archiveAndReset error", dbError)
@@ -469,6 +395,10 @@ export async function restoreEvaluations(evaluationIds: string[]) {
         return { success: false, error: `Failed to fetch archived evaluations: ${fetchError.message}` }
       }
 
+      const currentMonth = getCurrentMonthPeriod()
+      if (evaluations?.some((evaluation) => evaluation.evaluation_date < currentMonth.start || evaluation.evaluation_date >= currentMonth.end)) {
+        return { success: false, error: "Completed months stay archived. Their scores remain available in historical results." }
+      }
       if (evaluations && evaluations.length > 0) {
         const evaluationsToRestore = evaluations.map(({ archived_at, ...rest }) => rest)
 

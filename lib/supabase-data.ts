@@ -1,3 +1,8 @@
+import { getAdminSettings } from "@/app/actions/winners-page-actions"
+import { resolveLeaderboardScope } from "./display-period"
+import { calculateLeaderboard } from "./utils-leaderboard"
+import { readEvaluationHistory } from "./evaluation-history"
+import { getCurrentMonthPeriod } from "./month-period"
 import { createClient } from "@/lib/supabase/client"
 import { getEvaluationsStatus } from "@/app/actions/evaluation-settings-actions"
 import { submitEvaluation as submitEvaluationAction } from "@/app/actions/evaluation-actions"
@@ -198,61 +203,7 @@ export async function submitEvaluation(
 export async function getEvaluations(): Promise<Evaluation[]> {
   try {
     const supabase = createClient()
-    const { data, error } = await supabase
-      .from("evaluations")
-      .select(`
-        id,
-        classroom_id,
-        supervisor_id,
-        evaluation_date,
-        items,
-        total_score,
-        max_score,
-        notes,
-        created_at,
-        classrooms:classroom_id (
-          name,
-          grade,
-          division
-        ),
-        users:supervisor_id (
-          name,
-          email
-        )
-      `)
-      .order("evaluation_date", { ascending: false })
-
-    if (error) {
-      console.error("[Database] Error fetching evaluations:", error)
-      return []
-    }
-
-    if (!data) return []
-
-    return data.map((row: any) => ({
-      id: row.id,
-      classroom_id: row.classroom_id,
-      supervisor_id: row.supervisor_id,
-      evaluation_date: row.evaluation_date,
-      items: row.items || {},
-      total_score: row.total_score,
-      max_score: row.max_score,
-      notes: row.notes,
-      created_at: row.created_at,
-      classroom: row.classrooms
-        ? {
-          name: row.classrooms.name,
-          grade: row.classrooms.grade ?? "",
-          division: row.classrooms.division,
-        }
-        : undefined,
-      supervisor: row.users
-        ? {
-          name: row.users.name,
-          email: row.users.email ?? "",
-        }
-        : undefined,
-    }))
+    return await readEvaluationHistory(supabase, { ...getCurrentMonthPeriod() })
   } catch (error) {
     console.error("[Database] Exception fetching evaluations:", error)
     return []
@@ -262,62 +213,7 @@ export async function getEvaluations(): Promise<Evaluation[]> {
 export async function getEvaluationsBySupervisor(supervisorId: string): Promise<Evaluation[]> {
   try {
     const supabase = createClient()
-    const { data, error } = await supabase
-      .from("evaluations")
-      .select(`
-        id,
-        classroom_id,
-        supervisor_id,
-        evaluation_date,
-        items,
-        total_score,
-        max_score,
-        notes,
-        created_at,
-        classrooms:classroom_id (
-          name,
-          grade,
-          division
-        ),
-        users:supervisor_id (
-          name,
-          email
-        )
-      `)
-      .eq("supervisor_id", supervisorId)
-      .order("evaluation_date", { ascending: false })
-
-    if (error) {
-      console.error("[Database] Error fetching evaluations by supervisor:", error)
-      return []
-    }
-
-    if (!data) return []
-
-    return data.map((row: any) => ({
-      id: row.id,
-      classroom_id: row.classroom_id,
-      supervisor_id: row.supervisor_id,
-      evaluation_date: row.evaluation_date,
-      items: row.items || {},
-      total_score: row.total_score,
-      max_score: row.max_score,
-      notes: row.notes,
-      created_at: row.created_at,
-      classroom: row.classrooms
-        ? {
-          name: row.classrooms.name,
-          grade: row.classrooms.grade ?? "",
-          division: row.classrooms.division,
-        }
-        : undefined,
-      supervisor: row.users
-        ? {
-          name: row.users.name,
-          email: row.users.email ?? "",
-        }
-        : undefined,
-    }))
+    return await readEvaluationHistory(supabase, { ...getCurrentMonthPeriod(), supervisorId })
   } catch (error) {
     console.error("[Database] Exception fetching evaluations by supervisor:", error)
     return []
@@ -330,63 +226,7 @@ export async function getEvaluationsByDateRange(startDate: string, endDate: stri
     const formattedStart = startDate.includes("T") ? startDate : `${startDate}T00:00:00.000Z`
     const formattedEnd = endDate.includes("T") ? endDate : `${endDate}T23:59:59.999Z`
 
-    const { data, error } = await supabase
-      .from("evaluations")
-      .select(`
-        id,
-        classroom_id,
-        supervisor_id,
-        evaluation_date,
-        items,
-        total_score,
-        max_score,
-        notes,
-        created_at,
-        classrooms:classroom_id (
-          name,
-          grade,
-          division
-        ),
-        users:supervisor_id (
-          name,
-          email
-        )
-      `)
-      .gte("evaluation_date", formattedStart)
-      .lte("evaluation_date", formattedEnd)
-      .order("evaluation_date", { ascending: false })
-
-    if (error) {
-      console.error("[Database] Error fetching evaluations by date range:", error)
-      return []
-    }
-
-    if (!data) return []
-
-    return data.map((row: any) => ({
-      id: row.id,
-      classroom_id: row.classroom_id,
-      supervisor_id: row.supervisor_id,
-      evaluation_date: row.evaluation_date,
-      items: row.items || {},
-      total_score: row.total_score,
-      max_score: row.max_score,
-      notes: row.notes,
-      created_at: row.created_at,
-      classroom: row.classrooms
-        ? {
-          name: row.classrooms.name,
-          grade: row.classrooms.grade ?? "",
-          division: row.classrooms.division,
-        }
-        : undefined,
-      supervisor: row.users
-        ? {
-          name: row.users.name,
-          email: row.users.email ?? "",
-        }
-        : undefined,
-    }))
+    return await readEvaluationHistory(supabase, { start: formattedStart, end: formattedEnd, endInclusive: true, includeArchives: true })
   } catch (error) {
     console.error("[Database] Exception fetching evaluations by date range:", error)
     return []
@@ -396,70 +236,7 @@ export async function getEvaluationsByDateRange(startDate: string, endDate: stri
 export async function getArchivedEvaluationsList(): Promise<Evaluation[]> {
   try {
     const supabase = createClient()
-    const { data: archiveData, error } = await supabase
-      .from("archive_evaluations")
-      .select("id, classroom_id, classroom_name, classroom_grade, classroom_division, supervisor_id, supervisor_name, evaluation_date, items, total_score, max_score, notes, created_at, archived_at")
-      .order("archived_at", { ascending: false })
-
-    if (error) {
-      console.error("[Database] Error fetching archive evaluations:", error)
-      return []
-    }
-
-    if (!archiveData || archiveData.length === 0) return []
-
-    const [{ data: activeRooms }, { data: archiveRooms }, { data: users }] = await Promise.all([
-      supabase.from("classrooms").select("id, name, grade, division"),
-      supabase.from("archive_classrooms").select("id, name, grade"),
-      supabase.from("users").select("id, name, email"),
-    ])
-
-    const allRooms = [
-      ...(activeRooms || []),
-      ...(archiveRooms || []).map((r: any) => ({
-        ...r,
-        division: r.division || undefined,
-      })),
-    ]
-    const userMap = new Map<string, { id: string; name: string; email?: string }>((users || []).map((u: any) => [u.id, u]))
-    const roomMap = new Map<string, { id: string; name: string; grade?: string; division?: any }>(allRooms.map((r: any) => [r.id, r]))
-
-    return archiveData.map((row: any) => {
-      const cls = roomMap.get(row.classroom_id)
-      const usr = userMap.get(row.supervisor_id)
-
-      const classroomName = row.classroom_name || cls?.name || "Unknown Classroom"
-      const classroomGrade = row.classroom_grade || cls?.grade || ""
-      const classroomDivision = row.classroom_division || cls?.division
-      const supervisorName = row.supervisor_name || usr?.name || "Unknown Supervisor"
-
-      return {
-        id: row.id,
-        classroom_id: row.classroom_id,
-        supervisor_id: row.supervisor_id,
-        classroom_name: classroomName,
-        classroom_grade: classroomGrade,
-        classroom_division: classroomDivision,
-        supervisor_name: supervisorName,
-        evaluation_date: row.evaluation_date,
-        items: row.items || {},
-        total_score: row.total_score,
-        max_score: row.max_score,
-        notes: row.notes,
-        created_at: row.created_at,
-        archived_at: row.archived_at,
-        is_archived: true,
-        classroom: {
-          name: classroomName,
-          grade: classroomGrade,
-          division: classroomDivision,
-        },
-        supervisor: {
-          name: supervisorName,
-          email: usr?.email ?? "",
-        },
-      }
-    })
+    return await readEvaluationHistory(supabase, { archivesOnly: true })
   } catch (error) {
     console.error("[Database] Exception fetching archive evaluations:", error)
     return []
@@ -474,32 +251,21 @@ export async function getLeaderboardFromDatabaseView(): Promise<{
 }> {
   try {
     const supabase = createClient()
-    const { data, error } = await supabase
-      .from("v_live_classroom_leaderboard")
-      .select("*")
-      .order("total_score", { ascending: false })
-
-    if (error) {
-      return { success: false, error: error.message }
-    }
-
-    const formatted = (data || []).map((row: any) => ({
-      classroom: {
-        id: row.classroom_id,
-        name: row.classroom_name,
-        grade: row.classroom_grade,
-        division: row.classroom_division,
-      },
-      totalScore: row.total_score,
-      evaluationCount: row.total_evaluations,
-      averageScore: row.average_score_pct,
-      lastEvaluated: row.last_evaluated_at || "Never",
-    }))
-
-    return { success: true, data: formatted }
+    const settings = await getAdminSettings()
+    if (!settings.success || !settings.settings) throw new Error(settings.error || "Unable to load scoring settings")
+    const scope = resolveLeaderboardScope(settings.settings.leaderboard_show_monthly, settings.settings.leaderboard_display_month)
+    const [evaluations, classrooms] = await Promise.all([
+      readEvaluationHistory(supabase, scope),
+      getClassrooms(),
+    ])
+    return { success: true, data: calculateLeaderboard(evaluations, classrooms) }
   } catch (err: any) {
     return { success: false, error: err.message || "Failed to load view" }
   }
 }
 
 
+
+export async function getAllEvaluationHistory(): Promise<Evaluation[]> {
+  return readEvaluationHistory(createClient(), { includeArchives: true })
+}

@@ -1,5 +1,6 @@
 "use client"
 
+import { resolveCompetitionMonth } from "@/lib/display-period"
 import { useState, useEffect, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -133,6 +134,8 @@ export function DataManagementPanel() {
     }
   }
 
+  const competitionMonth = resolveCompetitionMonth(adminSettings?.winners_display_month, adminSettings?.leaderboard_display_month)
+
   return (
     <div className="space-y-6">
       <AdminPageHeader
@@ -149,6 +152,7 @@ export function DataManagementPanel() {
       <DefaultMonthSettings
         initialWinnersMonth={adminSettings?.winners_display_month}
         initialLeaderboardMonth={adminSettings?.leaderboard_display_month}
+        onMonthChange={(key, setting) => setAdminSettings((previous) => previous ? { ...previous, [key]: setting } : previous)}
       />
 
       <Tabs defaultValue="archive" className="space-y-6">
@@ -304,7 +308,7 @@ export function DataManagementPanel() {
         </TabsContent>
 
         <TabsContent value="winners" className="mt-6">
-          <MonthlyWinnersManager />
+          {adminSettings ? <MonthlyWinnersManager key={`${competitionMonth.year}-${competitionMonth.month}`} defaultMonth={competitionMonth} /> : <p role="status">Loading competition settings...</p>}
         </TabsContent>
       </Tabs>
 

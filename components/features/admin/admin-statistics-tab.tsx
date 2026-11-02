@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react"
 import { AdminPageHeader } from "@/components/features/admin/admin-page-header"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { getClassrooms, getEvaluationsByDateRange, getEvaluations } from "@/lib/supabase-data"
+import { getClassrooms, getEvaluationsByDateRange, getAllEvaluationHistory } from "@/lib/supabase-data"
 import type { Evaluation, Classroom } from "@/lib/types"
 import { LeafIcon, TrophyIcon, StarIcon } from "@/components/common/icons"
 import { Filter, Calendar as CalendarIcon } from "lucide-react"
@@ -59,7 +59,7 @@ export function AdminStatisticsTab() {
       const queryEnd = end !== undefined ? end : endDate
       const queryAllTime = isAllTime !== undefined ? isAllTime : preset === "all-time"
       const [evaluationsData, classroomsData] = await Promise.all([
-        queryAllTime ? getEvaluations() : getEvaluationsByDateRange(queryStart, queryEnd),
+        queryAllTime ? getAllEvaluationHistory() : getEvaluationsByDateRange(queryStart, queryEnd),
         getClassrooms(),
       ])
 

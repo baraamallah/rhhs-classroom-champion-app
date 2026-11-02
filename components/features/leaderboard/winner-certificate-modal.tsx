@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import { m, AnimatePresence } from "framer-motion"
 import { TrophyIcon, StarIcon, CrownIcon } from "@/components/common/icons"
 import { FirstPlaceLogo, SecondPlaceLogo, ThirdPlaceLogo } from "@/components/common/podium-logos"
-import { X, Award, Sparkles, Printer, Share2, Check, Download } from "lucide-react"
+import { X, Award, Sparkles, Printer, Share2, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { getDivisionDisplayName } from "@/lib/division-display"
 import { LazyMotionProvider } from "@/components/providers/lazy-motion-provider"
@@ -16,8 +16,8 @@ interface WinnerData {
   division: string
   rank: number
   totalScore: number
-  averageScore: number
-  evaluationCount: number
+  averageScore?: number
+  evaluationCount?: number
   month: string
   year: number
   winCount?: number
@@ -276,43 +276,10 @@ export function WinnerCertificateModal({ isOpen, onClose, winner }: WinnerCertif
                     </p>
                   </div>
 
-                  {/* Honor Performance Stats Bar */}
-                  <div className="w-full max-w-lg grid grid-cols-3 gap-2 sm:gap-3 my-3 sm:my-4">
-                    <div className="p-2 sm:p-3 rounded-lg bg-card/60 dark:bg-card/40 border border-amber-500/20 backdrop-blur-xs">
-                      <p className="text-base xs:text-lg sm:text-xl font-black text-amber-600 dark:text-amber-400">
-                        {winner.totalScore}
-                      </p>
-                      <p className="text-[9px] sm:text-[10px] uppercase font-bold text-muted-foreground">
-                        Total Score
-                      </p>
-                    </div>
-
-                    <div className="p-2 sm:p-3 rounded-lg bg-card/60 dark:bg-card/40 border border-amber-500/20 backdrop-blur-xs">
-                      <p className="text-base xs:text-lg sm:text-xl font-black text-amber-600 dark:text-amber-400">
-                        {winner.averageScore.toFixed(1)}
-                      </p>
-                      <p className="text-[9px] sm:text-[10px] uppercase font-bold text-muted-foreground">
-                        Average Score
-                      </p>
-                    </div>
-
-                    <div className="p-2 sm:p-3 rounded-lg bg-card/60 dark:bg-card/40 border border-amber-500/20 backdrop-blur-xs">
-                      <p className="text-base xs:text-lg sm:text-xl font-black text-amber-600 dark:text-amber-400">
-                        {winner.evaluationCount}
-                      </p>
-                      <p className="text-[9px] sm:text-[10px] uppercase font-bold text-muted-foreground">
-                        Evaluations
-                      </p>
-                    </div>
+                  <div className="w-full max-w-xs my-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
+                    <p className="text-3xl sm:text-4xl font-black tabular-nums text-amber-600 dark:text-amber-400">{winner.totalScore.toLocaleString("en-US")}</p>
+                    <p className="mt-1 text-xs uppercase tracking-wider font-bold text-muted-foreground">Total points</p>
                   </div>
-
-                  {/* Win Count Distinction Badge (if > 0) */}
-                  {winner.winCount && winner.winCount > 0 && (
-                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/40 text-amber-700 dark:text-amber-300 text-xs font-bold mb-2">
-                      <TrophyIcon className="w-3.5 h-3.5 text-amber-500" />
-                      <span>{winner.winCount} Total Champion Title{winner.winCount > 1 ? "s" : ""} This Academic Year</span>
-                    </div>
-                  )}
 
                   {/* Decorative Stars */}
                   <div className="flex justify-center gap-1.5 pt-2 sm:pt-4">

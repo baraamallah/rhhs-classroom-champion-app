@@ -1,7 +1,9 @@
 "use server"
 
-import { revalidatePath } from "next/cache"
-import { createClient, createAdminClient } from "@/lib/supabase/server"
+import { revalidatePath, revalidateTag } from "next/cache"
+import { recordRecentMutationCookie } from "@/lib/db-router"
+import { validDisplayMonth } from "@/lib/display-period"
+import { createAdminClient } from "@/lib/supabase/server"
 import { getSessionFromCookies } from "@/lib/auth/session"
 
 export type AdminSettings = {
@@ -138,28 +140,8 @@ export async function setWinnersPageVisibility(visible: boolean): Promise<{ succ
 }
 
 export async function getLeaderboardPointsSetting(): Promise<{ success: boolean; showMonthly?: boolean; error?: string }> {
-  try {
-    const supabase = await createAdminClient()
-    const { data, error } = await supabase
-      .from("system_settings")
-      .select("value")
-      .eq("key", "leaderboard_show_monthly")
-      .maybeSingle()
-
-    if (error) {
-      console.error("[getLeaderboardPointsSetting] Error:", error)
-      return { success: false, error: error.message }
-    }
-
-    // Default to true (show points per month) if setting doesn't exist
-    const rawValue = data?.value
-    const showMonthly = rawValue === null || rawValue === undefined ? true : (rawValue === true || rawValue === "true")
-    
-    return { success: true, showMonthly }
-  } catch (error: any) {
-    console.error("[getLeaderboardPointsSetting] Unexpected error:", error)
-    return { success: false, error: error.message || "Failed to get leaderboard setting" }
-  }
+  const result = await getAdminSettings()
+  return result.success ? { success: true, showMonthly: result.settings!.leaderboard_show_monthly } : { success: false, error: result.error }
 }
 
 export async function setLeaderboardPointsSetting(showMonthly: boolean): Promise<{ success: boolean; error?: string }> {
@@ -188,6 +170,9 @@ export async function setLeaderboardPointsSetting(showMonthly: boolean): Promise
       return { success: false, error: upsertError.message }
     }
 
+    await recordRecentMutationCookie()
+    revalidateTag("settings", { expire: 0 })
+    revalidateTag("leaderboard", { expire: 0 })
     revalidatePath("/")
     revalidatePath("/admin")
     return { success: true }
@@ -248,6 +233,9 @@ export async function setCalculationMode(enabled: boolean): Promise<{ success: b
       return { success: false, error: upsertError.message }
     }
 
+    await recordRecentMutationCookie()
+    revalidateTag("settings", { expire: 0 })
+    revalidateTag("leaderboard", { expire: 0 })
     revalidatePath("/")
     revalidatePath("/admin")
     revalidatePath("/winners")
@@ -309,6 +297,9 @@ export async function setWinnerRevealMode(enabled: boolean): Promise<{ success: 
       return { success: false, error: upsertError.message }
     }
 
+    await recordRecentMutationCookie()
+    revalidateTag("settings", { expire: 0 })
+    revalidateTag("leaderboard", { expire: 0 })
     revalidatePath("/")
     revalidatePath("/admin")
     revalidatePath("/winners")
@@ -342,8 +333,8 @@ export async function getDefaultMonthSettings(): Promise<{
       return { success: false, error: error.message }
     }
 
-    const winnersMonth = data?.find(s => s.key === "winners_display_month")?.value as MonthSetting | null
     const leaderboardMonth = data?.find(s => s.key === "leaderboard_display_month")?.value as MonthSetting | null
+    const winnersMonth = data?.find(s => s.key === "winners_display_month")?.value as MonthSetting | null
 
     return {
       success: true,
@@ -364,6 +355,8 @@ export async function setDefaultMonthSetting(
   if (error || !currentUser) {
     return { success: false, error }
   }
+
+  if (setting !== null && !validDisplayMonth(setting)) return { success: false, error: "Select a valid year and month" }
 
   try {
     const supabase = await createAdminClient()
@@ -400,6 +393,9 @@ export async function setDefaultMonthSetting(
       }
     }
 
+    await recordRecentMutationCookie()
+    revalidateTag("settings", { expire: 0 })
+    revalidateTag("leaderboard", { expire: 0 })
     revalidatePath("/")
     revalidatePath("/winners")
     revalidatePath("/admin")

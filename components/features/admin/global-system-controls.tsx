@@ -182,12 +182,14 @@ export function GlobalSystemControls({
     try {
       const res = await setLeaderboardPointsSetting(showMonthly)
       if (res.success) {
-        setSettings((prev) => ({ ...prev, leaderboard_show_monthly: showMonthly }))
+        const updated = { ...settings, leaderboard_show_monthly: showMonthly }
+        setSettings(updated)
+        onSettingsChange?.(updated)
         toast({
           title: showMonthly ? "Monthly Scoring Active" : "All-Time Scoring Active",
           description: showMonthly
-            ? "Homepage leaderboard is now filtering scores for the current calendar month only."
-            : "Homepage leaderboard is now computing cumulative points across the entire year.",
+            ? "Homepage leaderboard now shows the frozen month, or the current month when unfrozen, including archived scores."
+            : "Homepage leaderboard now includes all live and archived evaluation points.",
         })
       } else {
         toast({
@@ -682,11 +684,11 @@ export function GlobalSystemControls({
               <div className="rounded-xl bg-muted/40 p-3 border border-border/50 text-[11px] text-muted-foreground leading-relaxed">
                 {settings.leaderboard_show_monthly ? (
                   <span>
-                    <strong className="text-foreground">Monthly Active:</strong> Resets visually on the 1st of each month. Only evaluations within the active month count.
+                    <strong className="text-foreground">Monthly Active:</strong> Shows the frozen month, or resets on the 1st when unfrozen. Includes archived scores from that month.
                   </span>
                 ) : (
                   <span>
-                    <strong className="text-foreground">All-Time Active:</strong> Aggregates every approved evaluation across the full school year.
+                    <strong className="text-foreground">All-Time Active:</strong> Includes every live and archived evaluation, counted once.
                   </span>
                 )}
               </div>

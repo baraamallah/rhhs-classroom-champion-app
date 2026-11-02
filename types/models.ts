@@ -67,6 +67,7 @@ export interface Evaluation {
   created_at?: string
   archived_at?: string
   is_archived?: boolean
+  archive_source?: "archive_evaluations" | "academic_archive_evaluations"
   // Denormalized historical snapshot fields
   classroom_name?: string
   classroom_grade?: string

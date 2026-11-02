@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/server"
 import { getSessionFromCookies } from "@/lib/auth/session"
 import { getEvaluationsStatus } from "@/app/actions/evaluation-settings-actions"
 import { getSchoolTermDates } from "@/app/actions/calendar-actions"
+import { readEvaluationHistory } from "@/lib/evaluation-history"
 import { recordRecentMutationCookie } from "@/lib/db-router"
 import { format, isWeekend, parseISO } from "date-fns"
 
@@ -47,31 +48,11 @@ export async function checkClassroomDateEvaluation(
 
     const isWorkingDay = !isWeekendDay && !holiday
 
-    // Check existing evaluation
-    const { data: existing, error } = await supabase
-      .from("evaluations")
-      .select(`
-        id,
-        classroom_id,
-        supervisor_id,
-        total_score,
-        max_score,
-        evaluation_date,
-        items,
-        notes,
-        users:supervisor_id (
-          name,
-          email
-        )
-      `)
-      .eq("classroom_id", classroomId)
-      .gte("evaluation_date", `${targetDate}T00:00:00.000Z`)
-      .lte("evaluation_date", `${targetDate}T23:59:59.999Z`)
-      .maybeSingle()
-
-    if (error && error.code !== "PGRST116") {
-      throw error
-    }
+    // Archived days stay locked: moving a record must not allow a second score.
+    const [existing] = await readEvaluationHistory(supabase, {
+      classroomId, start: `${targetDate}T00:00:00.000Z`,
+      end: `${targetDate}T23:59:59.999Z`, endInclusive: true, includeArchives: true,
+    })
 
     let evaluation: ExistingEvaluationInfo | undefined
     if (existing) {
@@ -84,10 +65,7 @@ export async function checkClassroomDateEvaluation(
         evaluation_date: existing.evaluation_date,
         items: existing.items || {},
         notes: existing.notes || undefined,
-        supervisor: (existing as any).users ? {
-          name: (existing as any).users.name,
-          email: (existing as any).users.email || "",
-        } : undefined,
+        supervisor: existing.supervisor,
       }
     }
 
@@ -195,13 +173,10 @@ export async function submitEvaluation(
     }
 
     // Daily Lock Check: Ensure classroom does not already have an evaluation on target date
-    const { data: existingEval } = await supabase
-      .from("evaluations")
-      .select("id")
-      .eq("classroom_id", classroomId)
-      .gte("evaluation_date", `${targetDateStr}T00:00:00.000Z`)
-      .lte("evaluation_date", `${targetDateStr}T23:59:59.999Z`)
-      .maybeSingle()
+    const [existingEval] = await readEvaluationHistory(supabase, {
+      classroomId, start: `${targetDateStr}T00:00:00.000Z`,
+      end: `${targetDateStr}T23:59:59.999Z`, endInclusive: true, includeArchives: true,
+    })
 
     if (existingEval) {
       return {

@@ -1,5 +1,6 @@
 "use client"
 
+import { getSchoolMonth } from "@/lib/month-period"
 import { useState, useEffect, useRef } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -27,9 +28,10 @@ const MONTHS = [
 interface DefaultMonthSettingsProps {
   initialWinnersMonth?: MonthSetting | null
   initialLeaderboardMonth?: MonthSetting | null
+  onMonthChange?: (key: "winners_display_month" | "leaderboard_display_month", setting: MonthSetting | null) => void
 }
 
-export function DefaultMonthSettings({ initialWinnersMonth, initialLeaderboardMonth }: DefaultMonthSettingsProps) {
+export function DefaultMonthSettings({ initialWinnersMonth, initialLeaderboardMonth, onMonthChange }: DefaultMonthSettingsProps) {
   const { toast } = useToast()
   const [loading, setLoading] = useState(initialWinnersMonth === undefined)
   const [saving, setSaving] = useState<string | null>(null)
@@ -38,20 +40,28 @@ export function DefaultMonthSettings({ initialWinnersMonth, initialLeaderboardMo
   const [leaderboardSetting, setLeaderboardSetting] = useState<MonthSetting | null>(initialLeaderboardMonth ?? null)
 
   const [tempWinners, setTempWinners] = useState<MonthSetting>(
-    initialWinnersMonth || { year: new Date().getFullYear(), month: new Date().getMonth() + 1 }
+    initialWinnersMonth || getSchoolMonth()
   )
 
   const [tempLeaderboard, setTempLeaderboard] = useState<MonthSetting>(
-    initialLeaderboardMonth || { year: new Date().getFullYear(), month: new Date().getMonth() + 1 }
+    initialLeaderboardMonth || getSchoolMonth()
   )
 
   const hasLoaded = useRef(false)
 
   useEffect(() => {
-    if (initialWinnersMonth !== undefined || hasLoaded.current) return
+    if (initialWinnersMonth !== undefined && initialLeaderboardMonth !== undefined) {
+      setWinnersSetting(initialWinnersMonth)
+      setLeaderboardSetting(initialLeaderboardMonth)
+      setTempWinners(initialWinnersMonth || getSchoolMonth())
+      setTempLeaderboard(initialLeaderboardMonth || getSchoolMonth())
+      setLoading(false)
+      return
+    }
+    if (hasLoaded.current) return
     hasLoaded.current = true
     loadSettings()
-  }, [])
+  }, [initialWinnersMonth, initialLeaderboardMonth])
 
   const loadSettings = async () => {
     setLoading(true)
@@ -77,6 +87,7 @@ export function DefaultMonthSettings({ initialWinnersMonth, initialLeaderboardMo
     setSaving(null)
 
     if (result.success) {
+      onMonthChange?.(key, setting)
       if (key === "winners_display_month") setWinnersSetting(setting)
       else setLeaderboardSetting(setting)
 
@@ -99,12 +110,13 @@ export function DefaultMonthSettings({ initialWinnersMonth, initialLeaderboardMo
     setSaving(null)
 
     if (result.success) {
+      onMonthChange?.(key, null)
       if (key === "winners_display_month") {
         setWinnersSetting(null)
-        setTempWinners({ year: new Date().getFullYear(), month: new Date().getMonth() + 1 })
+        setTempWinners(getSchoolMonth())
       } else {
         setLeaderboardSetting(null)
-        setTempLeaderboard({ year: new Date().getFullYear(), month: new Date().getMonth() + 1 })
+        setTempLeaderboard(getSchoolMonth())
       }
 
       toast({
@@ -120,7 +132,7 @@ export function DefaultMonthSettings({ initialWinnersMonth, initialLeaderboardMo
     }
   }
 
-  const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i)
+  const years = Array.from(new Set([tempWinners.year, tempLeaderboard.year, ...Array.from({ length: 5 }, (_, i) => getSchoolMonth().year - i)])).sort((a, b) => b - a)
 
   if (loading) {
     return (
@@ -143,7 +155,7 @@ export function DefaultMonthSettings({ initialWinnersMonth, initialLeaderboardMo
             Winners Display Month
           </CardTitle>
           <CardDescription>
-            Choose which month to show by default on the Winners page.
+            Freeze the public winners page and admin declarations to the same competition month.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -186,7 +198,7 @@ export function DefaultMonthSettings({ initialWinnersMonth, initialLeaderboardMo
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium">Status:</span>
               <span className={`text-xs px-2 py-0.5 rounded-full ${winnersSetting ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" : "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"}`}>
-                {winnersSetting ? `Frozen: ${MONTHS.find(m => m.value === winnersSetting.month)?.label} ${winnersSetting.year}` : "Following Current Month"}
+                {winnersSetting ? `Frozen: ${MONTHS.find(m => m.value === winnersSetting.month)?.label} ${winnersSetting.year}` : leaderboardSetting ? `Following Leaderboard: ${MONTHS.find(m => m.value === leaderboardSetting.month)?.label} ${leaderboardSetting.year}` : "Following Current Month"}
               </span>
             </div>
             <div className="flex gap-2 mt-2">
@@ -218,7 +230,7 @@ export function DefaultMonthSettings({ initialWinnersMonth, initialLeaderboardMo
             Leaderboard Display Month
           </CardTitle>
           <CardDescription>
-            Choose which month to show on the leaderboard (only if "Monthly" mode is active).
+            Choose the leaderboard month in Monthly mode. Admin winners follow it when the Winners month is not separately frozen.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

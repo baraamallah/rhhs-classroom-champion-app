@@ -52,6 +52,7 @@ import {
   Download,
 } from "lucide-react"
 import { format } from "date-fns"
+import { getCurrentMonthPeriod, getSchoolMonthKey } from "@/lib/month-period"
 
 // Timezone-safe date formatting helper
 const formatDate = (dateString?: string | null) => {
@@ -88,7 +89,8 @@ export function EvaluationsList() {
   const [loading, setLoading] = useState(true)
   const [loadingUndoLogs, setLoadingUndoLogs] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
-  const [viewScope, setViewScope] = useState<"all" | "active" | "archived" | "undo_log">("all")
+  const [viewScope, setViewScope] = useState<"all" | "active" | "archived" | "undo_log">("active")
+  const [monthFilter, setMonthFilter] = useState("all")
   const [divisionFilter, setDivisionFilter] = useState("all")
   const [sortBy, setSortBy] = useState<"date_desc" | "date_asc" | "score_desc" | "score_asc">("date_desc")
   const [restoringId, setRestoringId] = useState<string | null>(null)
@@ -271,6 +273,7 @@ export function EvaluationsList() {
     const searchLower = deferredSearch.trim().toLowerCase()
     const filtered = scopedList.filter((e) => {
       const formatted = formatDate(e.evaluation_date).toLowerCase()
+      if (viewScope !== "active" && monthFilter !== "all" && getSchoolMonthKey(new Date(e.evaluation_date)) !== monthFilter) return false
       const matchesSearch =
         !searchLower ||
         (e.classroom?.name || "").toLowerCase().includes(searchLower) ||
@@ -302,7 +305,7 @@ export function EvaluationsList() {
       // Default: date_desc
       return (b.evaluation_date || "").localeCompare(a.evaluation_date || "")
     })
-  }, [scopedList, deferredSearch, divisionFilter, sortBy])
+  }, [scopedList, deferredSearch, divisionFilter, sortBy, monthFilter, viewScope])
 
   // Filtered undo logs
   const filteredUndoLogs = useMemo(() => {
@@ -430,7 +433,7 @@ export function EvaluationsList() {
         badge="Score Submissions"
         badgeLabel="Verified Inspection History"
         title="Evaluation History & Scores"
-        description="Review, filter, and inspect all active scores, undo evaluations, and track reverted undo points."
+        description="Current-month evaluations start fresh on the 1st. Browse previous months in Archived; their points remain included in historical winners."
       />
 
       <Card className="border-border/80 shadow-xs overflow-hidden rounded-2xl">
@@ -563,6 +566,12 @@ export function EvaluationsList() {
               </button>
             </div>
 
+            {viewScope !== "active" && viewScope !== "undo_log" && (
+              <select aria-label="Evaluation month" value={monthFilter} onChange={(event) => setMonthFilter(event.target.value)} className="min-h-11 rounded-xl border border-border bg-background px-3 text-sm">
+                <option value="all">All months</option>
+                {Array.from(new Set(combinedEvaluations.map((evaluation) => getSchoolMonthKey(new Date(evaluation.evaluation_date))))).sort().reverse().map((key) => <option key={key} value={key}>{key}</option>)}
+              </select>
+            )}
             {/* Division Pills & Sorting Controls */}
             <div className="flex items-center flex-wrap gap-2">
               <div className="flex flex-wrap gap-1">
@@ -889,7 +898,7 @@ export function EvaluationsList() {
                             )}
 
                             {/* Restore from Archive Button */}
-                            {evaluation.is_archived && (
+                            {evaluation.is_archived && evaluation.archive_source !== "academic_archive_evaluations" && evaluation.evaluation_date >= getCurrentMonthPeriod().start && (
                               <Button
                                 size="sm"
                                 variant="outline"

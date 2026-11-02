@@ -1,39 +1,57 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { checkAndAutoArchive } from "@/app/actions/auto-archive-actions"
+import { getCurrentMonthPeriod } from "@/lib/month-period"
 
-/**
- * Component that automatically checks for and performs monthly archiving.
- * Runs once per session to avoid redundant checks.
- */
 export function AutoArchiveChecker() {
-  const hasChecked = useRef(false)
-
+  const router = useRouter()
   useEffect(() => {
-    // Only run once per session
-    if (hasChecked.current) return
-    hasChecked.current = true
-
-    // Run the check asynchronously without blocking the UI
+    const initialMonth = getCurrentMonthPeriod().key
+    let stopped = false
+    let checking = false
+    let boundaryTimer: ReturnType<typeof setTimeout>
     const performCheck = async () => {
+      if (checking || stopped) return
+      checking = true
       try {
         const result = await checkAndAutoArchive()
-        
-        if (result.archived) {
-          console.log(`[AutoArchive] Successfully archived ${result.count} evaluations from ${result.fromMonth}`)
-        }
+        if (!stopped && result.archived) router.refresh()
       } catch (error) {
-        console.error("[AutoArchive] Error during check:", error)
+        console.error("[AutoArchive] Monthly check failed:", error)
+      } finally {
+        checking = false
       }
     }
-
-    // Delay slightly to not impact initial page load
-    const timeout = setTimeout(performCheck, 2000)
-    
-    return () => clearTimeout(timeout)
-  }, [])
-
-  // This component renders nothing
+    const checkBoundary = () => {
+      if (stopped) return
+      const period = getCurrentMonthPeriod()
+      if (period.key !== initialMonth) {
+        // Reset client-loaded evaluation lists as well as server-rendered scores.
+        window.location.reload()
+        return
+      }
+      clearTimeout(boundaryTimer)
+      boundaryTimer = setTimeout(checkBoundary, Math.min(Date.parse(period.end) - Date.now() + 50, 86_400_000))
+    }
+    const onVisible = () => {
+      if (document.visibilityState === "visible") {
+        checkBoundary()
+        void performCheck()
+      }
+    }
+    checkBoundary()
+    const initialCheck = setTimeout(performCheck, 2000)
+    const interval = setInterval(performCheck, 300_000)
+    document.addEventListener("visibilitychange", onVisible)
+    return () => {
+      stopped = true
+      clearTimeout(initialCheck)
+      clearTimeout(boundaryTimer)
+      clearInterval(interval)
+      document.removeEventListener("visibilitychange", onVisible)
+    }
+  }, [router])
   return null
 }

@@ -1,17 +1,19 @@
 "use client"
 
+import { resolveCompetitionMonth } from "@/lib/display-period"
+import { getSchoolMonth } from "@/lib/month-period"
+
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { m, AnimatePresence } from "framer-motion"
 import { Header } from "@/components/layout/header"
 import { LazyMotionProvider } from "@/components/providers/lazy-motion-provider"
 import { Confetti } from "@/components/features/animations/confetti"
 import { CelebrationAnimation } from "@/components/features/animations/celebration-animation"
-import { TrophyIcon, CrownIcon, StarIcon } from "@/components/common/icons"
+import { TrophyIcon, CrownIcon } from "@/components/common/icons"
 import { FirstPlaceLogo } from "@/components/common/podium-logos"
 import { getPublicMonthlyWinners } from "@/app/actions/public-winners-actions"
 import { getWinnersPageVisibility, getDefaultMonthSettings } from "@/app/actions/winners-page-actions"
 import { getCachedWinnersVisibility, setCachedWinnersVisibility } from "@/lib/winners-visibility"
-import { getClassroomWinCounts } from "@/app/actions/win-count-actions"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
@@ -22,12 +24,8 @@ import {
   ArrowLeft,
   Award,
   Sparkles,
-  Medal,
   Flame,
-  CheckCircle2,
   Clock,
-  Layers,
-  GraduationCap
 } from "lucide-react"
 import { WinnerCertificateModal } from "@/components/features/leaderboard/winner-certificate-modal"
 import { DIVISION_OPTIONS, getDivisionDisplayName } from "@/lib/division-display"
@@ -44,8 +42,6 @@ interface Winner {
   year: number
   month: number
   total_score: number
-  average_score: number
-  evaluation_count: number
   classrooms?: {
     id: string
     name: string
@@ -60,11 +56,8 @@ interface SelectedWinner {
   division: string
   rank: number
   totalScore: number
-  averageScore: number
-  evaluationCount: number
   month: string
   year: number
-  winCount?: number
 }
 
 export default function WinnersPage() {
@@ -72,15 +65,18 @@ export default function WinnersPage() {
   const [visible, setVisible] = useState(() => getCachedWinnersVisibility(true))
   const [loading, setLoading] = useState(true)
   const [winners, setWinners] = useState<Winner[]>([])
-  const [winCounts, setWinCounts] = useState<Record<string, number>>({})
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1)
+  const [initialized, setInitialized] = useState(false)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const requestRef = useRef(0)
+  const [selectedYear, setSelectedYear] = useState(() => getSchoolMonth().year)
+  const [selectedMonth, setSelectedMonth] = useState(() => getSchoolMonth().month)
   const [showConfetti, setShowConfetti] = useState(false)
   const [celebratingDivision, setCelebratingDivision] = useState<string | null>(null)
   const [selectedWinner, setSelectedWinner] = useState<SelectedWinner | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
 
   const confettiTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const celebrationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const triggerConfetti = useCallback((duration: number) => {
     if (confettiTimerRef.current) clearTimeout(confettiTimerRef.current)
@@ -90,6 +86,7 @@ export default function WinnersPage() {
 
   useEffect(() => () => {
     if (confettiTimerRef.current) clearTimeout(confettiTimerRef.current)
+    if (celebrationTimerRef.current) clearTimeout(celebrationTimerRef.current)
   }, [])
 
   useEffect(() => {
@@ -112,9 +109,10 @@ export default function WinnersPage() {
           return
         }
 
-        if (monthSettingsResult.success && monthSettingsResult.winnersMonth) {
-          setSelectedYear(monthSettingsResult.winnersMonth.year)
-          setSelectedMonth(monthSettingsResult.winnersMonth.month)
+        if (monthSettingsResult.success) {
+          const period = resolveCompetitionMonth(monthSettingsResult.winnersMonth, monthSettingsResult.leaderboardMonth)
+          setSelectedYear(period.year)
+          setSelectedMonth(period.month)
         }
       } catch (error) {
         if (!cancelled) {
@@ -122,7 +120,7 @@ export default function WinnersPage() {
           setVisible(true)
         }
       } finally {
-        if (!cancelled) setLoading(false)
+        if (!cancelled) setInitialized(true)
       }
     }
 
@@ -131,29 +129,31 @@ export default function WinnersPage() {
   }, [router])
 
   const loadData = useCallback(async () => {
+    const requestId = ++requestRef.current
     setLoading(true)
+    setLoadError(null)
+    setWinners([])
+    setIsModalOpen(false)
     try {
-      const [winCountsResult, winnersResult] = await Promise.all([
-        getClassroomWinCounts(),
-        getPublicMonthlyWinners(selectedYear, selectedMonth),
-      ])
-
-      if (winCountsResult.success && winCountsResult.data) setWinCounts(winCountsResult.data)
-      if (winnersResult.success) {
-        const winnerData = winnersResult.data || []
-        setWinners(winnerData)
-        if (winnerData.length > 0) triggerConfetti(3500)
-      }
+      const result = await getPublicMonthlyWinners(selectedYear, selectedMonth)
+      if (requestId !== requestRef.current) return
+      if (!result.success) throw new Error("Unable to load the winners. Please try again.")
+      const winnerData = result.data || []
+      setWinners(winnerData)
+      if (winnerData.length > 0) triggerConfetti(3500)
     } catch (error) {
+      if (requestId !== requestRef.current) return
       console.error("[WinnersPage] Failed to load winners:", error)
+      setLoadError("Unable to load the winners. Please try again.")
     } finally {
-      setLoading(false)
+      if (requestId === requestRef.current) setLoading(false)
     }
   }, [selectedMonth, selectedYear, triggerConfetti])
 
   useEffect(() => {
-    if (visible) void loadData()
-  }, [visible, loadData])
+    if (initialized && visible) void loadData()
+    return () => { requestRef.current += 1 }
+  }, [initialized, visible, loadData])
 
   const handleWinnerClick = (
     classroomName: string,
@@ -161,9 +161,6 @@ export default function WinnersPage() {
     division: string,
     rank: number,
     totalScore: number,
-    averageScore: number,
-    evaluationCount: number,
-    classroomId?: string
   ) => {
     setSelectedWinner({
       classroomName,
@@ -171,27 +168,27 @@ export default function WinnersPage() {
       division,
       rank,
       totalScore,
-      averageScore,
-      evaluationCount,
       month: MONTHS[selectedMonth - 1],
       year: selectedYear,
-      winCount: classroomId ? winCounts[classroomId] : undefined,
     })
     setCelebratingDivision(division)
     setIsModalOpen(true)
     triggerConfetti(2500)
-    setTimeout(() => setCelebratingDivision(null), 3000)
+    if (celebrationTimerRef.current) clearTimeout(celebrationTimerRef.current)
+    celebrationTimerRef.current = setTimeout(() => setCelebratingDivision(null), 3000)
   }
 
   // Highest-scoring champion across all declared divisions
   const topOverallWinner = useMemo(() => {
     if (winners.length === 0) return null
-    return [...winners].sort((a, b) => b.total_score - a.total_score)[0]
+    const sorted = [...winners].sort((a, b) => b.total_score - a.total_score)
+    // Equal totals do not establish a single overall champion.
+    return sorted[1]?.total_score === sorted[0].total_score ? null : sorted[0]
   }, [winners])
 
   if (!visible) return null
 
-  if (loading) {
+  if (!initialized) {
     return (
       <LazyMotionProvider>
         <WinnersLoading />
@@ -224,11 +221,24 @@ export default function WinnersPage() {
             onRefresh={loadData}
           />
 
-          {/* School-Wide Grand Champion Spotlight Plaque (if declared) */}
+          {loadError && (
+            <div role="alert" className="mb-6 rounded-2xl border border-destructive/30 bg-destructive/5 p-6 text-center">
+              <p className="font-semibold">{loadError}</p>
+              <Button onClick={loadData} variant="outline" className="mt-3">Try again</Button>
+            </div>
+          )}
+          {loading && <div role="status" className="py-12 text-center text-muted-foreground">Loading monthly champions...</div>}
+          {!loading && !loadError && winners.length === 0 && (
+            <div role="status" className="mb-6 rounded-2xl border border-dashed border-amber-500/30 bg-card p-8 text-center">
+              <TrophyIcon className="mx-auto mb-3 h-10 w-10 text-amber-500" />
+              <h2 className="text-xl font-bold">No champions declared yet</h2>
+              <p className="mt-2 text-sm text-muted-foreground">Official winners for {MONTHS[selectedMonth - 1]} {selectedYear} will appear here once announced.</p>
+            </div>
+          )}
+          {/* Highest declared score */}
           {topOverallWinner && topOverallWinner.classrooms && (
             <GrandChampionSpotlight
               winner={topOverallWinner}
-              winCount={topOverallWinner.classrooms.id ? winCounts[topOverallWinner.classrooms.id] : 0}
               monthName={MONTHS[selectedMonth - 1]}
               year={selectedYear}
               onInspect={() =>
@@ -237,17 +247,14 @@ export default function WinnersPage() {
                   topOverallWinner.classrooms!.grade,
                   topOverallWinner.division,
                   1,
-                  topOverallWinner.total_score,
-                  topOverallWinner.average_score,
-                  topOverallWinner.evaluation_count,
-                  topOverallWinner.classrooms!.id
+                  topOverallWinner.total_score
                 )
               }
             />
           )}
 
           {/* Division Champions Showcase Plaque Grid */}
-          <div className="grid gap-5 sm:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 mt-4 mb-12">
+          <div className={`grid gap-5 sm:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 mt-4 mb-12 ${loading || loadError ? "hidden" : ""}`}>
             <AnimatePresence mode="popLayout">
               {DIVISIONS.map((division, index) => {
                 const divisionWinner = winners.find((w) => w.division === division)
@@ -256,7 +263,6 @@ export default function WinnersPage() {
                     key={division}
                     division={division}
                     winner={divisionWinner}
-                    winCount={divisionWinner?.classrooms ? winCounts[divisionWinner.classrooms.id] : 0}
                     selectedMonthName={MONTHS[selectedMonth - 1]}
                     selectedYear={selectedYear}
                     index={index}
@@ -293,7 +299,7 @@ function WinnersLoading() {
           <TrophyIcon className="h-14 w-14 text-amber-500" />
         </m.div>
         <p className="mt-4 text-sm font-bold tracking-wider uppercase text-muted-foreground animate-pulse">
-          Summoning Champions Hall of Fame...
+          Loading monthly champions...
         </p>
       </main>
     </div>
@@ -370,12 +376,12 @@ function WinnersHero({
         </div>
 
         <h1 className="text-3xl xs:text-4xl sm:text-5xl md:text-6xl font-black tracking-tight bg-linear-to-r from-amber-600 via-amber-400 to-yellow-500 dark:from-amber-400 dark:via-yellow-300 dark:to-amber-500 bg-clip-text text-transparent text-center font-serif">
-          Champions Hall of Fame
+          Monthly Champions
         </h1>
       </m.div>
 
       <p className="text-sm xs:text-base sm:text-lg text-muted-foreground max-w-2xl mx-auto font-medium px-3 leading-relaxed">
-        Honoring Rafic Hariri High School's cleanest, greenest, and most dedicated classroom laureates.
+        Celebrating Rafic Hariri High School&apos;s monthly classroom champions and their official total points.
       </p>
 
       {/* Filter & Period Selector Bar */}
@@ -401,7 +407,7 @@ function WinnersHero({
             onChange={(e) => onYearChange(Number(e.target.value))}
             className="bg-transparent border-none outline-hidden text-foreground font-bold text-xs sm:text-sm cursor-pointer py-1.5"
           >
-            {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map((year) => (
+            {Array.from(new Set([selectedYear, ...Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i)])).sort((a, b) => b - a).map((year) => (
               <option key={year} value={year} className="bg-background text-foreground">
                 {year}
               </option>
@@ -429,13 +435,11 @@ function WinnersHero({
  */
 function GrandChampionSpotlight({
   winner,
-  winCount,
   monthName,
   year,
   onInspect,
 }: {
   winner: Winner
-  winCount: number
   monthName: string
   year: number
   onInspect: () => void
@@ -467,7 +471,7 @@ function GrandChampionSpotlight({
           <div className="space-y-1">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 text-xs font-black uppercase tracking-wider">
               <CrownIcon className="w-3.5 h-3.5" />
-              <span>School-Wide Grand Champion</span>
+              <span>Highest Declared Score</span>
             </div>
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-foreground font-serif tracking-tight">
               {classroom.name}
@@ -476,25 +480,17 @@ function GrandChampionSpotlight({
               Grade {classroom.grade} • {getDivisionDisplayName(winner.division)} Division
             </p>
             <p className="text-xs text-muted-foreground italic">
-              Conferred the highest overall hygiene & cleanliness score in {monthName} {year}
+              Highest total among declared division champions for {monthName} {year}
             </p>
           </div>
         </div>
 
         {/* Right Stats & CTA */}
         <div className="flex flex-col sm:flex-row items-center gap-4 w-full lg:w-auto">
-          <div className="grid grid-cols-3 gap-2 sm:gap-3 text-center w-full sm:w-auto">
+          <div className="text-center w-full sm:w-auto">
             <div className="p-2 xs:p-2.5 sm:p-3 rounded-xl bg-card/80 border border-amber-500/30 backdrop-blur-xs min-w-0 flex-1 sm:min-w-20">
-              <span className="text-[9px] xs:text-[10px] uppercase font-bold text-muted-foreground block truncate">Score</span>
-              <p className="text-base sm:text-xl font-black text-amber-600 dark:text-amber-400">{winner.total_score}</p>
-            </div>
-            <div className="p-2 xs:p-2.5 sm:p-3 rounded-xl bg-card/80 border border-amber-500/30 backdrop-blur-xs min-w-0 flex-1 sm:min-w-20">
-              <span className="text-[9px] xs:text-[10px] uppercase font-bold text-muted-foreground block truncate">Average</span>
-              <p className="text-base sm:text-xl font-black text-amber-600 dark:text-amber-400">{Number(winner.average_score).toFixed(1)}</p>
-            </div>
-            <div className="p-2 xs:p-2.5 sm:p-3 rounded-xl bg-card/80 border border-amber-500/30 backdrop-blur-xs min-w-0 flex-1 sm:min-w-20">
-              <span className="text-[9px] xs:text-[10px] uppercase font-bold text-muted-foreground block truncate">Wins</span>
-              <p className="text-base sm:text-xl font-black text-amber-600 dark:text-amber-400">{winCount || 1}</p>
+              <span className="text-xs uppercase tracking-wider font-bold text-muted-foreground block">Total points</span>
+              <p className="text-3xl sm:text-4xl tabular-nums font-black text-amber-600 dark:text-amber-400">{winner.total_score.toLocaleString("en-US")}</p>
             </div>
           </div>
 
@@ -503,7 +499,7 @@ function GrandChampionSpotlight({
             className="w-full sm:w-auto min-h-12 px-6 rounded-xl font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-lg shadow-amber-500/25 transition-all cursor-pointer text-sm shrink-0"
           >
             <Award className="w-4 h-4 mr-2" />
-            <span>Inspect Official Certificate</span>
+            <span>View Certificate</span>
           </Button>
         </div>
       </div>
@@ -518,7 +514,6 @@ function GrandChampionSpotlight({
 function DivisionPlaqueCard({
   division,
   winner,
-  winCount,
   selectedMonthName,
   selectedYear,
   index,
@@ -526,7 +521,6 @@ function DivisionPlaqueCard({
 }: {
   division: string
   winner?: Winner
-  winCount: number
   selectedMonthName: string
   selectedYear: number
   index: number
@@ -536,9 +530,6 @@ function DivisionPlaqueCard({
     division: string,
     rank: number,
     totalScore: number,
-    averageScore: number,
-    evaluationCount: number,
-    classroomId?: string
   ) => void
 }) {
   return (
@@ -572,7 +563,7 @@ function DivisionPlaqueCard({
               </div>
             ) : (
               <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80 px-2 py-0.5 rounded-md bg-muted">
-                In Competition
+                Pending
               </span>
             )}
           </div>
@@ -582,19 +573,7 @@ function DivisionPlaqueCard({
             <div className="mt-4 space-y-4">
               {/* Champion Presentation Row */}
               <div
-                onClick={() =>
-                  onOpenCertificate(
-                    winner.classrooms!.name,
-                    winner.classrooms!.grade,
-                    division,
-                    1,
-                    winner.total_score,
-                    winner.average_score,
-                    winner.evaluation_count,
-                    winner.classrooms!.id
-                  )
-                }
-                className="group p-3.5 rounded-2xl bg-linear-to-r from-amber-500/15 via-yellow-500/10 to-transparent border border-amber-500/30 hover:border-amber-500/60 cursor-pointer transition-all shadow-xs hover:shadow-md"
+                className="group p-3.5 rounded-2xl bg-linear-to-r from-amber-500/15 via-yellow-500/10 to-transparent border border-amber-500/30 transition-all shadow-xs hover:shadow-md"
               >
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3 min-w-0">
@@ -605,7 +584,7 @@ function DivisionPlaqueCard({
                       <span className="text-[9px] uppercase font-black tracking-wider text-amber-600 dark:text-amber-400 block">
                         Monthly Laureate
                       </span>
-                      <p className="font-extrabold text-base sm:text-lg text-foreground tracking-tight truncate group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
+                      <p className="font-extrabold text-base sm:text-lg text-foreground tracking-tight break-words transition-colors">
                         {winner.classrooms.name}
                       </p>
                       <p className="text-xs text-muted-foreground font-medium">
@@ -615,31 +594,14 @@ function DivisionPlaqueCard({
                   </div>
 
                   <div className="text-right shrink-0">
-                    <p className="text-xl sm:text-2xl font-black text-amber-600 dark:text-amber-400">
-                      {winner.total_score}
+                    <p className="text-2xl sm:text-3xl tabular-nums font-black text-amber-600 dark:text-amber-400">
+                      {winner.total_score.toLocaleString("en-US")}
                     </p>
                     <p className="text-[9px] uppercase font-bold text-muted-foreground">points</p>
                   </div>
                 </div>
 
-                {/* Performance Metrics Pill Grid */}
-                <div className="mt-3 pt-3 border-t border-amber-500/20 grid grid-cols-3 gap-1.5 text-center text-xs">
-                  <div>
-                    <span className="text-[9px] text-muted-foreground uppercase font-semibold block truncate">Average</span>
-                    <p className="font-bold text-foreground">{Number(winner.average_score).toFixed(1)}</p>
-                  </div>
-                  <div>
-                    <span className="text-[9px] text-muted-foreground uppercase font-semibold block truncate">Evaluations</span>
-                    <p className="font-bold text-foreground">{winner.evaluation_count}</p>
-                  </div>
-                  <div>
-                    <span className="text-[9px] text-muted-foreground uppercase font-semibold block truncate">Distinction</span>
-                    <p className="font-bold text-amber-600 dark:text-amber-400 flex items-center justify-center gap-0.5">
-                      <TrophyIcon className="w-3 h-3" />
-                      <span>{winCount > 0 ? `${winCount} Win${winCount > 1 ? "s" : ""}` : "1st"}</span>
-                    </p>
-                  </div>
-                </div>
+
               </div>
 
               {/* View Certificate CTA Button */}
@@ -650,10 +612,7 @@ function DivisionPlaqueCard({
                     winner.classrooms!.grade,
                     division,
                     1,
-                    winner.total_score,
-                    winner.average_score,
-                    winner.evaluation_count,
-                    winner.classrooms!.id
+                    winner.total_score
                   )
                 }
                 variant="outline"
@@ -669,9 +628,9 @@ function DivisionPlaqueCard({
               <div className="w-12 h-12 rounded-full bg-amber-500/10 border border-amber-500/20 mx-auto flex items-center justify-center text-amber-500/60">
                 <Clock className="w-6 h-6 animate-pulse" />
               </div>
-              <p className="text-sm font-bold text-foreground">Competition In Progress</p>
+              <p className="text-sm font-bold text-foreground">Awaiting announcement</p>
               <p className="text-xs text-muted-foreground max-w-xs mx-auto leading-relaxed">
-                Supervisors are actively conducting evaluations for {selectedMonthName} {selectedYear}. Results will be unveiled soon!
+                No official champion has been declared for {selectedMonthName} {selectedYear}.
               </p>
             </div>
           )}
@@ -701,7 +660,7 @@ function WinnersSummaryBanner({
       animate={{ opacity: 1 }}
       transition={{ delay: 0.5 }}
     >
-      <div className="inline-flex items-center gap-3 sm:gap-4 px-5 sm:px-6 py-2.5 sm:py-3 rounded-full bg-card/80 backdrop-blur-md border border-amber-500/30 text-xs sm:text-sm font-medium shadow-md shadow-amber-500/5">
+      <div className="inline-flex flex-wrap justify-center items-center gap-3 sm:gap-4 px-5 sm:px-6 py-2.5 sm:py-3 rounded-full bg-card/80 backdrop-blur-md border border-amber-500/30 text-xs sm:text-sm font-medium shadow-md shadow-amber-500/5">
         <div className="flex items-center gap-2">
           <TrophyIcon className="h-4 w-4 sm:h-5 sm:w-5 text-amber-500" />
           <span className="font-bold text-foreground">

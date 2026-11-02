@@ -7,6 +7,7 @@
     "dev": "node scripts/show-qr.js && next dev -H 0.0.0.0",
     "dev:plain": "next dev -H 0.0.0.0",
     "lint": "eslint .",
+    "test:monthly": "node --test scripts/monthly-scoring.test.js",
     "start": "node scripts/show-qr.js && next start -H 0.0.0.0",
     "start:plain": "next start -H 0.0.0.0",
     "qr": "node scripts/show-qr.js"

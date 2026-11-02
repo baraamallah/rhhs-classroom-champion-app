@@ -2,6 +2,9 @@ import { createClient } from "@supabase/supabase-js"
 import { unstable_cache } from "next/cache"
 import type { Classroom, Evaluation, ClassroomScore } from "./types"
 import { calculateLeaderboard } from "./utils-leaderboard"
+import { resolveLeaderboardScope } from "./display-period"
+import { readEvaluationHistory } from "./evaluation-history"
+import { getCurrentMonthPeriod } from "./month-period"
 import { hasRecentMutation, getSupabaseServerUrl } from "./db-router"
 
 // Helper to get a server-side Supabase client routing to primary or replica
@@ -16,82 +19,10 @@ function getAdminSupabase(forcePrimary = false) {
   return createClient(url, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 }
 
-interface EvaluationRow {
-  id: string
-  classroom_id: string
-  supervisor_id: string
-  evaluation_date: string
-  items: Record<string, boolean>
-  total_score: number
-  max_score: number
-  created_at: string
-  classroom_name: string | null
-  classroom_grade: string | null
-  supervisor_name: string | null
-  supervisor_email: string | null
-}
-
-function mapEvaluationRows(data: any[]): Evaluation[] {
-  return data.map((row: any) => ({
-    id: row.id,
-    classroom_id: row.classroom_id,
-    supervisor_id: row.supervisor_id,
-    evaluation_date: row.evaluation_date,
-    items: row.items || {},
-    total_score: row.total_score,
-    max_score: row.max_score,
-    notes: row.notes,
-    created_at: row.created_at,
-    classroom: row.classrooms
-      ? {
-        id: row.classroom_id,
-        name: row.classrooms.name,
-        grade: row.classrooms.grade ?? "",
-        division: row.classrooms.division,
-      }
-      : undefined,
-    supervisor: row.users
-      ? {
-        name: row.users.name,
-        email: row.users.email ?? "",
-      }
-      : undefined,
-  }))
-}
-
 export async function getEvaluationsServer(forcePrimary = false): Promise<Evaluation[]> {
   try {
     const supabase = getServerSupabase(forcePrimary)
-    const { data, error } = await supabase
-      .from("evaluations")
-      .select(`
-        id,
-        classroom_id,
-        supervisor_id,
-        evaluation_date,
-        items,
-        total_score,
-        max_score,
-        notes,
-        created_at,
-        classrooms:classroom_id (
-          name,
-          grade,
-          division
-        ),
-        users:supervisor_id (
-          name,
-          email
-        )
-      `)
-      .order("evaluation_date", { ascending: false })
-
-    if (error) {
-      console.error("[supabase-data-server] Error fetching evaluations:", error)
-      return []
-    }
-
-    return data ? mapEvaluationRows(data) : []
+    return await readEvaluationHistory(supabase, getCurrentMonthPeriod())
   } catch (err) {
     console.error("[supabase-data-server] Unexpected error fetching evaluations:", err)
     return []
@@ -108,38 +39,7 @@ export async function getEvaluationsByDateRangeServer(
     const formattedStart = startDate.includes("T") ? startDate : `${startDate}T00:00:00.000Z`
     const formattedEnd = endDate.includes("T") ? endDate : `${endDate}T23:59:59.999Z`
 
-    const { data, error } = await supabase
-      .from("evaluations")
-      .select(`
-        id,
-        classroom_id,
-        supervisor_id,
-        evaluation_date,
-        items,
-        total_score,
-        max_score,
-        notes,
-        created_at,
-        classrooms:classroom_id (
-          name,
-          grade,
-          division
-        ),
-        users:supervisor_id (
-          name,
-          email
-        )
-      `)
-      .gte("evaluation_date", formattedStart)
-      .lte("evaluation_date", formattedEnd)
-      .order("evaluation_date", { ascending: false })
-
-    if (error) {
-      console.error("[supabase-data-server] Error fetching evaluations by date range:", error)
-      return []
-    }
-
-    return data ? mapEvaluationRows(data) : []
+    return await readEvaluationHistory(supabase, { start: formattedStart, end: formattedEnd, endInclusive: true, includeArchives: true })
   } catch (err) {
     console.error("[supabase-data-server] Unexpected error fetching evaluations by date range:", err)
     return []
@@ -177,7 +77,7 @@ interface AdminSettings {
 
 async function getAdminSettingsServer(forcePrimary = false): Promise<AdminSettings> {
   try {
-    const adminSupabase = getAdminSupabase(forcePrimary)
+    const adminSupabase = getAdminSupabase(true)
     const { data, error } = await adminSupabase
       .from("system_settings")
       .select("key, value")
@@ -219,8 +119,7 @@ export interface HomepageData {
  * Pure data loader from the database.
  * Does NOT access request-specific sources (cookies/headers) so it can be safely cached.
  */
-async function fetchHomepageDataFromDB(forcePrimary: boolean): Promise<HomepageData> {
-  const { format, startOfMonth, endOfMonth } = await import("date-fns")
+async function fetchHomepageDataFromDB(forcePrimary: boolean, year: number, month: number): Promise<HomepageData> {
 
   // Phase 1: settings + classrooms in parallel
   const [settings, classrooms] = await Promise.all([
@@ -228,26 +127,8 @@ async function fetchHomepageDataFromDB(forcePrimary: boolean): Promise<HomepageD
     getClassroomsServer(forcePrimary),
   ])
 
-  // Phase 2: evaluations depend on settings (monthly mode + frozen month)
-  let evaluations: Evaluation[]
-  if (settings.showMonthly) {
-    let startDate: string
-    let endDate: string
-
-    if (settings.leaderboardMonth) {
-      const frozenDate = new Date(settings.leaderboardMonth.year, settings.leaderboardMonth.month - 1, 1)
-      startDate = format(startOfMonth(frozenDate), "yyyy-MM-dd")
-      endDate = format(endOfMonth(frozenDate), "yyyy-MM-dd")
-    } else {
-      const now = new Date()
-      startDate = format(startOfMonth(now), "yyyy-MM-dd")
-      endDate = format(endOfMonth(now), "yyyy-MM-dd")
-    }
-
-    evaluations = await getEvaluationsByDateRangeServer(startDate, endDate, forcePrimary)
-  } else {
-    evaluations = await getEvaluationsServer(forcePrimary)
-  }
+  const scope = resolveLeaderboardScope(settings.showMonthly, settings.leaderboardMonth, { year, month })
+  const evaluations = await readEvaluationHistory(getAdminSupabase(forcePrimary), scope)
 
   const leaderboard = calculateLeaderboard(evaluations, classrooms)
 
@@ -265,7 +146,7 @@ async function fetchHomepageDataFromDB(forcePrimary: boolean): Promise<HomepageD
  * Pure cached scope: strictly NO cookies() or headers() inside.
  */
 const getCachedHomepageData = unstable_cache(
-  async () => fetchHomepageDataFromDB(false),
+  async (year: number, month: number) => fetchHomepageDataFromDB(false, year, month),
   ["homepage-leaderboard-data"],
   {
     revalidate: 60, // 60s background revalidation window
@@ -280,13 +161,14 @@ const getCachedHomepageData = unstable_cache(
  * strict read-your-own-writes consistency.
  */
 export async function getHomepageData(): Promise<HomepageData> {
+  const { year, month } = getCurrentMonthPeriod()
   const recentlyMutated = await hasRecentMutation()
 
   if (recentlyMutated) {
     // Bypasses shared cache, queries authoritative Primary DB directly
-    return fetchHomepageDataFromDB(true)
+    return fetchHomepageDataFromDB(true, year, month)
   }
 
   // Standard public read path via shared tagged cache
-  return getCachedHomepageData()
+  return getCachedHomepageData(year, month)
 }

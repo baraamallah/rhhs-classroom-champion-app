@@ -1,5 +1,8 @@
 "use client"
 
+import type { DisplayMonth } from "@/lib/display-period"
+import { getSchoolMonth } from "@/lib/month-period"
+
 import { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -59,12 +62,13 @@ const MONTHS = [
   { value: 12, label: "December" },
 ]
 
-export function MonthlyWinnersManager() {
+export function MonthlyWinnersManager({ defaultMonth }: { defaultMonth?: DisplayMonth }) {
   const { toast } = useToast()
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [batchDeclaring, setBatchDeclaring] = useState(false)
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1)
+  const [selectedYear, setSelectedYear] = useState(() => defaultMonth?.year ?? getSchoolMonth().year)
+  const [selectedMonth, setSelectedMonth] = useState(() => defaultMonth?.month ?? getSchoolMonth().month)
   const [winners, setWinners] = useState<any[]>([])
   const [topClassrooms, setTopClassrooms] = useState<Record<string, any[]>>({})
   const [classrooms, setClassrooms] = useState<Classroom[]>([])
@@ -91,64 +95,60 @@ export function MonthlyWinnersManager() {
   } | null>(null)
   const [isCertificateOpen, setIsCertificateOpen] = useState(false)
 
-  const hasMounted = useRef(false)
+  const requestRef = useRef(0)
 
-  const loadWinners = useCallback(async () => {
+  const loadData = useCallback(async () => {
+    const requestId = ++requestRef.current
     setLoading(true)
+    setLoadError(null)
+    setWinners([])
+    setTopClassrooms({})
     try {
-      const result = await getMonthlyWinners(selectedYear, selectedMonth)
-      if (result.success) {
-        setWinners(result.data || [])
-      } else {
-        toast({
-          title: "Error",
-          description: result.error || "Failed to load winners",
-          variant: "destructive",
-        })
-      }
+      const [winnerResult, ...divisionResults] = await Promise.all([
+        getMonthlyWinners(selectedYear, selectedMonth),
+        ...DIVISIONS.map((division) => getTopClassroomsByDivision(division, selectedYear, selectedMonth)),
+      ])
+      if (requestId !== requestRef.current) return
+      if (!winnerResult.success) throw new Error(winnerResult.error || "Failed to load winners")
+      const failed = divisionResults.find((result) => !result.success)
+      if (failed) throw new Error(failed.error || "Failed to load standings")
+      const standings: Record<string, any[]> = {}
+      DIVISIONS.forEach((division, index) => { standings[division] = divisionResults[index].data || [] })
+      setWinners((winnerResult.data || []).filter((winner: any) => winner.year === selectedYear && winner.month === selectedMonth))
+      setTopClassrooms(standings)
+    } catch (error) {
+      if (requestId !== requestRef.current) return
+      setLoadError("Declarations and standings could not be loaded. Please try again.")
+      toast({ title: "Unable to load competition", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" })
     } finally {
-      setLoading(false)
+      if (requestId === requestRef.current) setLoading(false)
     }
   }, [selectedYear, selectedMonth, toast])
 
-  const loadClassrooms = useCallback(async () => {
-    try {
-      const data = await getClassrooms()
-      setClassrooms(data)
-    } catch (error) {
-      console.error("Error loading classrooms:", error)
-    }
+  useEffect(() => {
+    let cancelled = false
+    void getClassrooms().then((data) => { if (!cancelled) setClassrooms(data) })
+    return () => { cancelled = true }
   }, [])
 
-  const loadTopClassrooms = useCallback(async () => {
-    setLoading(true)
-    const topClassroomsMap: Record<string, any[]> = {}
-
-    try {
-      const results = await Promise.all(
-        DIVISIONS.map(async (division) => ({
-          division,
-          result: await getTopClassroomsByDivision(division, selectedYear, selectedMonth),
-        }))
-      )
-      for (const { division, result } of results) {
-        if (result.success) {
-          topClassroomsMap[division] = result.data || []
-        }
-      }
-      setTopClassrooms(topClassroomsMap)
-    } finally {
-      setLoading(false)
-    }
-  }, [selectedYear, selectedMonth])
-
   useEffect(() => {
-    if (!hasMounted.current) {
-      hasMounted.current = true
-      void loadClassrooms()
-    }
-    void Promise.all([loadWinners(), loadTopClassrooms()])
-  }, [loadClassrooms, loadTopClassrooms, loadWinners])
+    void loadData()
+    return () => { requestRef.current += 1 }
+  }, [loadData])
+
+  const changePeriod = (year: number, month: number) => {
+    requestRef.current += 1
+    setLoading(true)
+    setWinners([])
+    setTopClassrooms({})
+    setManualSelection({})
+    setChangingDivision(null)
+    setIsCertificateOpen(false)
+    setDeleteDialog({ open: false, winnerId: "" })
+    setBatchConfirmOpen(false)
+    setSelectedYear(year)
+    setSelectedMonth(month)
+  }
 
   const handleDeclareWinner = async (division: string, classroomData: any) => {
     if (!classroomData || !classroomData.classroom) return
@@ -175,8 +175,7 @@ export function MonthlyWinnersManager() {
         description: `Successfully crowned ${classroomData.classroom.name} as ${getDivisionDisplayName(division)} Champion.`,
       })
       setChangingDivision(null)
-      loadWinners()
-      loadTopClassrooms()
+      void loadData()
     } else {
       toast({
         title: "Declaration Failed",
@@ -229,7 +228,7 @@ export function MonthlyWinnersManager() {
         })
       }
 
-      await Promise.all([loadWinners(), loadTopClassrooms()])
+      await loadData()
     } catch (err: any) {
       toast({
         title: "Batch Declaration Error",
@@ -259,8 +258,7 @@ export function MonthlyWinnersManager() {
         title: "Winner Removed",
         description: "The champion declaration has been removed.",
       })
-      loadWinners()
-      loadTopClassrooms()
+      void loadData()
     } else {
       toast({
         title: "Error",
@@ -325,7 +323,7 @@ export function MonthlyWinnersManager() {
   const progressPercent = Math.round((declaredCount / totalDivisions) * 100)
   const currentMonthLabel = MONTHS.find((m) => m.value === selectedMonth)?.label || ""
 
-  const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i)
+  const years = Array.from(new Set([selectedYear, ...Array.from({ length: 5 }, (_, i) => getSchoolMonth().year - i)])).sort((a, b) => b - a)
 
   return (
     <LazyMotionProvider>
@@ -350,7 +348,7 @@ export function MonthlyWinnersManager() {
                   Declare Monthly Champions
                 </CardTitle>
                 <CardDescription className="text-xs sm:text-sm">
-                  Review division standings, declare official winners, and preview certificates for the public showcase.
+                  Review and declare winners for {MONTHS.find((month) => month.value === selectedMonth)?.label} {selectedYear}. The initial month follows the public winners freeze, then the leaderboard freeze.
                 </CardDescription>
               </div>
 
@@ -379,7 +377,8 @@ export function MonthlyWinnersManager() {
                 </label>
                 <Select
                   value={selectedYear.toString()}
-                  onValueChange={(v) => setSelectedYear(parseInt(v))}
+                  disabled={loading || batchDeclaring}
+                  onValueChange={(v) => changePeriod(parseInt(v), selectedMonth)}
                 >
                   <SelectTrigger className="min-h-11 font-semibold text-sm">
                     <SelectValue />
@@ -401,7 +400,8 @@ export function MonthlyWinnersManager() {
                 </label>
                 <Select
                   value={selectedMonth.toString()}
-                  onValueChange={(v) => setSelectedMonth(parseInt(v))}
+                  disabled={loading || batchDeclaring}
+                  onValueChange={(v) => changePeriod(selectedYear, parseInt(v))}
                 >
                   <SelectTrigger className="min-h-11 font-semibold text-sm">
                     <SelectValue />
@@ -452,8 +452,11 @@ export function MonthlyWinnersManager() {
           </CardContent>
         </Card>
 
+        {loading && <p role="status" className="text-center text-muted-foreground">Loading {currentMonthLabel} {selectedYear} declarations and standings...</p>}
+
+        {loadError && <div role="alert" className="rounded-xl border border-destructive/30 p-4 text-center"><p>{loadError}</p><Button variant="outline" className="mt-3" onClick={loadData}>Try again</Button></div>}
         {/* Division Declaring Cards Grid */}
-        <div className="grid gap-5 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+        <div className={`grid gap-5 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 ${loadError ? "hidden" : ""}`}>
           {DIVISIONS.map((division) => {
             const winner = winners.find((w) => w.division === division)
             const topContenders = topClassrooms[division] || []
@@ -625,7 +628,7 @@ export function MonthlyWinnersManager() {
                           {/* 1-Click Declare Button */}
                           <Button
                             onClick={() => handleDeclareWinner(division, leader)}
-                            disabled={loading}
+                            disabled={loading || batchDeclaring}
                             className="w-full min-h-11 rounded-xl font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs shadow-xs cursor-pointer gap-1.5"
                           >
                             <Award className="w-4 h-4 mr-1" />
@@ -663,7 +666,7 @@ export function MonthlyWinnersManager() {
                                 <Button
                                   size="sm"
                                   onClick={() => handleDeclareWinner(division, contender)}
-                                  disabled={loading}
+                                  disabled={loading || batchDeclaring}
                                   className="h-8 px-2.5 rounded-lg text-[11px] font-bold bg-muted hover:bg-amber-500/20 text-foreground cursor-pointer shrink-0"
                                 >
                                   Declare
@@ -701,7 +704,7 @@ export function MonthlyWinnersManager() {
                           </Select>
                           <Button
                             size="sm"
-                            disabled={!manualSelection[division] || loading}
+                            disabled={!manualSelection[division] || loading || batchDeclaring}
                             onClick={() => handleManualDeclare(division)}
                             className="min-h-10 px-3 text-xs font-bold cursor-pointer shrink-0"
                           >

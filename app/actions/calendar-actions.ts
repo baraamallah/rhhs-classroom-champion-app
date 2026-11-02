@@ -1,6 +1,7 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
+import { readEvaluationHistory } from "@/lib/evaluation-history"
 import { createAdminClient } from "@/lib/supabase/server"
 import { getSessionFromCookies } from "@/lib/auth/session"
 import {
@@ -340,13 +341,10 @@ export async function getSupervisorDailyStatus(
     let evaluations: any[] = []
 
     if (classroomIds.length > 0) {
-      const { data: evals, error: evalError } = await supabase
-        .from("evaluations")
-        .select("id, classroom_id, evaluation_date, total_score, max_score")
-        .in("classroom_id", classroomIds)
-
-      if (evalError) throw evalError
-      evaluations = evals || []
+      evaluations = await readEvaluationHistory(supabase, {
+        classroomIds, start: `${schoolStartDate}T00:00:00.000Z`,
+        end: `${schoolEndDate}T23:59:59.999Z`, endInclusive: true, includeArchives: true,
+      })
     }
 
     // Map: `classroomId_YYYY-MM-DD` -> evaluation
@@ -636,24 +634,10 @@ export async function getDateClassroomEvaluationOverview(
     const classroomIds = assignedClassrooms.map((c: any) => c.id)
     let evaluations: any[] = []
     if (classroomIds.length > 0) {
-      const { data: evals, error: evalError } = await supabase
-        .from("evaluations")
-        .select(`
-          id,
-          classroom_id,
-          evaluation_date,
-          total_score,
-          max_score,
-          users:supervisor_id (
-            name
-          )
-        `)
-        .in("classroom_id", classroomIds)
-        .gte("evaluation_date", `${targetDate}T00:00:00.000Z`)
-        .lte("evaluation_date", `${targetDate}T23:59:59.999Z`)
-
-      if (evalError) throw evalError
-      evaluations = evals || []
+      evaluations = await readEvaluationHistory(supabase, {
+        classroomIds, start: `${targetDate}T00:00:00.000Z`,
+        end: `${targetDate}T23:59:59.999Z`, endInclusive: true, includeArchives: true,
+      })
     }
 
     const evalMap = new Map<string, any>()
@@ -672,7 +656,7 @@ export async function getDateClassroomEvaluationOverview(
         score: existing?.total_score,
         maxScore: existing?.max_score,
         evaluationId: existing?.id,
-        supervisorName: existing?.users?.name,
+        supervisorName: existing?.supervisor?.name,
         evaluatedAt: existing?.evaluation_date,
       }
     })
@@ -690,12 +674,10 @@ export async function getDateClassroomEvaluationOverview(
     const missedDays: MissedDayRecord[] = []
     if (classroomIds.length > 0 && scanLowerBound <= scanUpperBound) {
       // Query evaluations for the whole scan interval
-      const { data: rangeEvals } = await supabase
-        .from("evaluations")
-        .select("classroom_id, evaluation_date")
-        .in("classroom_id", classroomIds)
-        .gte("evaluation_date", `${format(scanLowerBound, "yyyy-MM-dd")}T00:00:00.000Z`)
-        .lte("evaluation_date", `${format(scanUpperBound, "yyyy-MM-dd")}T23:59:59.999Z`)
+      const rangeEvals = await readEvaluationHistory(supabase, {
+        classroomIds, start: `${format(scanLowerBound, "yyyy-MM-dd")}T00:00:00.000Z`,
+        end: `${format(scanUpperBound, "yyyy-MM-dd")}T23:59:59.999Z`, endInclusive: true, includeArchives: true,
+      })
 
       const intervalEvalMap = new Set<string>()
       ;(rangeEvals || []).forEach((ev: any) => {
