@@ -73,7 +73,10 @@ const DataManagementPanel = dynamic(
   { loading: () => <AdminTabSkeleton /> }
 )
 
+const EditEvaluation = dynamic(() => import("./edit-evaluation").then(m => m.EditEvaluation), { loading: () => <AdminTabSkeleton /> })
+
 const VALID_TABS = [
+  "edit-evaluation",
   "classrooms",
   "users",
   "checklist",
@@ -200,6 +203,7 @@ function AdminDashboardInner({ currentUser, tabParam }: AdminDashboardInnerProps
 
           {/* Dynamic Main Workspace with Visited Tab Caching */}
           <div className="flex-1 w-full min-w-0">
+            {activeTab === "edit-evaluation" && <EditEvaluation onSaved={() => setVisitedTabs(new Set(["edit-evaluation"]))} />}
             {visitedTabs.has("classrooms") && (
               <div className={activeTab === "classrooms" ? "block" : "hidden"}>
                 <ClassroomManagement currentUser={currentUser} />

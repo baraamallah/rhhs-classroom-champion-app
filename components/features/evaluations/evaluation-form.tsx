@@ -27,6 +27,7 @@ import {
   Clock,
   Send,
 } from "lucide-react"
+import { matchesDivision } from "@/lib/checklist-division"
 import { cn } from "@/lib/utils"
 import type { Classroom, ChecklistItem, User } from "@/lib/types"
 import { LazyMotionProvider } from "@/components/providers/lazy-motion-provider"
@@ -137,7 +138,6 @@ export function EvaluationForm({
 
   // Filter checklist items to those applicable to this classroom's division and assigned supervisor
   const applicableChecklistItems = useMemo(() => {
-    const classDiv = (classroom.division || "").trim().toLowerCase()
     const effectiveUserId = user?.id || authUser?.id
     const effectiveUserRole = user?.role || authUser?.role
 
@@ -154,25 +154,7 @@ export function EvaluationForm({
       }
 
       // 2. Division / category filter:
-      const cat = (item.category || "").trim().toLowerCase()
-      // If item is assigned to "all", "general", legacy categories, or empty, it applies to all classrooms
-      if (
-        !cat ||
-        cat === "all" ||
-        cat === "all divisions" ||
-        cat === "general" ||
-        ["energy", "waste", "cleanliness", "environment"].includes(cat)
-      ) {
-        return true
-      }
-      if (!classDiv) return true
-      if (cat === classDiv) return true
-      if (cat.includes("pre") && classDiv.includes("pre")) return true
-      if (cat.includes("elem") && classDiv.includes("elem")) return true
-      if ((cat.includes("middle") || cat.includes("interm")) && (classDiv.includes("middle") || classDiv.includes("interm"))) return true
-      if ((cat.includes("high") || cat.includes("second")) && (classDiv.includes("high") || classDiv.includes("second"))) return true
-      if (cat.includes("tech") && classDiv.includes("tech")) return true
-      return false
+      return matchesDivision(item, classroom.division)
     })
   }, [checklistItems, classroom.division, user?.id, user?.role, authUser?.id, authUser?.role])
 

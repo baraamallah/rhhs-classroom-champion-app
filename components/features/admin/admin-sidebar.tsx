@@ -31,6 +31,7 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
   { id: "classrooms", label: "Classrooms", icon: Building2 },
   { id: "users", label: "Staff & Users", icon: Users },
   { id: "checklist", label: "Rubrics", icon: ClipboardList },
+  { id: "edit-evaluation", label: "Edit Evaluation", icon: FileText },
   { id: "evaluations", label: "Evaluations", icon: FileText },
   { id: "tracking", label: "Tracking", icon: BarChart3 },
   { id: "calendar", label: "Calendar", icon: Calendar },
