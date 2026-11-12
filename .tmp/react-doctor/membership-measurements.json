@@ -1,0 +1,27 @@
+{
+  "scenario": "Selection filtering and score totals; Set construction included; synthetic, not a production trace",
+  "results": [
+    {
+      "rows": 25,
+      "selected": 13,
+      "iterations": 3000,
+      "arrayMs": 12.97,
+      "setIncludingConstructionMs": 10.7
+    },
+    {
+      "rows": 100,
+      "selected": 50,
+      "iterations": 3000,
+      "arrayMs": 129.01,
+      "setIncludingConstructionMs": 30.46
+    },
+    {
+      "rows": 1000,
+      "selected": 500,
+      "iterations": 3000,
+      "arrayMs": 6999.45,
+      "setIncludingConstructionMs": 179.54
+    }
+  ],
+  "checksum": 17977600
+}

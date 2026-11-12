@@ -1,5 +1,6 @@
 "use server"
 
+import { readClassroomWinCounts } from "@/lib/classroom-win-counts"
 import { createAdminClient } from "@/lib/supabase/server"
 import { readMonthlyRankings, includeRecordedWinnerScores } from "@/lib/evaluation-history"
 
@@ -37,6 +38,7 @@ export async function getPublicMonthlyWinners(year?: number, month?: number) {
       return { success: false, error: `Failed to fetch winners: ${fetchError.message}`, data: [] }
     }
 
+    const winCounts = data?.length ? await readClassroomWinCounts(supabase) : {}
     const scoredData = await includeRecordedWinnerScores(supabase, data || [])
     const formattedData = scoredData.map((row: any) => {
       const clsName = row.classroom_name || row.classrooms?.name || "Unknown Classroom"
@@ -50,6 +52,7 @@ export async function getPublicMonthlyWinners(year?: number, month?: number) {
 
       return {
         ...row,
+        win_count: winCounts[row.classroom_id] || 0,
         total_score: totalScore,
         classroom_name: clsName,
         classroom_grade: clsGrade,

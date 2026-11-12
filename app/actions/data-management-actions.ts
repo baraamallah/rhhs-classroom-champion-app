@@ -1,5 +1,6 @@
 "use server"
 
+import { after } from "next/server"
 import { revalidatePath, revalidateTag } from "next/cache"
 import { createAdminClient } from "@/lib/supabase/server"
 import { getSessionFromCookies, clearSessionCookie } from "@/lib/auth/session"
@@ -232,7 +233,9 @@ export async function archiveEvaluations(evaluationIds: string[]) {
       return { success: true, message: `Successfully archived ${rpcData.archived_count || evaluationIds.length} evaluations` }
     }
 
-    console.warn("[archiveEvaluations] RPC unavailable, falling back to batch transfer:", rpcError?.message)
+    after(() => {
+      console.warn("[archiveEvaluations] RPC unavailable, falling back to batch transfer:", rpcError?.message)
+    })
 
     const idChunks = chunkArray(evaluationIds, 40)
     let totalArchived = 0

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -22,7 +22,7 @@ import {
   Eye,
   EyeOff,
   ShieldCheck,
-  Flame,
+  Flame
 } from "lucide-react"
 import {
   getAdminSettings,
@@ -30,23 +30,17 @@ import {
   setLeaderboardPointsSetting,
   setCalculationMode,
   setWinnerRevealMode,
-  type AdminSettings,
+  type AdminSettings
 } from "@/app/actions/winners-page-actions"
 import { setCachedWinnersVisibility } from "@/lib/winners-visibility"
-import {
-  getEvaluationsStatus,
-  setEvaluationsStatus,
-} from "@/app/actions/evaluation-settings-actions"
+import { getEvaluationsStatus, setEvaluationsStatus } from "@/app/actions/evaluation-settings-actions"
 
 interface GlobalSystemControlsProps {
   initialSettings?: AdminSettings
   onSettingsChange?: (settings: AdminSettings) => void
 }
 
-export function GlobalSystemControls({
-  initialSettings,
-  onSettingsChange,
-}: GlobalSystemControlsProps) {
+function useGlobalSystemControlsController({ initialSettings, onSettingsChange }: GlobalSystemControlsProps) {
   const { toast } = useToast()
 
   // Master settings state
@@ -58,7 +52,7 @@ export function GlobalSystemControls({
       winner_reveal_mode: false,
       evaluations_enabled: true,
       winners_display_month: null,
-      leaderboard_display_month: null,
+      leaderboard_display_month: null
     }
   )
 
@@ -67,62 +61,62 @@ export function GlobalSystemControls({
   const [savingKey, setSavingKey] = useState<string | null>(null)
   const [copiedUrl, setCopiedUrl] = useState(false)
 
-  const hasLoaded = useRef(false)
+  const loadAllSettings = useCallback(
+    async (isManualRefresh = false, signal?: AbortSignal) => {
+      if (isManualRefresh) setRefreshing(true)
+      else setLoading(true)
+
+      try {
+        const [adminResult, evalResult] = await Promise.all([getAdminSettings(), getEvaluationsStatus()])
+        if (signal?.aborted) return
+
+        const updated: AdminSettings = {
+          winners_page_visible: adminResult.settings?.winners_page_visible ?? true,
+          leaderboard_show_monthly: adminResult.settings?.leaderboard_show_monthly ?? true,
+          calculation_mode: adminResult.settings?.calculation_mode ?? false,
+          winner_reveal_mode: adminResult.settings?.winner_reveal_mode ?? false,
+          evaluations_enabled: evalResult.success
+            ? (evalResult.enabled ?? true)
+            : (adminResult.settings?.evaluations_enabled ?? true),
+          winners_display_month: adminResult.settings?.winners_display_month ?? null,
+          leaderboard_display_month: adminResult.settings?.leaderboard_display_month ?? null
+        }
+
+        setSettings(updated)
+        setCachedWinnersVisibility(updated.winners_page_visible)
+        if (onSettingsChange) onSettingsChange(updated)
+
+        if (isManualRefresh) {
+          toast({
+            title: "System Synced",
+            description: "All control parameters reloaded successfully."
+          })
+        }
+      } catch (error: any) {
+        if (signal?.aborted) return
+        console.error("[GlobalSystemControls] Load error:", error)
+        toast({
+          title: "Sync Error",
+          description: "Failed to reload system settings.",
+          variant: "destructive"
+        })
+      } finally {
+        if (!signal?.aborted) setLoading(false)
+        setRefreshing(false)
+      }
+    },
+    [onSettingsChange, toast]
+  )
 
   useEffect(() => {
     if (initialSettings) {
       setSettings(initialSettings)
       return
     }
-    if (hasLoaded.current) return
-    hasLoaded.current = true
-    loadAllSettings()
-  }, [initialSettings])
-
-  const loadAllSettings = async (isManualRefresh = false) => {
-    if (isManualRefresh) setRefreshing(true)
-    else setLoading(true)
-
-    try {
-      const [adminResult, evalResult] = await Promise.all([
-        getAdminSettings(),
-        getEvaluationsStatus(),
-      ])
-
-      const updated: AdminSettings = {
-        winners_page_visible: adminResult.settings?.winners_page_visible ?? true,
-        leaderboard_show_monthly: adminResult.settings?.leaderboard_show_monthly ?? true,
-        calculation_mode: adminResult.settings?.calculation_mode ?? false,
-        winner_reveal_mode: adminResult.settings?.winner_reveal_mode ?? false,
-        evaluations_enabled: evalResult.success
-          ? (evalResult.enabled ?? true)
-          : (adminResult.settings?.evaluations_enabled ?? true),
-        winners_display_month: adminResult.settings?.winners_display_month ?? null,
-        leaderboard_display_month: adminResult.settings?.leaderboard_display_month ?? null,
-      }
-
-      setSettings(updated)
-      setCachedWinnersVisibility(updated.winners_page_visible)
-      if (onSettingsChange) onSettingsChange(updated)
-
-      if (isManualRefresh) {
-        toast({
-          title: "System Synced",
-          description: "All control parameters reloaded successfully.",
-        })
-      }
-    } catch (error: any) {
-      console.error("[GlobalSystemControls] Load error:", error)
-      toast({
-        title: "Sync Error",
-        description: "Failed to reload system settings.",
-        variant: "destructive",
-      })
-    } finally {
-      setLoading(false)
-      setRefreshing(false)
-    }
-  }
+    const controller = new AbortController()
+    void loadAllSettings(false, controller.signal)
+    return () => controller.abort()
+  }, [initialSettings, loadAllSettings])
 
   // Toggle handlers
   const handleToggleSubmissions = async () => {
@@ -136,13 +130,13 @@ export function GlobalSystemControls({
           title: nextVal ? "Evaluations Opened" : "Evaluations Closed",
           description: nextVal
             ? "Supervisors can now submit new classroom evaluations."
-            : "Evaluation submissions are now locked for all supervisors.",
+            : "Evaluation submissions are now locked for all supervisors."
         })
       } else {
         toast({
           title: "Update Failed",
           description: res.error || "Could not update submission status.",
-          variant: "destructive",
+          variant: "destructive"
         })
       }
     } finally {
@@ -162,13 +156,13 @@ export function GlobalSystemControls({
           title: nextVal ? "Winners Page Public" : "Winners Page Hidden",
           description: nextVal
             ? "The animated winners showcase is now accessible to all users at /winners."
-            : "The winners showcase is now hidden from public navigation.",
+            : "The winners showcase is now hidden from public navigation."
         })
       } else {
         toast({
           title: "Update Failed",
           description: res.error || "Could not update visibility.",
-          variant: "destructive",
+          variant: "destructive"
         })
       }
     } finally {
@@ -189,13 +183,13 @@ export function GlobalSystemControls({
           title: showMonthly ? "Monthly Scoring Active" : "All-Time Scoring Active",
           description: showMonthly
             ? "Homepage leaderboard now shows the frozen month, or the current month when unfrozen, including archived scores."
-            : "Homepage leaderboard now includes all live and archived evaluation points.",
+            : "Homepage leaderboard now includes all live and archived evaluation points."
         })
       } else {
         toast({
           title: "Update Failed",
           description: res.error || "Could not update points mode.",
-          variant: "destructive",
+          variant: "destructive"
         })
       }
     } finally {
@@ -213,13 +207,13 @@ export function GlobalSystemControls({
           title: enabled ? "Calculation Animation Activated" : "Calculation Mode Disabled",
           description: enabled
             ? "Public homepage is now showing the calculation animation instead of scores."
-            : "Standard leaderboard view restored on homepage.",
+            : "Standard leaderboard view restored on homepage."
         })
       } else {
         toast({
           title: "Update Failed",
           description: res.error || "Could not update calculation mode.",
-          variant: "destructive",
+          variant: "destructive"
         })
       }
     } finally {
@@ -237,13 +231,13 @@ export function GlobalSystemControls({
           title: enabled ? "Winner Reveal Mode Activated" : "Winner Reveal Mode Disabled",
           description: enabled
             ? "Public homepage is now showing the interactive 'Check Winner' reveal button."
-            : "Standard leaderboard view restored on homepage.",
+            : "Standard leaderboard view restored on homepage."
         })
       } else {
         toast({
           title: "Update Failed",
           description: res.error || "Could not update winner reveal mode.",
-          variant: "destructive",
+          variant: "destructive"
         })
       }
     } finally {
@@ -259,18 +253,205 @@ export function GlobalSystemControls({
       setCopiedUrl(true)
       toast({
         title: "Link Copied",
-        description: "Direct URL to /winners copied to clipboard.",
+        description: "Direct URL to /winners copied to clipboard."
       })
       setTimeout(() => setCopiedUrl(false), 2000)
     } catch {
       toast({
         title: "Copy Failed",
         description: "Please manually copy /winners.",
-        variant: "destructive",
+        variant: "destructive"
       })
     }
   }
+  return {
+    copiedUrl,
+    handleCopyWinnersUrl,
+    handleToggleCalculationMode,
+    handleToggleLeaderboardMode,
+    handleToggleSubmissions,
+    handleToggleWinnerRevealMode,
+    handleToggleWinnersVisibility,
+    loadAllSettings,
+    loading,
+    refreshing,
+    savingKey,
+    settings
+  }
+}
 
+export function GlobalSystemControls({ initialSettings, onSettingsChange }: GlobalSystemControlsProps) {
+  const {
+    copiedUrl,
+    handleCopyWinnersUrl,
+    handleToggleCalculationMode,
+    handleToggleLeaderboardMode,
+    handleToggleSubmissions,
+    handleToggleWinnerRevealMode,
+    handleToggleWinnersVisibility,
+    loadAllSettings,
+    loading,
+    refreshing,
+    savingKey,
+    settings
+  } = useGlobalSystemControlsController({ initialSettings, onSettingsChange })
+
+  return (
+    <SystemControlsWorkspace
+      copiedUrl={copiedUrl}
+      handleCopyWinnersUrl={handleCopyWinnersUrl}
+      handleToggleCalculationMode={handleToggleCalculationMode}
+      handleToggleLeaderboardMode={handleToggleLeaderboardMode}
+      handleToggleSubmissions={handleToggleSubmissions}
+      handleToggleWinnerRevealMode={handleToggleWinnerRevealMode}
+      handleToggleWinnersVisibility={handleToggleWinnersVisibility}
+      loadAllSettings={loadAllSettings}
+      loading={loading}
+      refreshing={refreshing}
+      savingKey={savingKey}
+      settings={settings}
+    />
+  )
+}
+
+function SystemStatusBar({
+  loadAllSettings,
+  loading,
+  refreshing,
+  settings
+}: Pick<
+  ReturnType<typeof useGlobalSystemControlsController>,
+  "loadAllSettings" | "loading" | "refreshing" | "settings"
+>) {
+  return (
+    <SystemStateIndicators
+      loadAllSettings={loadAllSettings}
+      loading={loading}
+      refreshing={refreshing}
+      settings={settings}
+    />
+  )
+}
+
+function SubmissionAndWinnersControls({
+  copiedUrl,
+  handleCopyWinnersUrl,
+  handleToggleSubmissions,
+  handleToggleWinnersVisibility,
+  savingKey,
+  settings
+}: Pick<
+  ReturnType<typeof useGlobalSystemControlsController>,
+  | "copiedUrl"
+  | "handleCopyWinnersUrl"
+  | "handleToggleSubmissions"
+  | "handleToggleWinnersVisibility"
+  | "savingKey"
+  | "settings"
+>) {
+  return (
+    <div>
+      <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground/80 mb-3 flex items-center gap-2">
+        <ShieldCheck className="h-4 w-4 text-primary" />
+        System Intake & Public Access
+      </h3>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* CARD 1: SUBMISSIONS CONTROL */}
+        <SubmissionAccessControl
+          handleToggleSubmissions={handleToggleSubmissions}
+          savingKey={savingKey}
+          settings={settings}
+        />
+
+        {/* CARD 2: WINNERS PAGE ACCESS */}
+        <WinnersPageAccessControl
+          copiedUrl={copiedUrl}
+          handleCopyWinnersUrl={handleCopyWinnersUrl}
+          handleToggleWinnersVisibility={handleToggleWinnersVisibility}
+          savingKey={savingKey}
+          settings={settings}
+        />
+      </div>
+    </div>
+  )
+}
+
+function LeaderboardModeControls({
+  handleToggleCalculationMode,
+  handleToggleLeaderboardMode,
+  handleToggleWinnerRevealMode,
+  savingKey,
+  settings
+}: Pick<
+  ReturnType<typeof useGlobalSystemControlsController>,
+  | "handleToggleCalculationMode"
+  | "handleToggleLeaderboardMode"
+  | "handleToggleWinnerRevealMode"
+  | "savingKey"
+  | "settings"
+>) {
+  return (
+    <div>
+      <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground/80 mb-3 flex items-center gap-2">
+        <Flame className="h-4 w-4 text-primary" />
+        Homepage Display & Ceremony Modes
+      </h3>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* CARD 3: LEADERBOARD SCORING MODE (MONTHLY VS ALL-TIME) */}
+        <LeaderboardPeriodControl
+          handleToggleLeaderboardMode={handleToggleLeaderboardMode}
+          savingKey={savingKey}
+          settings={settings}
+        />
+
+        {/* CARD 4: CALCULATION MODE */}
+        <CalculationModeControl
+          handleToggleCalculationMode={handleToggleCalculationMode}
+          savingKey={savingKey}
+          settings={settings}
+        />
+
+        {/* CARD 5: WINNER REVEAL MODE */}
+        <WinnerRevealControl
+          handleToggleWinnerRevealMode={handleToggleWinnerRevealMode}
+          savingKey={savingKey}
+          settings={settings}
+        />
+      </div>
+    </div>
+  )
+}
+
+function SystemControlsWorkspace({
+  copiedUrl,
+  handleCopyWinnersUrl,
+  handleToggleCalculationMode,
+  handleToggleLeaderboardMode,
+  handleToggleSubmissions,
+  handleToggleWinnerRevealMode,
+  handleToggleWinnersVisibility,
+  loadAllSettings,
+  loading,
+  refreshing,
+  savingKey,
+  settings
+}: Pick<
+  ReturnType<typeof useGlobalSystemControlsController>,
+  | "copiedUrl"
+  | "handleCopyWinnersUrl"
+  | "handleToggleCalculationMode"
+  | "handleToggleLeaderboardMode"
+  | "handleToggleSubmissions"
+  | "handleToggleWinnerRevealMode"
+  | "handleToggleWinnersVisibility"
+  | "loadAllSettings"
+  | "loading"
+  | "refreshing"
+  | "savingKey"
+  | "settings"
+>) {
   return (
     <div className="relative overflow-hidden rounded-3xl border border-border/70 bg-linear-to-b from-card via-card/70 to-muted/20 p-3.5 xs:p-5 sm:p-7 shadow-lg shadow-black/5 backdrop-blur-md space-y-6">
       {/* Decorative ambient background accents */}
@@ -280,100 +461,12 @@ export function GlobalSystemControls({
       {/* ============================================================ */}
       {/* 1. EXECUTIVE COMMAND HEADER & LIVE STATUS STRIP */}
       {/* ============================================================ */}
-      <div className="relative flex flex-col gap-4 border-b border-border/50 pb-6 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex items-start gap-3">
-          <div className="flex h-11 w-11 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/15 text-primary border border-primary/25 shadow-inner">
-            <Sliders className="h-5 w-5 sm:h-6 sm:w-6" />
-          </div>
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-xl font-extrabold tracking-tight text-foreground sm:text-2xl">
-                Global System Controls
-              </h2>
-              <Badge
-                variant="outline"
-                className="bg-primary/10 text-primary border-primary/20 text-[10px] font-bold tracking-wider uppercase px-2 py-0.5"
-              >
-                Runtime Engine
-              </Badge>
-            </div>
-            <p className="mt-0.5 text-xs sm:text-sm text-muted-foreground">
-              Master control center for public display, scoring aggregation, and supervisor submission workflows.
-            </p>
-          </div>
-        </div>
-
-        {/* Live system state indicators bar */}
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Submissions Indicator */}
-          <div
-            className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold border transition-all ${
-              settings.evaluations_enabled
-                ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
-                : "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30"
-            }`}
-          >
-            <span
-              className={`h-2 w-2 rounded-full ${
-                settings.evaluations_enabled
-                  ? "bg-emerald-500 animate-pulse"
-                  : "bg-rose-500"
-              }`}
-            />
-            <span>{settings.evaluations_enabled ? "Intake: Open" : "Intake: Locked"}</span>
-          </div>
-
-          {/* Homepage Indicator */}
-          <div
-            className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold border transition-all ${
-              settings.calculation_mode
-                ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30"
-                : settings.winner_reveal_mode
-                ? "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/30"
-                : "bg-primary/10 text-primary border-primary/30"
-            }`}
-          >
-            {settings.calculation_mode ? (
-              <>
-                <Calculator className="h-3.5 w-3.5 text-amber-500" />
-                <span>HP: Calculating</span>
-              </>
-            ) : settings.winner_reveal_mode ? (
-              <>
-                <PartyPopper className="h-3.5 w-3.5 text-purple-500" />
-                <span>HP: Winner Reveal</span>
-              </>
-            ) : (
-              <>
-                <BarChart3 className="h-3.5 w-3.5 text-primary" />
-                <span>HP: Live Ranks</span>
-              </>
-            )}
-          </div>
-
-          {/* Scoring Mode Indicator */}
-          <div className="flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold border bg-muted/60 text-muted-foreground border-border/80">
-            <span>
-              Mode: {settings.leaderboard_show_monthly ? "Monthly" : "All-Time"}
-            </span>
-          </div>
-
-          {/* Manual Refresh Sync Button */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => loadAllSettings(true)}
-            disabled={refreshing || loading}
-            className="h-9 min-h-9 rounded-full px-3 text-xs gap-1.5 font-medium border-border/70 hover:bg-muted/80 shadow-xs"
-            title="Sync settings with database"
-          >
-            <RefreshCw
-              className={`h-3.5 w-3.5 ${refreshing || loading ? "animate-spin text-primary" : ""}`}
-            />
-            <span className="hidden sm:inline">Sync</span>
-          </Button>
-        </div>
-      </div>
+      <SystemStatusBar
+        loadAllSettings={loadAllSettings}
+        loading={loading}
+        refreshing={refreshing}
+        settings={settings}
+      />
 
       {/* ============================================================ */}
       {/* 2. CONTEXTUAL HOMEPAGE OVERRIDE ALERT BANNER */}
@@ -386,12 +479,16 @@ export function GlobalSystemControls({
           <div className="flex-1 text-xs sm:text-sm">
             <p className="font-bold flex items-center gap-2">
               <span>Homepage Override Active: Calculation Mode</span>
-              <Badge variant="outline" className="border-amber-500/50 bg-amber-500/20 text-amber-700 dark:text-amber-300 text-[10px]">
+              <Badge
+                variant="outline"
+                className="border-amber-500/50 bg-amber-500/20 text-amber-700 dark:text-amber-300 text-[10px]"
+              >
                 High Priority
               </Badge>
             </p>
             <p className="mt-0.5 text-amber-800/90 dark:text-amber-300/80 leading-relaxed">
-              Visitors to the homepage will see the animated calculating screen with falling leaves instead of the leaderboard. Disable this toggle when you are ready to display live scores or trigger the winner reveal.
+              Visitors to the homepage will see the animated calculating screen with falling leaves instead of the
+              leaderboard. Disable this toggle when you are ready to display live scores or trigger the winner reveal.
             </p>
           </div>
         </div>
@@ -403,12 +500,16 @@ export function GlobalSystemControls({
           <div className="flex-1 text-xs sm:text-sm">
             <p className="font-bold flex items-center gap-2">
               <span>Homepage Override Active: Winner Reveal Mode</span>
-              <Badge variant="outline" className="border-purple-500/50 bg-purple-500/20 text-purple-700 dark:text-purple-300 text-[10px]">
+              <Badge
+                variant="outline"
+                className="border-purple-500/50 bg-purple-500/20 text-purple-700 dark:text-purple-300 text-[10px]"
+              >
                 Ceremonial
               </Badge>
             </p>
             <p className="mt-0.5 text-purple-800/90 dark:text-purple-300/80 leading-relaxed">
-              The public leaderboard is masked behind an interactive "Check Winner" button. When visitors click it, confetti animates and the champions are unveiled.
+              The public leaderboard is masked behind an interactive "Check Winner" button. When visitors click it,
+              confetti animates and the champions are unveiled.
             </p>
           </div>
         </div>
@@ -417,425 +518,564 @@ export function GlobalSystemControls({
       {/* ============================================================ */}
       {/* 3. PRIMARY SYSTEM ACCESS (ROW 1 - 2 LARGE CARDS) */}
       {/* ============================================================ */}
-      <div>
-        <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground/80 mb-3 flex items-center gap-2">
-          <ShieldCheck className="h-4 w-4 text-primary" />
-          System Intake & Public Access
-        </h3>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* CARD 1: SUBMISSIONS CONTROL */}
-          <Card className={`relative overflow-hidden border transition-all duration-200 hover:shadow-md ${
-            settings.evaluations_enabled
-              ? "border-emerald-500/30 bg-card/90"
-              : "border-rose-500/30 bg-card/90"
-          }`}>
-            <div className={`absolute top-0 left-0 right-0 h-1 ${
-              settings.evaluations_enabled ? "bg-emerald-500" : "bg-rose-500"
-            }`} />
-            <CardContent className="p-4 sm:p-5 flex flex-col justify-between h-full space-y-4">
-              <div className="flex flex-col xs:flex-row xs:items-start justify-between gap-3">
-                <div className="flex items-start gap-3 min-w-0">
-                  <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border ${
-                    settings.evaluations_enabled
-                      ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
-                      : "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20"
-                  }`}>
-                    {settings.evaluations_enabled ? (
-                      <Unlock className="h-5 w-5" />
-                    ) : (
-                      <Lock className="h-5 w-5" />
-                    )}
-                  </div>
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h4 className="font-bold text-base text-foreground">
-                        Evaluation Intake
-                      </h4>
-                      <Badge
-                        variant="outline"
-                        className={
-                          settings.evaluations_enabled
-                            ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 text-[10px]"
-                            : "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30 text-[10px]"
-                        }
-                      >
-                        {settings.evaluations_enabled ? "OPEN" : "LOCKED"}
-                      </Badge>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Open or close the system for new supervisor evaluations.
-                    </p>
-                  </div>
-                </div>
-
-                <Button
-                  onClick={handleToggleSubmissions}
-                  disabled={savingKey === "evaluations_enabled"}
-                  size="sm"
-                  variant={settings.evaluations_enabled ? "destructive" : "default"}
-                  className="rounded-xl shrink-0 font-bold px-3.5 shadow-xs min-h-11 w-full xs:w-auto"
-                >
-                  {savingKey === "evaluations_enabled" ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : settings.evaluations_enabled ? (
-                    <>
-                      <Lock className="h-4 w-4 mr-1.5" />
-                      Lock System
-                    </>
-                  ) : (
-                    <>
-                      <Unlock className="h-4 w-4 mr-1.5" />
-                      Open System
-                    </>
-                  )}
-                </Button>
-              </div>
-
-              <div className="rounded-xl bg-muted/40 p-3 border border-border/50 text-xs text-muted-foreground leading-relaxed">
-                {settings.evaluations_enabled ? (
-                  <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-medium">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                    Supervisors can actively submit new evaluations and rubrics.
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-1.5 text-rose-600 dark:text-rose-400 font-medium">
-                    <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
-                    System is locked. Supervisors attempting to submit will receive a closed notice.
-                  </span>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* CARD 2: WINNERS PAGE ACCESS */}
-          <Card className={`relative overflow-hidden border transition-all duration-200 hover:shadow-md ${
-            settings.winners_page_visible
-              ? "border-primary/30 bg-card/90"
-              : "border-border/70 bg-card/90"
-          }`}>
-            <div className={`absolute top-0 left-0 right-0 h-1 ${
-              settings.winners_page_visible ? "bg-amber-500" : "bg-muted-foreground/30"
-            }`} />
-            <CardContent className="p-4 sm:p-5 flex flex-col justify-between h-full space-y-4">
-              <div className="flex flex-col xs:flex-row xs:items-start justify-between gap-3">
-                <div className="flex items-start gap-3 min-w-0">
-                  <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border ${
-                    settings.winners_page_visible
-                      ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
-                      : "bg-muted text-muted-foreground border-border"
-                  }`}>
-                    <Trophy className="h-5 w-5" />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h4 className="font-bold text-base text-foreground">
-                        Winners Showcase Page
-                      </h4>
-                      <Badge
-                        variant="outline"
-                        className={
-                          settings.winners_page_visible
-                            ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 text-[10px]"
-                            : "bg-muted text-muted-foreground border-border text-[10px]"
-                        }
-                      >
-                        {settings.winners_page_visible ? "PUBLIC" : "HIDDEN"}
-                      </Badge>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Toggle public visibility of the animated podium at <code className="font-mono text-foreground font-semibold">/winners</code>.
-                    </p>
-                  </div>
-                </div>
-
-                <Button
-                  onClick={handleToggleWinnersVisibility}
-                  disabled={savingKey === "winners_page_visible"}
-                  size="sm"
-                  variant={settings.winners_page_visible ? "outline" : "default"}
-                  className="rounded-xl shrink-0 font-bold px-3.5 shadow-xs min-h-11 w-full xs:w-auto"
-                >
-                  {savingKey === "winners_page_visible" ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : settings.winners_page_visible ? (
-                    <>
-                      <EyeOff className="h-4 w-4 mr-1.5" />
-                      Hide Page
-                    </>
-                  ) : (
-                    <>
-                      <Eye className="h-4 w-4 mr-1.5" />
-                      Publish Page
-                    </>
-                  )}
-                </Button>
-              </div>
-
-              {/* URL & quick actions bar */}
-              <div className="flex items-center justify-between gap-2 rounded-xl bg-muted/40 px-3 py-2 border border-border/50">
-                <div className="flex items-center gap-2 min-w-0 text-xs text-muted-foreground">
-                  <span className="font-medium text-foreground shrink-0">Public URL:</span>
-                  <code className="truncate rounded bg-background/80 px-1.5 py-0.5 font-mono text-[11px] text-primary border border-border/50">
-                    /winners
-                  </code>
-                </div>
-
-                <div className="flex items-center gap-1 shrink-0">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleCopyWinnersUrl}
-                    className="h-9 w-9 min-h-11 min-w-11 p-0 rounded-lg text-muted-foreground hover:text-foreground"
-                    title="Copy direct link"
-                    aria-label="Copy direct link"
-                  >
-                    {copiedUrl ? (
-                      <Check className="h-4 w-4 text-emerald-500" />
-                    ) : (
-                      <Copy className="h-4 w-4" />
-                    )}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    asChild
-                    className="h-9 w-9 min-h-11 min-w-11 p-0 rounded-lg text-muted-foreground hover:text-foreground"
-                    title="Open winners page in new tab"
-                    aria-label="Open winners page in new tab"
-                  >
-                    <a href="/winners" target="_blank" rel="noopener noreferrer">
-                      <ExternalLink className="h-4 w-4" />
-                    </a>
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+      <SubmissionAndWinnersControls
+        copiedUrl={copiedUrl}
+        handleCopyWinnersUrl={handleCopyWinnersUrl}
+        handleToggleSubmissions={handleToggleSubmissions}
+        handleToggleWinnersVisibility={handleToggleWinnersVisibility}
+        savingKey={savingKey}
+        settings={settings}
+      />
 
       {/* ============================================================ */}
       {/* 4. HOMEPAGE LEADERBOARD & CEREMONY MODES (ROW 2 - 3 BALANCED CARDS) */}
       {/* ============================================================ */}
-      <div>
-        <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground/80 mb-3 flex items-center gap-2">
-          <Flame className="h-4 w-4 text-primary" />
-          Homepage Display & Ceremony Modes
-        </h3>
+      <LeaderboardModeControls
+        handleToggleCalculationMode={handleToggleCalculationMode}
+        handleToggleLeaderboardMode={handleToggleLeaderboardMode}
+        handleToggleWinnerRevealMode={handleToggleWinnerRevealMode}
+        savingKey={savingKey}
+        settings={settings}
+      />
+    </div>
+  )
+}
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* CARD 3: LEADERBOARD SCORING MODE (MONTHLY VS ALL-TIME) */}
-          <Card className="relative overflow-hidden border border-border/80 bg-card/90 transition-all duration-200 hover:shadow-md flex flex-col justify-between">
-            <CardContent className="p-4 sm:p-5 flex flex-col justify-between h-full space-y-4">
-              <div className="space-y-3">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-2.5">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20">
-                      <BarChart3 className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-sm text-foreground">
-                        Leaderboard Points Mode
-                      </h4>
-                      <p className="text-[11px] text-muted-foreground">
-                        Score calculation formula
-                      </p>
-                    </div>
-                  </div>
-
-                  <Badge
-                    variant="outline"
-                    className="bg-primary/10 text-primary border-primary/20 text-[10px] font-bold shrink-0"
-                  >
-                    {settings.leaderboard_show_monthly ? "Monthly" : "All-Time"}
-                  </Badge>
-                </div>
-
-                {/* Segmented Pill Selector */}
-                <div className="grid grid-cols-2 rounded-xl bg-muted/70 p-1 border border-border/60">
-                  <button
-                    type="button"
-                    onClick={() => handleToggleLeaderboardMode(false)}
-                    disabled={savingKey === "leaderboard_show_monthly"}
-                    className={`flex items-center justify-center gap-1.5 py-2 min-h-11 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                      !settings.leaderboard_show_monthly
-                        ? "bg-background text-foreground shadow-xs border border-border/40"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    All-Time
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleToggleLeaderboardMode(true)}
-                    disabled={savingKey === "leaderboard_show_monthly"}
-                    className={`flex items-center justify-center gap-1.5 py-2 min-h-11 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                      settings.leaderboard_show_monthly
-                        ? "bg-primary text-primary-foreground shadow-xs"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    Monthly
-                  </button>
-                </div>
-              </div>
-
-              <div className="rounded-xl bg-muted/40 p-3 border border-border/50 text-[11px] text-muted-foreground leading-relaxed">
-                {settings.leaderboard_show_monthly ? (
-                  <span>
-                    <strong className="text-foreground">Monthly Active:</strong> Shows the frozen month, or resets on the 1st when unfrozen. Includes archived scores from that month.
-                  </span>
-                ) : (
-                  <span>
-                    <strong className="text-foreground">All-Time Active:</strong> Includes every live and archived evaluation, counted once.
-                  </span>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* CARD 4: CALCULATION MODE */}
-          <Card className={`relative overflow-hidden border transition-all duration-200 hover:shadow-md flex flex-col justify-between ${
-            settings.calculation_mode ? "border-amber-500/40 bg-amber-500/5" : "border-border/80 bg-card/90"
-          }`}>
-            <CardContent className="p-4 sm:p-5 flex flex-col justify-between h-full space-y-4">
-              <div className="space-y-3">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-2.5">
-                    <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border ${
-                      settings.calculation_mode
-                        ? "bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/30"
-                        : "bg-muted text-muted-foreground border-border"
-                    }`}>
-                      <Calculator className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-sm text-foreground">
-                        Calculation Mode
-                      </h4>
-                      <p className="text-[11px] text-muted-foreground">
-                        Tallying & intermission screen
-                      </p>
-                    </div>
-                  </div>
-
-                  <Badge
-                    variant="outline"
-                    className={
-                      settings.calculation_mode
-                        ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30 text-[10px]"
-                        : "bg-muted text-muted-foreground border-border text-[10px]"
-                    }
-                  >
-                    {settings.calculation_mode ? "ACTIVE" : "STANDBY"}
-                  </Badge>
-                </div>
-
-                <div className="flex items-center justify-between rounded-xl bg-muted/40 p-2.5 border border-border/50">
-                  <span className="text-xs font-semibold text-foreground">
-                    Animation Mask
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[11px] text-muted-foreground font-medium">
-                      {settings.calculation_mode ? "Enabled" : "Disabled"}
-                    </span>
-                    <Switch
-                      checked={settings.calculation_mode}
-                      onCheckedChange={handleToggleCalculationMode}
-                      disabled={savingKey === "calculation_mode"}
-                      className="data-[state=checked]:bg-amber-500"
-                      aria-label="Toggle calculation animation mode"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="rounded-xl bg-muted/40 p-3 border border-border/50 text-[11px] text-muted-foreground leading-relaxed">
-                {settings.calculation_mode ? (
-                  <span className="text-amber-700 dark:text-amber-300 font-medium">
-                    Leaderboard is hidden. Visitors see the themed leaf & tree calculation animation.
-                  </span>
-                ) : (
-                  <span>
-                    Standard leaderboard ranking is rendered on the public homepage.
-                  </span>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* CARD 5: WINNER REVEAL MODE */}
-          <Card className={`relative overflow-hidden border transition-all duration-200 hover:shadow-md flex flex-col justify-between ${
-            settings.winner_reveal_mode ? "border-purple-500/40 bg-purple-500/5" : "border-border/80 bg-card/90"
-          }`}>
-            <CardContent className="p-4 sm:p-5 flex flex-col justify-between h-full space-y-4">
-              <div className="space-y-3">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-2.5">
-                    <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border ${
-                      settings.winner_reveal_mode
-                        ? "bg-purple-500/20 text-purple-600 dark:text-purple-400 border-purple-500/30"
-                        : "bg-muted text-muted-foreground border-border"
-                    }`}>
-                      <PartyPopper className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-sm text-foreground">
-                        Winner Reveal Mode
-                      </h4>
-                      <p className="text-[11px] text-muted-foreground">
-                        Confetti ceremony trigger
-                      </p>
-                    </div>
-                  </div>
-
-                  <Badge
-                    variant="outline"
-                    className={
-                      settings.winner_reveal_mode
-                        ? "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/30 text-[10px]"
-                        : "bg-muted text-muted-foreground border-border text-[10px]"
-                    }
-                  >
-                    {settings.winner_reveal_mode ? "ACTIVE" : "STANDBY"}
-                  </Badge>
-                </div>
-
-                <div className="flex items-center justify-between rounded-xl bg-muted/40 p-2.5 border border-border/50">
-                  <span className="text-xs font-semibold text-foreground">
-                    Reveal Button
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[11px] text-muted-foreground font-medium">
-                      {settings.winner_reveal_mode ? "Enabled" : "Disabled"}
-                    </span>
-                    <Switch
-                      checked={settings.winner_reveal_mode}
-                      onCheckedChange={handleToggleWinnerRevealMode}
-                      disabled={savingKey === "winner_reveal_mode"}
-                      className="data-[state=checked]:bg-purple-600"
-                      aria-label="Toggle winner reveal mode"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="rounded-xl bg-muted/40 p-3 border border-border/50 text-[11px] text-muted-foreground leading-relaxed">
-                {settings.winner_reveal_mode ? (
-                  <span className="text-purple-700 dark:text-purple-300 font-medium">
-                    Homepage features an interactive "Check Winner" button with celebratory confetti.
-                  </span>
-                ) : (
-                  <span>
-                    Leaderboard rankings are shown directly without an interactive reveal button.
-                  </span>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+function SystemStateIndicators({
+  loadAllSettings,
+  loading,
+  refreshing,
+  settings
+}: Pick<
+  NonNullable<Parameters<typeof SystemStatusBar>[0]>,
+  "loadAllSettings" | "loading" | "refreshing" | "settings"
+>) {
+  return (
+    <div className="relative flex flex-col gap-4 border-b border-border/50 pb-6 lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex items-start gap-3">
+        <div className="flex h-11 w-11 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/15 text-primary border border-primary/25 shadow-inner">
+          <Sliders className="h-5 w-5 sm:h-6 sm:w-6" />
+        </div>
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-xl font-extrabold tracking-tight text-foreground sm:text-2xl">
+              Global System Controls
+            </h2>
+            <Badge
+              variant="outline"
+              className="bg-primary/10 text-primary border-primary/20 text-[10px] font-bold tracking-wider uppercase px-2 py-0.5"
+            >
+              Runtime Engine
+            </Badge>
+          </div>
+          <p className="mt-0.5 text-xs sm:text-sm text-muted-foreground">
+            Master control center for public display, scoring aggregation, and supervisor submission workflows.
+          </p>
         </div>
       </div>
+
+      {/* Live system state indicators bar */}
+      <div className="flex flex-wrap items-center gap-2">
+        {/* Submissions Indicator */}
+        <div
+          className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold border transition-colors ${
+            settings.evaluations_enabled
+              ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
+              : "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30"
+          }`}
+        >
+          <span
+            className={`h-2 w-2 rounded-full ${
+              settings.evaluations_enabled ? "bg-emerald-500 animate-pulse" : "bg-rose-500"
+            }`}
+          />
+          <span>{settings.evaluations_enabled ? "Intake: Open" : "Intake: Locked"}</span>
+        </div>
+
+        {/* Homepage Indicator */}
+        <div
+          className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold border transition-colors ${
+            settings.calculation_mode
+              ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30"
+              : settings.winner_reveal_mode
+                ? "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/30"
+                : "bg-primary/10 text-primary border-primary/30"
+          }`}
+        >
+          {settings.calculation_mode ? (
+            <>
+              <Calculator className="h-3.5 w-3.5 text-amber-500" />
+              <span>HP: Calculating</span>
+            </>
+          ) : settings.winner_reveal_mode ? (
+            <>
+              <PartyPopper className="h-3.5 w-3.5 text-purple-500" />
+              <span>HP: Winner Reveal</span>
+            </>
+          ) : (
+            <>
+              <BarChart3 className="h-3.5 w-3.5 text-primary" />
+              <span>HP: Live Ranks</span>
+            </>
+          )}
+        </div>
+
+        {/* Scoring Mode Indicator */}
+        <div className="flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold border bg-muted/60 text-muted-foreground border-border/80">
+          <span>Mode: {settings.leaderboard_show_monthly ? "Monthly" : "All-Time"}</span>
+        </div>
+
+        {/* Manual Refresh Sync Button */}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => loadAllSettings(true)}
+          disabled={refreshing || loading}
+          className="h-9 min-h-9 rounded-full px-3 text-xs gap-1.5 font-medium border-border/70 hover:bg-muted/80 shadow-xs"
+          title="Sync settings with database"
+        >
+          <RefreshCw className={`h-3.5 w-3.5 ${refreshing || loading ? "animate-spin text-primary" : ""}`} />
+          <span className="hidden sm:inline">Sync</span>
+        </Button>
+      </div>
     </div>
+  )
+}
+
+function SubmissionAccessControl({
+  handleToggleSubmissions,
+  savingKey,
+  settings
+}: Pick<
+  NonNullable<Parameters<typeof SubmissionAndWinnersControls>[0]>,
+  "handleToggleSubmissions" | "savingKey" | "settings"
+>) {
+  return (
+    <Card
+      className={`relative overflow-hidden border transition-[color,background-color,border-color,box-shadow] duration-200 hover:shadow-md ${
+        settings.evaluations_enabled ? "border-emerald-500/30 bg-card/90" : "border-rose-500/30 bg-card/90"
+      }`}
+    >
+      <div
+        className={`absolute top-0 left-0 right-0 h-1 ${
+          settings.evaluations_enabled ? "bg-emerald-500" : "bg-rose-500"
+        }`}
+      />
+      <CardContent className="p-4 sm:p-5 flex flex-col justify-between h-full space-y-4">
+        <div className="flex flex-col xs:flex-row xs:items-start justify-between gap-3">
+          <div className="flex items-start gap-3 min-w-0">
+            <div
+              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border ${
+                settings.evaluations_enabled
+                  ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                  : "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20"
+              }`}
+            >
+              {settings.evaluations_enabled ? <Unlock className="h-5 w-5" /> : <Lock className="h-5 w-5" />}
+            </div>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h4 className="font-bold text-base text-foreground">Evaluation Intake</h4>
+                <Badge
+                  variant="outline"
+                  className={
+                    settings.evaluations_enabled
+                      ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 text-[10px]"
+                      : "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30 text-[10px]"
+                  }
+                >
+                  {settings.evaluations_enabled ? "OPEN" : "LOCKED"}
+                </Badge>
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Open or close the system for new supervisor evaluations.
+              </p>
+            </div>
+          </div>
+
+          <Button
+            onClick={handleToggleSubmissions}
+            disabled={savingKey === "evaluations_enabled"}
+            size="sm"
+            variant={settings.evaluations_enabled ? "destructive" : "default"}
+            className="rounded-xl shrink-0 font-bold px-3.5 shadow-xs min-h-11 w-full xs:w-auto"
+          >
+            {savingKey === "evaluations_enabled" ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : settings.evaluations_enabled ? (
+              <>
+                <Lock className="h-4 w-4 mr-1.5" />
+                Lock System
+              </>
+            ) : (
+              <>
+                <Unlock className="h-4 w-4 mr-1.5" />
+                Open System
+              </>
+            )}
+          </Button>
+        </div>
+
+        <div className="rounded-xl bg-muted/40 p-3 border border-border/50 text-xs text-muted-foreground leading-relaxed">
+          {settings.evaluations_enabled ? (
+            <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-medium">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              Supervisors can actively submit new evaluations and rubrics.
+            </span>
+          ) : (
+            <span className="flex items-center gap-1.5 text-rose-600 dark:text-rose-400 font-medium">
+              <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
+              System is locked. Supervisors attempting to submit will receive a closed notice.
+            </span>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function WinnersPageAccessControl({
+  copiedUrl,
+  handleCopyWinnersUrl,
+  handleToggleWinnersVisibility,
+  savingKey,
+  settings
+}: Pick<
+  NonNullable<Parameters<typeof SubmissionAndWinnersControls>[0]>,
+  "copiedUrl" | "handleCopyWinnersUrl" | "handleToggleWinnersVisibility" | "savingKey" | "settings"
+>) {
+  return (
+    <Card
+      className={`relative overflow-hidden border transition-[color,background-color,border-color,box-shadow] duration-200 hover:shadow-md ${
+        settings.winners_page_visible ? "border-primary/30 bg-card/90" : "border-border/70 bg-card/90"
+      }`}
+    >
+      <div
+        className={`absolute top-0 left-0 right-0 h-1 ${
+          settings.winners_page_visible ? "bg-amber-500" : "bg-muted-foreground/30"
+        }`}
+      />
+      <CardContent className="p-4 sm:p-5 flex flex-col justify-between h-full space-y-4">
+        <div className="flex flex-col xs:flex-row xs:items-start justify-between gap-3">
+          <div className="flex items-start gap-3 min-w-0">
+            <div
+              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border ${
+                settings.winners_page_visible
+                  ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
+                  : "bg-muted text-muted-foreground border-border"
+              }`}
+            >
+              <Trophy className="h-5 w-5" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h4 className="font-bold text-base text-foreground">Winners Showcase Page</h4>
+                <Badge
+                  variant="outline"
+                  className={
+                    settings.winners_page_visible
+                      ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 text-[10px]"
+                      : "bg-muted text-muted-foreground border-border text-[10px]"
+                  }
+                >
+                  {settings.winners_page_visible ? "PUBLIC" : "HIDDEN"}
+                </Badge>
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Toggle public visibility of the animated podium at{" "}
+                <code className="font-mono text-foreground font-semibold">/winners</code>.
+              </p>
+            </div>
+          </div>
+
+          <Button
+            onClick={handleToggleWinnersVisibility}
+            disabled={savingKey === "winners_page_visible"}
+            size="sm"
+            variant={settings.winners_page_visible ? "outline" : "default"}
+            className="rounded-xl shrink-0 font-bold px-3.5 shadow-xs min-h-11 w-full xs:w-auto"
+          >
+            {savingKey === "winners_page_visible" ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : settings.winners_page_visible ? (
+              <>
+                <EyeOff className="h-4 w-4 mr-1.5" />
+                Hide Page
+              </>
+            ) : (
+              <>
+                <Eye className="h-4 w-4 mr-1.5" />
+                Publish Page
+              </>
+            )}
+          </Button>
+        </div>
+
+        {/* URL & quick actions bar */}
+        <div className="flex items-center justify-between gap-2 rounded-xl bg-muted/40 px-3 py-2 border border-border/50">
+          <div className="flex items-center gap-2 min-w-0 text-xs text-muted-foreground">
+            <span className="font-medium text-foreground shrink-0">Public URL:</span>
+            <code className="truncate rounded bg-background/80 px-1.5 py-0.5 font-mono text-[11px] text-primary border border-border/50">
+              /winners
+            </code>
+          </div>
+
+          <div className="flex items-center gap-1 shrink-0">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleCopyWinnersUrl}
+              className="h-9 w-9 min-h-11 min-w-11 p-0 rounded-lg text-muted-foreground hover:text-foreground"
+              title="Copy direct link"
+              aria-label="Copy direct link"
+            >
+              {copiedUrl ? <Check className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4" />}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              asChild
+              className="h-9 w-9 min-h-11 min-w-11 p-0 rounded-lg text-muted-foreground hover:text-foreground"
+              title="Open winners page in new tab"
+              aria-label="Open winners page in new tab"
+            >
+              <a href="/winners" target="_blank" rel="noopener noreferrer" aria-label="Open winners page in new tab">
+                <ExternalLink className="h-4 w-4" />
+              </a>
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function LeaderboardPeriodControl({
+  handleToggleLeaderboardMode,
+  savingKey,
+  settings
+}: Pick<
+  NonNullable<Parameters<typeof LeaderboardModeControls>[0]>,
+  "handleToggleLeaderboardMode" | "savingKey" | "settings"
+>) {
+  return (
+    <Card className="relative overflow-hidden border border-border/80 bg-card/90 transition-[color,background-color,border-color,box-shadow] duration-200 hover:shadow-md flex flex-col justify-between">
+      <CardContent className="p-4 sm:p-5 flex flex-col justify-between h-full space-y-4">
+        <div className="space-y-3">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20">
+                <BarChart3 className="h-4 w-4" />
+              </div>
+              <div>
+                <h4 className="font-bold text-sm text-foreground">Leaderboard Points Mode</h4>
+                <p className="text-[11px] text-muted-foreground">Score calculation formula</p>
+              </div>
+            </div>
+
+            <Badge
+              variant="outline"
+              className="bg-primary/10 text-primary border-primary/20 text-[10px] font-bold shrink-0"
+            >
+              {settings.leaderboard_show_monthly ? "Monthly" : "All-Time"}
+            </Badge>
+          </div>
+
+          {/* Segmented Pill Selector */}
+          <div className="grid grid-cols-2 rounded-xl bg-muted/70 p-1 border border-border/60">
+            <button
+              type="button"
+              onClick={() => handleToggleLeaderboardMode(false)}
+              disabled={savingKey === "leaderboard_show_monthly"}
+              className={`flex items-center justify-center gap-1.5 py-2 min-h-11 rounded-lg text-xs font-bold transition-[color,background-color,border-color,box-shadow] cursor-pointer ${
+                !settings.leaderboard_show_monthly
+                  ? "bg-background text-foreground shadow-xs border border-border/40"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              All-Time
+            </button>
+            <button
+              type="button"
+              onClick={() => handleToggleLeaderboardMode(true)}
+              disabled={savingKey === "leaderboard_show_monthly"}
+              className={`flex items-center justify-center gap-1.5 py-2 min-h-11 rounded-lg text-xs font-bold transition-[color,background-color,border-color,box-shadow] cursor-pointer ${
+                settings.leaderboard_show_monthly
+                  ? "bg-primary text-primary-foreground shadow-xs"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Monthly
+            </button>
+          </div>
+        </div>
+
+        <div className="rounded-xl bg-muted/40 p-3 border border-border/50 text-[11px] text-muted-foreground leading-relaxed">
+          {settings.leaderboard_show_monthly ? (
+            <span>
+              <strong className="text-foreground">Monthly Active:</strong> Shows the frozen month, or resets on the 1st
+              when unfrozen. Includes archived scores from that month.
+            </span>
+          ) : (
+            <span>
+              <strong className="text-foreground">All-Time Active:</strong> Includes every live and archived evaluation,
+              counted once.
+            </span>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function CalculationModeControl({
+  handleToggleCalculationMode,
+  savingKey,
+  settings
+}: Pick<
+  NonNullable<Parameters<typeof LeaderboardModeControls>[0]>,
+  "handleToggleCalculationMode" | "savingKey" | "settings"
+>) {
+  return (
+    <Card
+      className={`relative overflow-hidden border transition-[color,background-color,border-color,box-shadow] duration-200 hover:shadow-md flex flex-col justify-between ${
+        settings.calculation_mode ? "border-amber-500/40 bg-amber-500/5" : "border-border/80 bg-card/90"
+      }`}
+    >
+      <CardContent className="p-4 sm:p-5 flex flex-col justify-between h-full space-y-4">
+        <div className="space-y-3">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex items-center gap-2.5">
+              <div
+                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border ${
+                  settings.calculation_mode
+                    ? "bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/30"
+                    : "bg-muted text-muted-foreground border-border"
+                }`}
+              >
+                <Calculator className="h-4 w-4" />
+              </div>
+              <div>
+                <h4 className="font-bold text-sm text-foreground">Calculation Mode</h4>
+                <p className="text-[11px] text-muted-foreground">Tallying & intermission screen</p>
+              </div>
+            </div>
+
+            <Badge
+              variant="outline"
+              className={
+                settings.calculation_mode
+                  ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30 text-[10px]"
+                  : "bg-muted text-muted-foreground border-border text-[10px]"
+              }
+            >
+              {settings.calculation_mode ? "ACTIVE" : "STANDBY"}
+            </Badge>
+          </div>
+
+          <div className="flex items-center justify-between rounded-xl bg-muted/40 p-2.5 border border-border/50">
+            <span className="text-xs font-semibold text-foreground">Animation Mask</span>
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] text-muted-foreground font-medium">
+                {settings.calculation_mode ? "Enabled" : "Disabled"}
+              </span>
+              <Switch
+                checked={settings.calculation_mode}
+                onCheckedChange={handleToggleCalculationMode}
+                disabled={savingKey === "calculation_mode"}
+                className="data-[state=checked]:bg-amber-500"
+                aria-label="Toggle calculation animation mode"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-xl bg-muted/40 p-3 border border-border/50 text-[11px] text-muted-foreground leading-relaxed">
+          {settings.calculation_mode ? (
+            <span className="text-amber-700 dark:text-amber-300 font-medium">
+              Leaderboard is hidden. Visitors see the themed leaf & tree calculation animation.
+            </span>
+          ) : (
+            <span>Standard leaderboard ranking is rendered on the public homepage.</span>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function WinnerRevealControl({
+  handleToggleWinnerRevealMode,
+  savingKey,
+  settings
+}: Pick<
+  NonNullable<Parameters<typeof LeaderboardModeControls>[0]>,
+  "handleToggleWinnerRevealMode" | "savingKey" | "settings"
+>) {
+  return (
+    <Card
+      className={`relative overflow-hidden border transition-[color,background-color,border-color,box-shadow] duration-200 hover:shadow-md flex flex-col justify-between ${
+        settings.winner_reveal_mode ? "border-purple-500/40 bg-purple-500/5" : "border-border/80 bg-card/90"
+      }`}
+    >
+      <CardContent className="p-4 sm:p-5 flex flex-col justify-between h-full space-y-4">
+        <div className="space-y-3">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex items-center gap-2.5">
+              <div
+                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border ${
+                  settings.winner_reveal_mode
+                    ? "bg-purple-500/20 text-purple-600 dark:text-purple-400 border-purple-500/30"
+                    : "bg-muted text-muted-foreground border-border"
+                }`}
+              >
+                <PartyPopper className="h-4 w-4" />
+              </div>
+              <div>
+                <h4 className="font-bold text-sm text-foreground">Winner Reveal Mode</h4>
+                <p className="text-[11px] text-muted-foreground">Confetti ceremony trigger</p>
+              </div>
+            </div>
+
+            <Badge
+              variant="outline"
+              className={
+                settings.winner_reveal_mode
+                  ? "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/30 text-[10px]"
+                  : "bg-muted text-muted-foreground border-border text-[10px]"
+              }
+            >
+              {settings.winner_reveal_mode ? "ACTIVE" : "STANDBY"}
+            </Badge>
+          </div>
+
+          <div className="flex items-center justify-between rounded-xl bg-muted/40 p-2.5 border border-border/50">
+            <span className="text-xs font-semibold text-foreground">Reveal Button</span>
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] text-muted-foreground font-medium">
+                {settings.winner_reveal_mode ? "Enabled" : "Disabled"}
+              </span>
+              <Switch
+                checked={settings.winner_reveal_mode}
+                onCheckedChange={handleToggleWinnerRevealMode}
+                disabled={savingKey === "winner_reveal_mode"}
+                className="data-[state=checked]:bg-purple-600"
+                aria-label="Toggle winner reveal mode"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-xl bg-muted/40 p-3 border border-border/50 text-[11px] text-muted-foreground leading-relaxed">
+          {settings.winner_reveal_mode ? (
+            <span className="text-purple-700 dark:text-purple-300 font-medium">
+              Homepage features an interactive "Check Winner" button with celebratory confetti.
+            </span>
+          ) : (
+            <span>Leaderboard rankings are shown directly without an interactive reveal button.</span>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   )
 }

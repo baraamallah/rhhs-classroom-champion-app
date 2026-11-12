@@ -1,5 +1,6 @@
 "use server"
 
+import { after } from "next/server"
 import { createAdminClient } from "@/lib/supabase/server"
 import { getSessionFromCookies, clearSessionCookie } from "@/lib/auth/session"
 import { readEvaluationHistory } from "@/lib/evaluation-history"
@@ -353,7 +354,9 @@ export async function exportDataAsExcel() {
       const buffer = await styledWb.xlsx.writeBuffer()
       base64 = Buffer.from(buffer).toString("base64")
     } catch (styledErr) {
-      console.warn("[exportDataAsExcel] Could not generate styled ExcelJS buffer, fallback to sheets:", styledErr)
+      after(() => {
+        console.warn("[exportDataAsExcel] Could not generate styled ExcelJS buffer, fallback to sheets:", styledErr)
+      })
     }
 
     return { success: true, sheets, base64, fileName }

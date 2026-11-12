@@ -190,8 +190,8 @@ export default function ErrorPage({ error, reset }: ErrorProps) {
 
                 {showStack && (
                   <m.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
                     className="mt-2 p-3 bg-zinc-950 text-zinc-300 rounded-xl overflow-x-auto text-[11px] font-mono leading-relaxed border border-border/40 max-h-56 scrollbar-thin"
                   >
                     <pre className="whitespace-pre-wrap break-all">{error.stack}</pre>

@@ -130,7 +130,7 @@ export function WinnerRevealAnimation() {
               <Button
                 size="lg"
                 onClick={handleReveal}
-                className="w-full sm:w-auto relative group overflow-hidden bg-linear-to-r from-amber-500 via-yellow-500 to-amber-600 hover:from-amber-600 hover:via-yellow-600 hover:to-amber-700 text-black font-black text-base sm:text-lg px-8 sm:px-12 py-6 rounded-full shadow-xl shadow-amber-500/30 transition-all duration-300 hover:scale-105 active:scale-95"
+                className="w-full sm:w-auto relative group overflow-hidden bg-linear-to-r from-amber-500 via-yellow-500 to-amber-600 hover:from-amber-600 hover:via-yellow-600 hover:to-amber-700 text-black font-black text-base sm:text-lg px-8 sm:px-12 py-6 rounded-full shadow-xl shadow-amber-500/30 transition-[color,background-color,border-color,box-shadow,transform,scale,rotate,translate] duration-300 hover:scale-105 active:scale-95"
               >
                 {/* Button Shimmer */}
                 <div className="absolute inset-0 bg-linear-to-r from-transparent via-white/40 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />

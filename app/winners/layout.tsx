@@ -2,7 +2,7 @@ import type { Metadata } from "next"
 
 export const metadata: Metadata = {
   title: "Monthly Champions & Hall of Fame",
-  description: "Explore monthly winners, top-performing green classrooms, award certificates, and win streaks across all RHHS school divisions.",
+  description: "Explore monthly winners, top-performing green classrooms, all-time monthly award counts across all RHHS school divisions.",
   alternates: {
     canonical: "/winners",
   },

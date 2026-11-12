@@ -1,20 +1,7 @@
+import { getUserCount } from "@/lib/first-user"
 import { NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/server"
 import { setSessionCookie } from "@/lib/auth/session"
-
-async function getUserCount(): Promise<number> {
-  const supabase = await createAdminClient()
-  const { count, error } = await supabase
-    .from('users')
-    .select('*', { count: 'exact', head: true })
-  
-  if (error) {
-    console.error("Error getting user count:", error)
-    return 0
-  }
-  
-  return count || 0
-}
 
 export async function GET() {
   const total = await getUserCount()
@@ -42,18 +29,18 @@ export async function POST(request: Request) {
   }
 
   const supabase = await createAdminClient()
-  
+
   try {
     const { data: userData, error: insertError } = await supabase
-      .from('users')
+      .from("users")
       .insert({
         email,
         password_hash: password,
-        role: 'super_admin',
+        role: "super_admin",
         name,
         is_active: true
       })
-      .select('id, role')
+      .select("id, role")
       .single()
 
     if (insertError) {

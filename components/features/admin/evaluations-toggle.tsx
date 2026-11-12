@@ -17,23 +17,25 @@ export function EvaluationsToggle({ initialEnabled }: EvaluationsToggleProps) {
   const [loading, setLoading] = useState(initialEnabled === undefined)
   const [saving, setSaving] = useState(false)
 
-  const hasLoaded = useRef(false)
-
   useEffect(() => {
-    if (initialEnabled !== undefined || hasLoaded.current) return
-    hasLoaded.current = true
-    loadStatus()
-  }, [])
-
-  const loadStatus = async () => {
-    setLoading(true)
-    try {
-      const result = await getEvaluationsStatus()
-      if (result.success) setEnabled(result.enabled ?? true)
-    } finally {
-      setLoading(false)
+    if (initialEnabled !== undefined) return
+    let cancelled = false
+    async function load() {
+      try {
+        const result = await getEvaluationsStatus()
+        if (cancelled) return
+        if (result.success) setEnabled(result.enabled ?? true)
+      } catch (error) {
+        console.error("Could not load setting", error)
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
     }
-  }
+    void load()
+    return () => {
+      cancelled = true
+    }
+  }, [initialEnabled])
 
   const handleToggle = async () => {
     setSaving(true)
@@ -42,9 +44,16 @@ export function EvaluationsToggle({ initialEnabled }: EvaluationsToggleProps) {
       const result = await setEvaluationsStatus(newStatus)
       if (result.success) {
         setEnabled(newStatus)
-        toast({ title: "Success", description: newStatus ? "System is now accepting evaluations" : "System is now closed for evaluations" })
+        toast({
+          title: "Success",
+          description: newStatus ? "System is now accepting evaluations" : "System is now closed for evaluations"
+        })
       } else {
-        toast({ title: "Error", description: result.error || "Failed to update evaluation status", variant: "destructive" })
+        toast({
+          title: "Error",
+          description: result.error || "Failed to update evaluation status",
+          variant: "destructive"
+        })
       }
     } finally {
       setSaving(false)
@@ -58,9 +67,7 @@ export function EvaluationsToggle({ initialEnabled }: EvaluationsToggleProps) {
           <Settings2 className="h-5 w-5" />
           Submission Control
         </CardTitle>
-        <CardDescription>
-          Open or close the system for new evaluations
-        </CardDescription>
+        <CardDescription>Open or close the system for new evaluations</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="flex items-center justify-between">
@@ -70,11 +77,7 @@ export function EvaluationsToggle({ initialEnabled }: EvaluationsToggleProps) {
               {enabled ? "System is currently accepting evaluations" : "System is currently closed"}
             </p>
           </div>
-          <Button
-            onClick={handleToggle}
-            disabled={loading || saving}
-            variant={enabled ? "destructive" : "default"}
-          >
+          <Button onClick={handleToggle} disabled={loading || saving} variant={enabled ? "destructive" : "default"}>
             {loading ? (
               "Loading..."
             ) : enabled ? (

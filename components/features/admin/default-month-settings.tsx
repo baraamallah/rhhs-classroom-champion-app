@@ -1,7 +1,8 @@
 "use client"
 
+import { EcoLoader } from "@/components/common/eco-loader"
 import { getSchoolMonth } from "@/lib/month-period"
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -11,18 +12,18 @@ import { Calendar, RefreshCw, Trophy, BarChart3 } from "lucide-react"
 import { getDefaultMonthSettings, setDefaultMonthSetting, type MonthSetting } from "@/app/actions/winners-page-actions"
 
 const MONTHS = [
-  { value: 1, label: 'January' },
-  { value: 2, label: 'February' },
-  { value: 3, label: 'March' },
-  { value: 4, label: 'April' },
-  { value: 5, label: 'May' },
-  { value: 6, label: 'June' },
-  { value: 7, label: 'July' },
-  { value: 8, label: 'August' },
-  { value: 9, label: 'September' },
-  { value: 10, label: 'October' },
-  { value: 11, label: 'November' },
-  { value: 12, label: 'December' },
+  { value: 1, label: "January" },
+  { value: 2, label: "February" },
+  { value: 3, label: "March" },
+  { value: 4, label: "April" },
+  { value: 5, label: "May" },
+  { value: 6, label: "June" },
+  { value: 7, label: "July" },
+  { value: 8, label: "August" },
+  { value: 9, label: "September" },
+  { value: 10, label: "October" },
+  { value: 11, label: "November" },
+  { value: 12, label: "December" }
 ]
 
 interface DefaultMonthSettingsProps {
@@ -31,7 +32,11 @@ interface DefaultMonthSettingsProps {
   onMonthChange?: (key: "winners_display_month" | "leaderboard_display_month", setting: MonthSetting | null) => void
 }
 
-export function DefaultMonthSettings({ initialWinnersMonth, initialLeaderboardMonth, onMonthChange }: DefaultMonthSettingsProps) {
+export function DefaultMonthSettings({
+  initialWinnersMonth,
+  initialLeaderboardMonth,
+  onMonthChange
+}: DefaultMonthSettingsProps) {
   const { toast } = useToast()
   const [loading, setLoading] = useState(initialWinnersMonth === undefined)
   const [saving, setSaving] = useState<string | null>(null)
@@ -39,15 +44,33 @@ export function DefaultMonthSettings({ initialWinnersMonth, initialLeaderboardMo
   const [winnersSetting, setWinnersSetting] = useState<MonthSetting | null>(initialWinnersMonth ?? null)
   const [leaderboardSetting, setLeaderboardSetting] = useState<MonthSetting | null>(initialLeaderboardMonth ?? null)
 
-  const [tempWinners, setTempWinners] = useState<MonthSetting>(
-    initialWinnersMonth || getSchoolMonth()
-  )
+  const [tempWinners, setTempWinners] = useState<MonthSetting>(initialWinnersMonth || getSchoolMonth())
 
-  const [tempLeaderboard, setTempLeaderboard] = useState<MonthSetting>(
-    initialLeaderboardMonth || getSchoolMonth()
-  )
+  const [tempLeaderboard, setTempLeaderboard] = useState<MonthSetting>(initialLeaderboardMonth || getSchoolMonth())
 
-  const hasLoaded = useRef(false)
+  const loadSettings = useCallback(async (signal?: AbortSignal) => {
+    setLoading(true)
+    try {
+      const result = await getDefaultMonthSettings()
+      if (signal?.aborted) return
+      if (result.success) {
+        setWinnersSetting(result.winnersMonth || null)
+        setLeaderboardSetting(result.leaderboardMonth || null)
+
+        if (result.winnersMonth) {
+          setTempWinners(result.winnersMonth)
+        }
+        if (result.leaderboardMonth) {
+          setTempLeaderboard(result.leaderboardMonth)
+        }
+      }
+    } catch (error) {
+      if (signal?.aborted) return
+      console.error("loadSettings failed:", error)
+    } finally {
+      if (!signal?.aborted) setLoading(false)
+    }
+  }, [])
 
   useEffect(() => {
     if (initialWinnersMonth !== undefined && initialLeaderboardMonth !== undefined) {
@@ -58,27 +81,10 @@ export function DefaultMonthSettings({ initialWinnersMonth, initialLeaderboardMo
       setLoading(false)
       return
     }
-    if (hasLoaded.current) return
-    hasLoaded.current = true
-    loadSettings()
-  }, [initialWinnersMonth, initialLeaderboardMonth])
-
-  const loadSettings = async () => {
-    setLoading(true)
-    const result = await getDefaultMonthSettings()
-    if (result.success) {
-      setWinnersSetting(result.winnersMonth || null)
-      setLeaderboardSetting(result.leaderboardMonth || null)
-
-      if (result.winnersMonth) {
-        setTempWinners(result.winnersMonth)
-      }
-      if (result.leaderboardMonth) {
-        setTempLeaderboard(result.leaderboardMonth)
-      }
-    }
-    setLoading(false)
-  }
+    const controller = new AbortController()
+    void loadSettings(controller.signal)
+    return () => controller.abort()
+  }, [initialWinnersMonth, initialLeaderboardMonth, loadSettings])
 
   const handleSave = async (key: "winners_display_month" | "leaderboard_display_month") => {
     setSaving(key)
@@ -93,13 +99,13 @@ export function DefaultMonthSettings({ initialWinnersMonth, initialLeaderboardMo
 
       toast({
         title: "Setting Updated",
-        description: `Default month for ${key === "winners_display_month" ? "winners" : "leaderboard"} has been set.`,
+        description: `Default month for ${key === "winners_display_month" ? "winners" : "leaderboard"} has been set.`
       })
     } else {
       toast({
         title: "Error",
         description: result.error || "Failed to update setting.",
-        variant: "destructive",
+        variant: "destructive"
       })
     }
   }
@@ -121,28 +127,23 @@ export function DefaultMonthSettings({ initialWinnersMonth, initialLeaderboardMo
 
       toast({
         title: "Setting Reset",
-        description: `Default month for ${key === "winners_display_month" ? "winners" : "leaderboard"} reset to current.`,
+        description: `Default month for ${key === "winners_display_month" ? "winners" : "leaderboard"} reset to current.`
       })
     } else {
       toast({
         title: "Error",
         description: result.error || "Failed to reset setting.",
-        variant: "destructive",
+        variant: "destructive"
       })
     }
   }
 
-  const years = Array.from(new Set([tempWinners.year, tempLeaderboard.year, ...Array.from({ length: 5 }, (_, i) => getSchoolMonth().year - i)])).sort((a, b) => b - a)
+  const years = Array.from(
+    new Set([tempWinners.year, tempLeaderboard.year, ...Array.from({ length: 5 }, (_, i) => getSchoolMonth().year - i)])
+  ).sort((a, b) => b - a)
 
   if (loading) {
-    return (
-      <Card>
-        <CardContent className="p-6 text-center text-muted-foreground">
-          <RefreshCw className="h-6 w-6 animate-spin mx-auto mb-2" />
-          Loading settings...
-        </CardContent>
-      </Card>
-    )
+    return <EcoLoader compact title="Preparing display settings" />
   }
 
   return (
@@ -164,14 +165,16 @@ export function DefaultMonthSettings({ initialWinnersMonth, initialLeaderboardMo
               <Label className="text-xs">Year</Label>
               <Select
                 value={tempWinners.year.toString()}
-                onValueChange={(v) => setTempWinners(prev => ({ ...prev, year: parseInt(v) }))}
+                onValueChange={(v) => setTempWinners((prev) => ({ ...prev, year: parseInt(v) }))}
               >
                 <SelectTrigger className="min-h-11">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {years.map(year => (
-                    <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+                  {years.map((year) => (
+                    <SelectItem key={year} value={year.toString()}>
+                      {year}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -180,14 +183,16 @@ export function DefaultMonthSettings({ initialWinnersMonth, initialLeaderboardMo
               <Label className="text-xs">Month</Label>
               <Select
                 value={tempWinners.month.toString()}
-                onValueChange={(v) => setTempWinners(prev => ({ ...prev, month: parseInt(v) }))}
+                onValueChange={(v) => setTempWinners((prev) => ({ ...prev, month: parseInt(v) }))}
               >
                 <SelectTrigger className="min-h-11">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {MONTHS.map(month => (
-                    <SelectItem key={month.value} value={month.value.toString()}>{month.label}</SelectItem>
+                  {MONTHS.map((month) => (
+                    <SelectItem key={month.value} value={month.value.toString()}>
+                      {month.label}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -197,8 +202,14 @@ export function DefaultMonthSettings({ initialWinnersMonth, initialLeaderboardMo
           <div className="pt-2 flex flex-col gap-2">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium">Status:</span>
-              <span className={`text-xs px-2 py-0.5 rounded-full ${winnersSetting ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" : "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"}`}>
-                {winnersSetting ? `Frozen: ${MONTHS.find(m => m.value === winnersSetting.month)?.label} ${winnersSetting.year}` : leaderboardSetting ? `Following Leaderboard: ${MONTHS.find(m => m.value === leaderboardSetting.month)?.label} ${leaderboardSetting.year}` : "Following Current Month"}
+              <span
+                className={`text-xs px-2 py-0.5 rounded-full ${winnersSetting ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" : "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"}`}
+              >
+                {winnersSetting
+                  ? `Frozen: ${MONTHS.find((m) => m.value === winnersSetting.month)?.label} ${winnersSetting.year}`
+                  : leaderboardSetting
+                    ? `Following Leaderboard: ${MONTHS.find((m) => m.value === leaderboardSetting.month)?.label} ${leaderboardSetting.year}`
+                    : "Following Current Month"}
               </span>
             </div>
             <div className="flex gap-2 mt-2">
@@ -207,7 +218,11 @@ export function DefaultMonthSettings({ initialWinnersMonth, initialLeaderboardMo
                 onClick={() => handleSave("winners_display_month")}
                 disabled={saving !== null}
               >
-                {saving === "winners_display_month" ? <RefreshCw className="h-4 w-4 animate-spin mr-2" /> : "Freeze to Month"}
+                {saving === "winners_display_month" ? (
+                  <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  "Freeze to Month"
+                )}
               </Button>
               <Button
                 variant="outline"
@@ -230,7 +245,8 @@ export function DefaultMonthSettings({ initialWinnersMonth, initialLeaderboardMo
             Leaderboard Display Month
           </CardTitle>
           <CardDescription>
-            Choose the leaderboard month in Monthly mode. Admin winners follow it when the Winners month is not separately frozen.
+            Choose the leaderboard month in Monthly mode. Admin winners follow it when the Winners month is not
+            separately frozen.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -239,14 +255,16 @@ export function DefaultMonthSettings({ initialWinnersMonth, initialLeaderboardMo
               <Label className="text-xs">Year</Label>
               <Select
                 value={tempLeaderboard.year.toString()}
-                onValueChange={(v) => setTempLeaderboard(prev => ({ ...prev, year: parseInt(v) }))}
+                onValueChange={(v) => setTempLeaderboard((prev) => ({ ...prev, year: parseInt(v) }))}
               >
                 <SelectTrigger className="min-h-11">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {years.map(year => (
-                    <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+                  {years.map((year) => (
+                    <SelectItem key={year} value={year.toString()}>
+                      {year}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -255,14 +273,16 @@ export function DefaultMonthSettings({ initialWinnersMonth, initialLeaderboardMo
               <Label className="text-xs">Month</Label>
               <Select
                 value={tempLeaderboard.month.toString()}
-                onValueChange={(v) => setTempLeaderboard(prev => ({ ...prev, month: parseInt(v) }))}
+                onValueChange={(v) => setTempLeaderboard((prev) => ({ ...prev, month: parseInt(v) }))}
               >
                 <SelectTrigger className="min-h-11">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {MONTHS.map(month => (
-                    <SelectItem key={month.value} value={month.value.toString()}>{month.label}</SelectItem>
+                  {MONTHS.map((month) => (
+                    <SelectItem key={month.value} value={month.value.toString()}>
+                      {month.label}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -272,8 +292,12 @@ export function DefaultMonthSettings({ initialWinnersMonth, initialLeaderboardMo
           <div className="pt-2 flex flex-col gap-2">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium">Status:</span>
-              <span className={`text-xs px-2 py-0.5 rounded-full ${leaderboardSetting ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" : "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"}`}>
-                {leaderboardSetting ? `Frozen: ${MONTHS.find(m => m.value === leaderboardSetting.month)?.label} ${leaderboardSetting.year}` : "Following Current Month"}
+              <span
+                className={`text-xs px-2 py-0.5 rounded-full ${leaderboardSetting ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" : "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"}`}
+              >
+                {leaderboardSetting
+                  ? `Frozen: ${MONTHS.find((m) => m.value === leaderboardSetting.month)?.label} ${leaderboardSetting.year}`
+                  : "Following Current Month"}
               </span>
             </div>
             <div className="flex gap-2 mt-2">
@@ -282,7 +306,11 @@ export function DefaultMonthSettings({ initialWinnersMonth, initialLeaderboardMo
                 onClick={() => handleSave("leaderboard_display_month")}
                 disabled={saving !== null}
               >
-                {saving === "leaderboard_display_month" ? <RefreshCw className="h-4 w-4 animate-spin mr-2" /> : "Freeze to Month"}
+                {saving === "leaderboard_display_month" ? (
+                  <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  "Freeze to Month"
+                )}
               </Button>
               <Button
                 variant="outline"

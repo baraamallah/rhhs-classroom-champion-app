@@ -175,7 +175,7 @@ function HowItWorksSection() {
         {appSteps.map((card, index) => (
           <m.div
             key={card.title}
-            className="relative bg-card/80 dark:bg-card/50 backdrop-blur-md border border-border/70 p-4 xs:p-5 sm:p-6 rounded-2xl xs:rounded-3xl shadow-xs hover:shadow-md hover:border-primary/50 transition-all duration-300 group"
+            className="relative bg-card/80 dark:bg-card/50 backdrop-blur-md border border-border/70 p-4 xs:p-5 sm:p-6 rounded-2xl xs:rounded-3xl shadow-xs hover:shadow-md hover:border-primary/50 transition-[color,background-color,border-color,box-shadow] duration-300 group"
             initial={{ opacity: 0, y: 15 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -232,7 +232,7 @@ function ScoringRulesSection() {
 function ScoringMechanicsCard() {
   return (
     <m.div
-      className="bg-card/80 dark:bg-card/50 border border-border/70 p-4 xs:p-5 sm:p-6 rounded-2xl xs:rounded-3xl shadow-xs hover:shadow-md hover:border-emerald-500/50 transition-all duration-300 flex flex-col justify-between group"
+      className="bg-card/80 dark:bg-card/50 border border-border/70 p-4 xs:p-5 sm:p-6 rounded-2xl xs:rounded-3xl shadow-xs hover:shadow-md hover:border-emerald-500/50 transition-[color,background-color,border-color,box-shadow] duration-300 flex flex-col justify-between group"
       initial={{ opacity: 0, y: 15 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
@@ -280,7 +280,7 @@ function ScoringMechanicsCard() {
 function LeaderboardRulesCard() {
   return (
     <m.div
-      className="bg-card/80 dark:bg-card/50 border border-border/70 p-4 xs:p-5 sm:p-6 rounded-2xl xs:rounded-3xl shadow-xs hover:shadow-md hover:border-blue-500/50 transition-all duration-300 flex flex-col justify-between group"
+      className="bg-card/80 dark:bg-card/50 border border-border/70 p-4 xs:p-5 sm:p-6 rounded-2xl xs:rounded-3xl shadow-xs hover:shadow-md hover:border-blue-500/50 transition-[color,background-color,border-color,box-shadow] duration-300 flex flex-col justify-between group"
       initial={{ opacity: 0, y: 15 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
@@ -315,7 +315,7 @@ function LeaderboardRulesCard() {
 function PerformanceTiersCard() {
   return (
     <m.div
-      className="bg-card/80 dark:bg-card/50 border border-border/70 p-4 xs:p-5 sm:p-6 rounded-2xl xs:rounded-3xl shadow-xs hover:shadow-md hover:border-amber-500/50 transition-all duration-300 flex flex-col justify-between group"
+      className="bg-card/80 dark:bg-card/50 border border-border/70 p-4 xs:p-5 sm:p-6 rounded-2xl xs:rounded-3xl shadow-xs hover:shadow-md hover:border-amber-500/50 transition-[color,background-color,border-color,box-shadow] duration-300 flex flex-col justify-between group"
       initial={{ opacity: 0, y: 15 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
@@ -377,7 +377,7 @@ function EcoBadgesSection() {
       <div className="grid md:grid-cols-3 gap-6">
         {/* 1st Place Card: Grand Eco Champion */}
         <m.div
-          className="bg-card/90 dark:bg-card/60 backdrop-blur-md border border-amber-500/30 hover:border-amber-500/60 p-5 sm:p-6 rounded-2xl xs:rounded-3xl shadow-sm hover:shadow-xl hover:shadow-amber-500/10 transition-all duration-300 flex flex-col items-center text-center group relative overflow-hidden"
+          className="bg-card/90 dark:bg-card/60 backdrop-blur-md border border-amber-500/30 hover:border-amber-500/60 p-5 sm:p-6 rounded-2xl xs:rounded-3xl shadow-sm hover:shadow-xl hover:shadow-amber-500/10 transition-[color,background-color,border-color,box-shadow] duration-300 flex flex-col items-center text-center group relative overflow-hidden"
           initial={{ opacity: 0, y: 15 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -411,7 +411,7 @@ function EcoBadgesSection() {
 
         {/* 2nd Place Card: Distinguished Eco Ambassador */}
         <m.div
-          className="bg-card/90 dark:bg-card/60 backdrop-blur-md border border-slate-400/40 hover:border-slate-400/70 p-5 sm:p-6 rounded-2xl xs:rounded-3xl shadow-sm hover:shadow-xl hover:shadow-slate-400/10 transition-all duration-300 flex flex-col items-center text-center group relative overflow-hidden"
+          className="bg-card/90 dark:bg-card/60 backdrop-blur-md border border-slate-400/40 hover:border-slate-400/70 p-5 sm:p-6 rounded-2xl xs:rounded-3xl shadow-sm hover:shadow-xl hover:shadow-slate-400/10 transition-[color,background-color,border-color,box-shadow] duration-300 flex flex-col items-center text-center group relative overflow-hidden"
           initial={{ opacity: 0, y: 15 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -445,7 +445,7 @@ function EcoBadgesSection() {
 
         {/* 3rd Place Card: Eco Trailblazer */}
         <m.div
-          className="bg-card/90 dark:bg-card/60 backdrop-blur-md border border-amber-700/35 hover:border-amber-700/60 p-5 sm:p-6 rounded-2xl xs:rounded-3xl shadow-sm hover:shadow-xl hover:shadow-amber-700/10 transition-all duration-300 flex flex-col items-center text-center group relative overflow-hidden"
+          className="bg-card/90 dark:bg-card/60 backdrop-blur-md border border-amber-700/35 hover:border-amber-700/60 p-5 sm:p-6 rounded-2xl xs:rounded-3xl shadow-sm hover:shadow-xl hover:shadow-amber-700/10 transition-[color,background-color,border-color,box-shadow] duration-300 flex flex-col items-center text-center group relative overflow-hidden"
           initial={{ opacity: 0, y: 15 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -550,7 +550,7 @@ function TeamDropdown({
   const isGreen = accent === "green"
 
   return (
-    <div className="bg-card/80 dark:bg-card/50 backdrop-blur-md border border-border/70 rounded-3xl shadow-xs overflow-hidden transition-all duration-300 hover:border-primary/40">
+    <div className="bg-card/80 dark:bg-card/50 backdrop-blur-md border border-border/70 rounded-3xl shadow-xs overflow-hidden transition-colors duration-300 hover:border-primary/40">
       <button
         type="button"
         id={`team-dropdown-btn-${id}`}
@@ -598,9 +598,9 @@ function TeamDropdown({
             id={`team-dropdown-content-${id}`}
             role="region"
             aria-labelledby={`team-dropdown-btn-${id}`}
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
             transition={{ duration: 0.3, ease: "easeInOut" }}
             className="overflow-hidden"
           >
@@ -608,7 +608,7 @@ function TeamDropdown({
               {members.map((member, index) => (
                 <m.div
                   key={member.email}
-                  className="flex items-center justify-between p-3 bg-muted/40 dark:bg-muted/20 border border-border/60 rounded-2xl hover:border-primary/40 shadow-2xs hover:shadow-xs transition-all duration-200 group"
+                  className="flex items-center justify-between p-3 bg-muted/40 dark:bg-muted/20 border border-border/60 rounded-2xl hover:border-primary/40 shadow-2xs hover:shadow-xs transition-[color,background-color,border-color,box-shadow] duration-200 group"
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.04 }}

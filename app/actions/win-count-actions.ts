@@ -1,5 +1,6 @@
 "use server"
 
+import { readClassroomWinCounts } from "@/lib/classroom-win-counts"
 import { createAdminClient } from "@/lib/supabase/server"
 
 export async function getClassroomWinCounts(): Promise<{ success: boolean; data?: Record<string, number>; error?: string }> {
@@ -7,24 +8,7 @@ export async function getClassroomWinCounts(): Promise<{ success: boolean; data?
     // Use admin client for public access (bypasses RLS)
     const supabase = await createAdminClient()
     
-    // Get all monthly winners
-    const { data: winners, error } = await supabase
-      .from("monthly_winners")
-      .select("classroom_id")
-
-    if (error) {
-      console.error("[getClassroomWinCounts] Error:", error)
-      return { success: false, error: error.message }
-    }
-
-    // Count wins per classroom
-    const winCounts: Record<string, number> = {}
-    if (winners) {
-      winners.forEach((winner: any) => {
-        const classroomId = winner.classroom_id
-        winCounts[classroomId] = (winCounts[classroomId] || 0) + 1
-      })
-    }
+    const winCounts = await readClassroomWinCounts(supabase)
 
     return { success: true, data: winCounts }
   } catch (error: any) {

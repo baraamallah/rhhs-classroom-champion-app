@@ -23,13 +23,9 @@ import {
   X,
   Trophy,
   ListOrdered,
-  Award,
+  Award
 } from "lucide-react"
-import {
-  setCachedWinnersVisibility,
-  fetchWinnersVisibility,
-  onWinnersVisibilityChange,
-} from "@/lib/winners-visibility"
+import { setCachedWinnersVisibility, fetchWinnersVisibility, onWinnersVisibilityChange } from "@/lib/winners-visibility"
 
 interface LeaderboardViewProps {
   leaderboard: ClassroomScore[]
@@ -38,11 +34,11 @@ interface LeaderboardViewProps {
   winnersPageVisible?: boolean
 }
 
-export function LeaderboardView({
+function useLeaderboardViewController({
   leaderboard,
   calculationMode,
   winnerRevealMode,
-  winnersPageVisible = false,
+  winnersPageVisible = false
 }: LeaderboardViewProps) {
   const [isWinnersVisible, setIsWinnersVisible] = useState(winnersPageVisible)
   const [activeDivision, setActiveDivision] = useState<string>("Pre-School")
@@ -70,7 +66,6 @@ export function LeaderboardView({
     }
   }, [winnersPageVisible])
 
-
   // Count per division
   const divisionCounts = useMemo(() => {
     const counts: Record<string, number> = {}
@@ -96,6 +91,36 @@ export function LeaderboardView({
         return null
     }
   }
+  return {
+    activeDivision,
+    divisionCounts,
+    getDivisionIcon,
+    isWinnersVisible,
+    searchQuery,
+    setActiveDivision,
+    setSearchQuery,
+    setViewMode,
+    viewMode
+  }
+}
+
+export function LeaderboardView({
+  leaderboard,
+  calculationMode,
+  winnerRevealMode,
+  winnersPageVisible = false
+}: LeaderboardViewProps) {
+  const {
+    activeDivision,
+    divisionCounts,
+    getDivisionIcon,
+    isWinnersVisible,
+    searchQuery,
+    setActiveDivision,
+    setSearchQuery,
+    setViewMode,
+    viewMode
+  } = useLeaderboardViewController({ leaderboard, calculationMode, winnerRevealMode, winnersPageVisible })
 
   return (
     <LazyMotionProvider>
@@ -120,7 +145,8 @@ export function LeaderboardView({
             </h1>
 
             <p className="text-sm xs:text-base sm:text-lg text-muted-foreground max-w-xl mx-auto font-medium leading-relaxed px-2">
-              Celebrating daily environmental leadership, cleanliness, and eco-conscious habits across Rafic Hariri High School.
+              Celebrating daily environmental leadership, cleanliness, and eco-conscious habits across Rafic Hariri High
+              School.
             </p>
 
             {/* Prominent Winners Transfer Button / Banner */}
@@ -128,13 +154,13 @@ export function LeaderboardView({
               <div className="mt-6 flex items-center justify-center">
                 <Link
                   href="/winners"
-                  className="group relative inline-flex items-center gap-2.5 min-h-11 px-4 xs:px-5 py-2.5 rounded-full border border-amber-500/40 bg-linear-to-r from-amber-500/10 via-yellow-500/15 to-amber-500/10 hover:from-amber-500/25 hover:via-yellow-500/25 hover:to-amber-500/25 text-foreground shadow-xs hover:shadow-md hover:shadow-amber-500/15 transition-all duration-300 active:scale-95"
+                  className="group relative inline-flex items-center gap-2.5 min-h-11 px-4 xs:px-5 py-2.5 rounded-full border border-amber-500/40 bg-linear-to-r from-amber-500/10 via-yellow-500/15 to-amber-500/10 hover:from-amber-500/25 hover:via-yellow-500/25 hover:to-amber-500/25 text-foreground shadow-xs hover:shadow-md hover:shadow-amber-500/15 transition-[color,background-color,border-color,box-shadow,transform,scale,rotate,translate] duration-300 active:scale-95"
                 >
                   <div className="h-6 w-6 rounded-full bg-amber-500/20 flex items-center justify-center shrink-0">
                     <TrophyIcon className="h-3.5 w-3.5 text-amber-500 group-hover:rotate-12 transition-transform duration-300" />
                   </div>
                   <span className="text-xs sm:text-sm font-bold tracking-tight text-foreground text-center">
-                    View Monthly Champions & Certificates
+                    View Monthly Champions & Wins
                   </span>
                   <ArrowRight className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-amber-500 group-hover:translate-x-1 transition-transform duration-300 shrink-0" />
                 </Link>
@@ -155,205 +181,229 @@ export function LeaderboardView({
             >
               <LeafIcon className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
               <p className="text-base font-semibold text-foreground">No evaluations yet.</p>
-              <p className="text-sm text-muted-foreground mt-1">Supervisors will be evaluating classrooms soon. Check back shortly!</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Supervisors will be evaluating classrooms soon. Check back shortly!
+              </p>
             </m.div>
           ) : (
-            <Tabs
-              defaultValue="Pre-School"
-              value={activeDivision}
-              onValueChange={setActiveDivision}
-              className="w-full max-w-4xl mx-auto mb-16 relative z-10"
-            >
-              {/* Division Navigation Tabs (Sticky, reactive to header autohide) */}
-              <div className="sticky top-(--header-top-offset) z-30 pb-3 pt-2 bg-background/90 dark:bg-background/95 backdrop-blur-md border-b border-border/40 mb-6 transition-[top] duration-300 ease-in-out">
-                <div className="relative max-w-4xl mx-auto px-1 sm:px-0">
-                  <div className="flex justify-start sm:justify-center overflow-x-auto pb-1 no-scrollbar snap-x snap-mandatory scroll-smooth">
-                    <TabsList className="inline-flex h-auto p-1 bg-muted/70 dark:bg-card/70 backdrop-blur-sm rounded-full border border-border/60 shadow-xs min-w-max gap-1">
-                      {DIVISION_OPTIONS.map((option) => (
-                        <TabsTrigger
-                          key={option.value}
-                          value={option.value}
-                          className="rounded-full px-3 xs:px-3.5 sm:px-4 py-1.5 sm:py-2 min-h-9.5 sm:min-h-11 text-xs sm:text-sm font-semibold transition-all data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md snap-center flex items-center justify-center gap-1.5 cursor-pointer touch-manipulation"
-                        >
-                          {getDivisionIcon(option.value)}
-                          <span>{option.label}</span>
-                          <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-background/20 font-bold ml-0.5">
-                            {divisionCounts[option.value] ?? 0}
-                          </span>
-                        </TabsTrigger>
-                      ))}
-                    </TabsList>
-                  </div>
-                </div>
-              </div>
-
-              {/* Division Filter & View Switcher Bar */}
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mb-6">
-                {/* Search Bar */}
-                <div className="relative w-full sm:w-72">
-                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search classroom or grade..."
-                    className="w-full pl-9 pr-8 py-2 rounded-full border border-border bg-card/80 text-foreground text-xs sm:text-sm placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all shadow-2xs"
-                  />
-                  {searchQuery && (
-                    <button
-                      onClick={() => setSearchQuery("")}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5 rounded-full cursor-pointer"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                </div>
-
-                {/* View Switcher: Podium vs List */}
-                <div className="flex items-center justify-center w-full sm:w-auto p-1 bg-muted/60 dark:bg-card/70 rounded-full border border-border/60 shadow-2xs">
-                  <button
-                    onClick={() => setViewMode("podium")}
-                    className={`flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                      viewMode === "podium"
-                        ? "bg-primary text-primary-foreground shadow-xs"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    <Trophy className="w-3.5 h-3.5 shrink-0" />
-                    <span>Podium Showcase</span>
-                  </button>
-                  <button
-                    onClick={() => setViewMode("list")}
-                    className={`flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                      viewMode === "list"
-                        ? "bg-primary text-primary-foreground shadow-xs"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    <ListOrdered className="w-3.5 h-3.5 shrink-0" />
-                    <span>Full List</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Division Content Lists */}
-              {DIVISION_OPTIONS.map((option) => {
-                const divisionClassrooms = leaderboard.filter((c) => c.classroom.division === option.value)
-                const filteredClassrooms = divisionClassrooms.filter((c) => {
-                  if (!searchQuery.trim()) return true
-                  const q = searchQuery.toLowerCase().trim()
-                  return (
-                    c.classroom.name.toLowerCase().includes(q) ||
-                    c.classroom.grade.toLowerCase().includes(q)
-                  )
-                })
-
-                const maxScoreInDivision =
-                  divisionClassrooms.length > 0
-                    ? Math.max(...divisionClassrooms.map((c) => c.totalScore))
-                    : 100
-
-                const showPodium =
-                  viewMode === "podium" &&
-                  !searchQuery &&
-                  filteredClassrooms.length >= 1
-
-                const podiumTopThree = showPodium ? filteredClassrooms.slice(0, 3) : []
-                const listClassrooms = showPodium
-                  ? filteredClassrooms.slice(3)
-                  : filteredClassrooms
-
-                return (
-                  <TabsContent key={option.value} value={option.value} className="mt-0 focus-visible:outline-hidden">
-                    <AnimatePresence mode="wait">
-                      {divisionClassrooms.length === 0 ? (
-                        <m.div
-                          key="no-classrooms"
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          className="text-center py-14 text-muted-foreground bg-card/60 backdrop-blur-sm rounded-2xl border border-border/60 shadow-2xs"
-                        >
-                          <LeafIcon className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
-                          <p className="font-semibold text-foreground">No classrooms registered in this division</p>
-                          <p className="text-xs text-muted-foreground mt-1">Evaluations will appear here once submitted.</p>
-                        </m.div>
-                      ) : filteredClassrooms.length === 0 ? (
-                        <m.div
-                          key="no-search-results"
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          className="text-center py-12 text-muted-foreground bg-card/60 backdrop-blur-sm rounded-2xl border border-border/60 shadow-2xs"
-                        >
-                          <Search className="h-8 w-8 text-muted-foreground/40 mx-auto mb-3" />
-                          <p className="font-semibold text-foreground">No classrooms matched &quot;{searchQuery}&quot;</p>
-                          <button
-                            onClick={() => setSearchQuery("")}
-                            className="mt-2 text-xs font-bold text-primary hover:underline"
-                          >
-                            Clear search filter
-                          </button>
-                        </m.div>
-                      ) : (
-                        <m.div
-                          key={`content-${option.value}-${viewMode}-${searchQuery ? "search" : "all"}`}
-                          initial={{ opacity: 0, y: 12 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.3 }}
-                          className="space-y-4"
-                        >
-                          {/* 3D Olympic Podium Showcase for Top 3 */}
-                          {showPodium && (
-                            <LeaderboardPodium
-                              topThree={podiumTopThree}
-                            />
-                          )}
-
-                          {/* Remaining Standings Section Header */}
-                          {showPodium && listClassrooms.length > 0 && (
-                            <div className="flex items-center gap-3 pt-4 pb-1">
-                              <div className="h-px flex-1 bg-border/60" />
-                              <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                                <Award className="w-3.5 h-3.5 text-primary" />
-                                Standings (Ranks 4 – {filteredClassrooms.length})
-                              </span>
-                              <div className="h-px flex-1 bg-border/60" />
-                            </div>
-                          )}
-
-                          {/* Cards List */}
-                          <div className="space-y-3">
-                            {listClassrooms.map((classroom, index) => {
-                              const rank = showPodium ? index + 4 : index + 1
-                              return (
-                                <m.div
-                                  key={`${classroom.classroom.id}-${option.value}`}
-                                  initial={{ opacity: 0, y: 12 }}
-                                  animate={{ opacity: 1, y: 0 }}
-                                  transition={{
-                                    delay: 0.03 * Math.min(index, 8),
-                                    duration: 0.3,
-                                    ease: "easeOut",
-                                  }}
-                                >
-                                  <SimpleClassroomCard
-                                    classroom={classroom}
-                                    rank={rank}
-                                    maxScore={maxScoreInDivision}
-                                  />
-                                </m.div>
-                              )
-                            })}
-                          </div>
-                        </m.div>
-                      )}
-                    </AnimatePresence>
-                  </TabsContent>
-                )
-              })}
-            </Tabs>
+            <LeaderboardFilters
+              activeDivision={activeDivision}
+              divisionCounts={divisionCounts}
+              getDivisionIcon={getDivisionIcon}
+              leaderboard={leaderboard}
+              searchQuery={searchQuery}
+              setActiveDivision={setActiveDivision}
+              setSearchQuery={setSearchQuery}
+              setViewMode={setViewMode}
+              viewMode={viewMode}
+            />
           )}
         </div>
       </div>
     </LazyMotionProvider>
+  )
+}
+
+function LeaderboardFilters({
+  activeDivision,
+  divisionCounts,
+  getDivisionIcon,
+  leaderboard,
+  searchQuery,
+  setActiveDivision,
+  setSearchQuery,
+  setViewMode,
+  viewMode
+}: Pick<
+  ReturnType<typeof useLeaderboardViewController>,
+  | "activeDivision"
+  | "divisionCounts"
+  | "getDivisionIcon"
+  | "searchQuery"
+  | "setActiveDivision"
+  | "setSearchQuery"
+  | "setViewMode"
+  | "viewMode"
+> &
+  Pick<NonNullable<Parameters<typeof useLeaderboardViewController>[0]>, "leaderboard">) {
+  return (
+    <Tabs
+      defaultValue="Pre-School"
+      value={activeDivision}
+      onValueChange={setActiveDivision}
+      className="w-full max-w-4xl mx-auto mb-16 relative z-10"
+    >
+      {/* Division Navigation Tabs (Sticky, reactive to header autohide) */}
+      <div className="sticky top-(--header-top-offset) z-30 pb-3 pt-2 bg-background/90 dark:bg-background/95 backdrop-blur-md border-b border-border/40 mb-6 transition-[top] duration-300 ease-in-out">
+        <div className="relative max-w-4xl mx-auto px-1 sm:px-0">
+          <div className="flex justify-start sm:justify-center overflow-x-auto pb-1 no-scrollbar snap-x snap-mandatory scroll-smooth">
+            <TabsList className="inline-flex h-auto p-1 bg-muted/70 dark:bg-card/70 backdrop-blur-sm rounded-full border border-border/60 shadow-xs min-w-max gap-1">
+              {DIVISION_OPTIONS.map((option) => (
+                <TabsTrigger
+                  key={option.value}
+                  value={option.value}
+                  className="rounded-full px-3 xs:px-3.5 sm:px-4 py-1.5 sm:py-2 min-h-9.5 sm:min-h-11 text-xs sm:text-sm font-semibold transition-[color,background-color,border-color,box-shadow] data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md snap-center flex items-center justify-center gap-1.5 cursor-pointer touch-manipulation"
+                >
+                  {getDivisionIcon(option.value)}
+                  <span>{option.label}</span>
+                  <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-background/20 font-bold ml-0.5">
+                    {divisionCounts[option.value] ?? 0}
+                  </span>
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </div>
+        </div>
+      </div>
+
+      {/* Division Filter & View Switcher Bar */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mb-6">
+        {/* Search Bar */}
+        <div className="relative w-full sm:w-72">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+          <input
+            aria-label="Search classrooms"
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search classroom or grade..."
+            className="w-full pl-9 pr-8 py-2 rounded-full border border-border bg-card/80 text-foreground text-xs sm:text-sm placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors shadow-2xs"
+          />
+          {searchQuery && (
+            <button
+              aria-label="Clear classroom search"
+              onClick={() => setSearchQuery("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5 rounded-full cursor-pointer"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+
+        {/* View Switcher: Podium vs List */}
+        <div className="flex items-center justify-center w-full sm:w-auto p-1 bg-muted/60 dark:bg-card/70 rounded-full border border-border/60 shadow-2xs">
+          <button
+            onClick={() => setViewMode("podium")}
+            className={`flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-[color,background-color,border-color,box-shadow] cursor-pointer ${
+              viewMode === "podium"
+                ? "bg-primary text-primary-foreground shadow-xs"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Trophy className="w-3.5 h-3.5 shrink-0" />
+            <span>Podium Showcase</span>
+          </button>
+          <button
+            onClick={() => setViewMode("list")}
+            className={`flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-[color,background-color,border-color,box-shadow] cursor-pointer ${
+              viewMode === "list"
+                ? "bg-primary text-primary-foreground shadow-xs"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <ListOrdered className="w-3.5 h-3.5 shrink-0" />
+            <span>Full List</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Division Content Lists */}
+      {DIVISION_OPTIONS.map((option) => {
+        const divisionClassrooms = leaderboard.filter((c) => c.classroom.division === option.value)
+        const filteredClassrooms = divisionClassrooms.filter((c) => {
+          if (!searchQuery.trim()) return true
+          const q = searchQuery.toLowerCase().trim()
+          return c.classroom.name.toLowerCase().includes(q) || c.classroom.grade.toLowerCase().includes(q)
+        })
+
+        const maxScoreInDivision =
+          divisionClassrooms.length > 0 ? Math.max(...divisionClassrooms.map((c) => c.totalScore)) : 100
+
+        const showPodium = viewMode === "podium" && !searchQuery && filteredClassrooms.length >= 1
+
+        const podiumTopThree = showPodium ? filteredClassrooms.slice(0, 3) : []
+        const listClassrooms = showPodium ? filteredClassrooms.slice(3) : filteredClassrooms
+
+        return (
+          <TabsContent key={option.value} value={option.value} className="mt-0 focus-visible:outline-hidden">
+            <AnimatePresence mode="wait">
+              {divisionClassrooms.length === 0 ? (
+                <m.div
+                  key="no-classrooms"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="text-center py-14 text-muted-foreground bg-card/60 backdrop-blur-sm rounded-2xl border border-border/60 shadow-2xs"
+                >
+                  <LeafIcon className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
+                  <p className="font-semibold text-foreground">No classrooms registered in this division</p>
+                  <p className="text-xs text-muted-foreground mt-1">Evaluations will appear here once submitted.</p>
+                </m.div>
+              ) : filteredClassrooms.length === 0 ? (
+                <m.div
+                  key="no-search-results"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="text-center py-12 text-muted-foreground bg-card/60 backdrop-blur-sm rounded-2xl border border-border/60 shadow-2xs"
+                >
+                  <Search className="h-8 w-8 text-muted-foreground/40 mx-auto mb-3" />
+                  <p className="font-semibold text-foreground">No classrooms matched &quot;{searchQuery}&quot;</p>
+                  <button
+                    aria-label="Clear classroom search"
+                    onClick={() => setSearchQuery("")}
+                    className="mt-2 text-xs font-bold text-primary hover:underline"
+                  >
+                    Clear search filter
+                  </button>
+                </m.div>
+              ) : (
+                <m.div
+                  key={`content-${option.value}-${viewMode}-${searchQuery ? "search" : "all"}`}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="space-y-4"
+                >
+                  {/* 3D Olympic Podium Showcase for Top 3 */}
+                  {showPodium && <LeaderboardPodium topThree={podiumTopThree} />}
+
+                  {/* Remaining Standings Section Header */}
+                  {showPodium && listClassrooms.length > 0 && (
+                    <div className="flex items-center gap-3 pt-4 pb-1">
+                      <div className="h-px flex-1 bg-border/60" />
+                      <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                        <Award className="w-3.5 h-3.5 text-primary" />
+                        Standings (Ranks 4 – {filteredClassrooms.length})
+                      </span>
+                      <div className="h-px flex-1 bg-border/60" />
+                    </div>
+                  )}
+
+                  {/* Cards List */}
+                  <div className="space-y-3">
+                    {listClassrooms.map((classroom, index) => {
+                      const rank = showPodium ? index + 4 : index + 1
+                      return (
+                        <m.div
+                          key={`${classroom.classroom.id}-${option.value}`}
+                          initial={{ opacity: 0, y: 12 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{
+                            delay: 0.03 * Math.min(index, 8),
+                            duration: 0.3,
+                            ease: "easeOut"
+                          }}
+                        >
+                          <SimpleClassroomCard classroom={classroom} rank={rank} maxScore={maxScoreInDivision} />
+                        </m.div>
+                      )
+                    })}
+                  </div>
+                </m.div>
+              )}
+            </AnimatePresence>
+          </TabsContent>
+        )
+      })}
+    </Tabs>
   )
 }

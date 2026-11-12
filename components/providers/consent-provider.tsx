@@ -1,6 +1,6 @@
 "use client"
 
-import React, { createContext, useContext, useEffect, useState, useTransition } from "react"
+import React, { createContext, useContext, useEffect, useState, useTransition, useCallback, useMemo } from "react"
 import {
   type PrivacyConsent,
   getStoredConsent,
@@ -9,7 +9,7 @@ import {
   rejectNonEssentialConsent,
   CONSENT_CHANGE_EVENT,
   OPEN_CONSENT_MODAL_EVENT,
-  CONSENT_STORAGE_KEY,
+  CONSENT_STORAGE_KEY
 } from "@/lib/privacy/consent"
 
 interface ConsentContextType {
@@ -70,46 +70,45 @@ export function ConsentProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
-  const openModal = () => setIsModalOpen(true)
-  const closeModal = () => setIsModalOpen(false)
+  const openModal = useCallback(() => setIsModalOpen(true), [])
+  const closeModal = useCallback(() => setIsModalOpen(false), [])
 
-  const handleUpdate = (prefs: { analytics: boolean; functional: boolean }) => {
+  const handleUpdate = useCallback((prefs: { analytics: boolean; functional: boolean }) => {
     const record = saveConsent(prefs)
     setConsent(record)
     setHasDecided(true)
     setIsModalOpen(false)
-  }
+  }, [])
 
-  const handleAcceptAll = () => {
+  const handleAcceptAll = useCallback(() => {
     const record = acceptAllConsent()
     setConsent(record)
     setHasDecided(true)
     setIsModalOpen(false)
-  }
+  }, [])
 
-  const handleRejectNonEssential = () => {
+  const handleRejectNonEssential = useCallback(() => {
     const record = rejectNonEssentialConsent()
     setConsent(record)
     setHasDecided(true)
     setIsModalOpen(false)
-  }
+  }, [])
 
-  return (
-    <ConsentContext.Provider
-      value={{
-        consent,
-        hasDecided,
-        isModalOpen,
-        openModal,
-        closeModal,
-        updateConsent: handleUpdate,
-        acceptAll: handleAcceptAll,
-        rejectNonEssential: handleRejectNonEssential,
-      }}
-    >
-      {children}
-    </ConsentContext.Provider>
+  const contextValue = useMemo(
+    () => ({
+      consent,
+      hasDecided,
+      isModalOpen,
+      openModal,
+      closeModal,
+      updateConsent: handleUpdate,
+      acceptAll: handleAcceptAll,
+      rejectNonEssential: handleRejectNonEssential
+    }),
+    [consent, hasDecided, isModalOpen, openModal, closeModal, handleUpdate, handleAcceptAll, handleRejectNonEssential]
   )
+
+  return <ConsentContext.Provider value={contextValue}>{children}</ConsentContext.Provider>
 }
 
 export function useConsent(): ConsentContextType {

@@ -1,5 +1,6 @@
 "use client"
 
+import { ADMIN_NAV_ITEMS, STATS_ALLOWED_TAB_IDS } from "@/lib/admin-navigation"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet"
@@ -15,33 +16,9 @@ import {
   MoreHorizontal,
   Download,
   Calendar,
-  LineChart,
+  LineChart
 } from "lucide-react"
 import Link from "next/link"
-
-export interface NavItem {
-  id: string
-  label: string
-  icon: React.ComponentType<{ className?: string }>
-  badge?: string
-  superAdminOnly?: boolean
-}
-
-export const ADMIN_NAV_ITEMS: NavItem[] = [
-  { id: "classrooms", label: "Classrooms", icon: Building2 },
-  { id: "users", label: "Staff & Users", icon: Users },
-  { id: "checklist", label: "Rubrics", icon: ClipboardList },
-  { id: "edit-evaluation", label: "Edit Evaluation", icon: FileText },
-  { id: "evaluations", label: "Evaluations", icon: FileText },
-  { id: "tracking", label: "Tracking", icon: BarChart3 },
-  { id: "calendar", label: "Calendar", icon: Calendar },
-  { id: "statistics", label: "Analytics", icon: LineChart },
-  { id: "exports", label: "Data Exports", icon: Download },
-  { id: "academic-archives", label: "New Year Archive", icon: Archive },
-  { id: "system", label: "System Settings", icon: Database },
-]
-
-export const STATS_ALLOWED_TAB_IDS = ["tracking", "statistics", "exports"]
 
 interface AdminSidebarProps {
   activeTab: string
@@ -88,7 +65,9 @@ export function AdminSidebar({ activeTab, onSelectTab, userRole }: AdminSidebarP
                 aria-current={isActive ? "page" : undefined}
                 onClick={() => onSelectTab(item.id)}
                 className={`flex min-h-13 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[10px] font-semibold transition-colors cursor-pointer select-none touch-manipulation ${
-                  isActive ? "bg-primary/10 text-primary font-bold" : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                  isActive
+                    ? "bg-primary/10 text-primary font-bold"
+                    : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
                 }`}
               >
                 <Icon className="h-5 w-5" />
@@ -125,7 +104,9 @@ export function AdminSidebar({ activeTab, onSelectTab, userRole }: AdminSidebarP
                           setMobileOpen(false)
                         }}
                         className={`flex min-h-11 items-center gap-2.5 xs:gap-3 rounded-xl border px-3 py-2.5 text-left text-xs xs:text-sm font-medium transition-colors cursor-pointer touch-manipulation ${
-                          isActive ? "border-primary bg-primary/10 text-primary font-semibold" : "border-border hover:bg-muted/60"
+                          isActive
+                            ? "border-primary bg-primary/10 text-primary font-semibold"
+                            : "border-border hover:bg-muted/60"
                         }`}
                       >
                         <Icon className="h-4 w-4 shrink-0" />
@@ -177,7 +158,9 @@ export function AdminSidebar({ activeTab, onSelectTab, userRole }: AdminSidebarP
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <Icon className={`h-4 w-4 shrink-0 ${isActive ? "text-primary-foreground" : "text-muted-foreground"}`} />
+                    <Icon
+                      className={`h-4 w-4 shrink-0 ${isActive ? "text-primary-foreground" : "text-muted-foreground"}`}
+                    />
                     <span className="truncate">{item.label}</span>
                   </div>
                   {item.badge && (

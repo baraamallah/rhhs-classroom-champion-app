@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useEffectEvent, useRef, useState } from "react"
 import { m, AnimatePresence } from "framer-motion"
 import { TrophyIcon, StarIcon, CrownIcon } from "@/components/common/icons"
 import { FirstPlaceLogo, SecondPlaceLogo, ThirdPlaceLogo } from "@/components/common/podium-logos"
@@ -40,7 +40,7 @@ const getRankTheme = (rank: number) => {
         badgeBg: "bg-amber-500/15 border-amber-500/40 text-amber-600 dark:text-amber-300",
         ribbonColor: "from-amber-500 via-yellow-400 to-amber-600",
         icon: <FirstPlaceLogo className="w-16 h-16 sm:w-20 sm:h-20 drop-shadow-xl" />,
-        sealColor: "#d97706",
+        sealColor: "#d97706"
       }
     case 2:
       return {
@@ -51,7 +51,7 @@ const getRankTheme = (rank: number) => {
         badgeBg: "bg-slate-400/15 border-slate-400/40 text-slate-700 dark:text-slate-200",
         ribbonColor: "from-slate-400 via-slate-300 to-slate-500",
         icon: <SecondPlaceLogo className="w-16 h-16 sm:w-20 sm:h-20 drop-shadow-xl" />,
-        sealColor: "#64748b",
+        sealColor: "#64748b"
       }
     case 3:
       return {
@@ -62,7 +62,7 @@ const getRankTheme = (rank: number) => {
         badgeBg: "bg-amber-700/15 border-amber-700/40 text-amber-800 dark:text-amber-300",
         ribbonColor: "from-amber-700 via-amber-600 to-orange-700",
         icon: <ThirdPlaceLogo className="w-16 h-16 sm:w-20 sm:h-20 drop-shadow-xl" />,
-        sealColor: "#b45309",
+        sealColor: "#b45309"
       }
     default:
       return {
@@ -73,7 +73,7 @@ const getRankTheme = (rank: number) => {
         badgeBg: "bg-emerald-500/15 border-emerald-500/40 text-emerald-700 dark:text-emerald-300",
         ribbonColor: "from-emerald-600 via-teal-500 to-emerald-700",
         icon: <Award className="w-14 h-14 sm:w-16 sm:h-16 text-emerald-500" />,
-        sealColor: "#059669",
+        sealColor: "#059669"
       }
   }
 }
@@ -83,14 +83,16 @@ export function WinnerCertificateModal({ isOpen, onClose, winner }: WinnerCertif
   const [copied, setCopied] = useState(false)
   const certificateRef = useRef<HTMLDivElement>(null)
 
+  const closeFromKeyboard = useEffectEvent(() => onClose())
+
   useEffect(() => {
     if (!isOpen) return
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose()
+      if (e.key === "Escape") closeFromKeyboard()
     }
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [isOpen, onClose])
+  }, [isOpen])
 
   if (!winner) return null
 
@@ -107,7 +109,7 @@ export function WinnerCertificateModal({ isOpen, onClose, winner }: WinnerCertif
         setCopied(true)
         toast({
           title: "Certificate Link Copied",
-          description: `Share the link to celebrate ${winner.classroomName}'s victory!`,
+          description: `Share the link to celebrate ${winner.classroomName}'s victory!`
         })
         setTimeout(() => setCopied(false), 2500)
       }
@@ -115,7 +117,7 @@ export function WinnerCertificateModal({ isOpen, onClose, winner }: WinnerCertif
       toast({
         title: "Could not copy link",
         description: "Please copy the URL directly from your browser bar.",
-        variant: "destructive",
+        variant: "destructive"
       })
     }
   }
@@ -161,9 +163,13 @@ export function WinnerCertificateModal({ isOpen, onClose, winner }: WinnerCertif
                     variant="outline"
                     size="sm"
                     onClick={handleCopyLink}
-                    className="min-h-10 px-3 rounded-full bg-white/10 hover:bg-white/20 text-white border-white/20 text-xs font-semibold backdrop-blur-md cursor-pointer transition-all"
+                    className="min-h-10 px-3 rounded-full bg-white/10 hover:bg-white/20 text-white border-white/20 text-xs font-semibold backdrop-blur-md cursor-pointer transition-colors"
                   >
-                    {copied ? <Check className="w-3.5 h-3.5 mr-1.5 text-emerald-400" /> : <Share2 className="w-3.5 h-3.5 mr-1.5" />}
+                    {copied ? (
+                      <Check className="w-3.5 h-3.5 mr-1.5 text-emerald-400" />
+                    ) : (
+                      <Share2 className="w-3.5 h-3.5 mr-1.5" />
+                    )}
                     <span>{copied ? "Copied" : "Share"}</span>
                   </Button>
 
@@ -171,7 +177,7 @@ export function WinnerCertificateModal({ isOpen, onClose, winner }: WinnerCertif
                     variant="outline"
                     size="sm"
                     onClick={handlePrint}
-                    className="min-h-10 px-3.5 rounded-full bg-amber-500 hover:bg-amber-400 text-slate-950 border-none text-xs font-bold shadow-lg shadow-amber-500/25 cursor-pointer transition-all"
+                    className="min-h-10 px-3.5 rounded-full bg-amber-500 hover:bg-amber-400 text-slate-950 border-none text-xs font-bold shadow-lg shadow-amber-500/25 cursor-pointer transition-[color,background-color,border-color,box-shadow]"
                   >
                     <Printer className="w-3.5 h-3.5 mr-1.5" />
                     <span>Print / PDF</span>
@@ -251,7 +257,9 @@ export function WinnerCertificateModal({ isOpen, onClose, winner }: WinnerCertif
                     <div className="inline-flex items-center gap-2 px-3 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-xs font-semibold text-muted-foreground">
                       <span>{getDivisionDisplayName(winner.division)} Division</span>
                       <span>•</span>
-                      <span className="font-bold text-foreground">{winner.month} {winner.year}</span>
+                      <span className="font-bold text-foreground">
+                        {winner.month} {winner.year}
+                      </span>
                     </div>
                   </div>
 
@@ -272,13 +280,18 @@ export function WinnerCertificateModal({ isOpen, onClose, winner }: WinnerCertif
                     </div>
 
                     <p className="text-[11px] sm:text-xs text-muted-foreground/90 max-w-md mx-auto leading-relaxed mt-2 font-medium">
-                      In recognition of supreme dedication to environmental cleanliness, peer teamwork, and exemplary hygiene standards.
+                      In recognition of supreme dedication to environmental cleanliness, peer teamwork, and exemplary
+                      hygiene standards.
                     </p>
                   </div>
 
                   <div className="w-full max-w-xs my-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
-                    <p className="text-3xl sm:text-4xl font-black tabular-nums text-amber-600 dark:text-amber-400">{winner.totalScore.toLocaleString("en-US")}</p>
-                    <p className="mt-1 text-xs uppercase tracking-wider font-bold text-muted-foreground">Total points</p>
+                    <p className="text-3xl sm:text-4xl font-black tabular-nums text-amber-600 dark:text-amber-400">
+                      {winner.totalScore.toLocaleString("en-US")}
+                    </p>
+                    <p className="mt-1 text-xs uppercase tracking-wider font-bold text-muted-foreground">
+                      Total points
+                    </p>
                   </div>
 
                   {/* Decorative Stars */}
@@ -305,18 +318,20 @@ function CornerFlourish({ position }: { position: "top-left" | "top-right" | "bo
     "top-left": "",
     "top-right": "rotate-90",
     "bottom-right": "rotate-180",
-    "bottom-left": "-rotate-90",
+    "bottom-left": "-rotate-90"
   }[position]
 
   const positionClass = {
     "top-left": "top-2 left-2 sm:top-3 sm:left-3",
     "top-right": "top-2 right-2 sm:top-3 sm:right-3",
     "bottom-left": "bottom-2 left-2 sm:bottom-3 sm:left-3",
-    "bottom-right": "bottom-2 right-2 sm:bottom-3 sm:right-3",
+    "bottom-right": "bottom-2 right-2 sm:bottom-3 sm:right-3"
   }[position]
 
   return (
-    <div className={`absolute ${positionClass} ${rotationClass} pointer-events-none text-amber-500/70 dark:text-amber-400/80`}>
+    <div
+      className={`absolute ${positionClass} ${rotationClass} pointer-events-none text-amber-500/70 dark:text-amber-400/80`}
+    >
       <svg width="34" height="34" viewBox="0 0 40 40" fill="none" className="w-6 h-6 sm:w-8 sm:h-8">
         <path
           d="M2 2H18C20 2 22 4 22 6C22 8 20 10 18 10H8V20C8 22 6 24 4 24C2 24 2 22 2 20V2Z"
@@ -334,4 +349,3 @@ function CornerFlourish({ position }: { position: "top-left" | "top-right" | "bo
     </div>
   )
 }
-

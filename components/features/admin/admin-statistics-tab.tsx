@@ -1,5 +1,6 @@
 "use client"
 
+import { EcoLoader } from "@/components/common/eco-loader"
 import { useState, useEffect, useRef } from "react"
 import { AdminPageHeader } from "@/components/features/admin/admin-page-header"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -44,14 +45,6 @@ export function AdminStatisticsTab() {
   const [preset, setPreset] = useState<string>("this-month")
   const [startDate, setStartDate] = useState<string>(() => format(startOfMonth(new Date()), "yyyy-MM-dd"))
   const [endDate, setEndDate] = useState<string>(() => format(endOfMonth(new Date()), "yyyy-MM-dd"))
-  const initialMounted = useRef(false)
-
-  useEffect(() => {
-    if (initialMounted.current) return
-    initialMounted.current = true
-    fetchData(startDate, endDate, false)
-  }, [])
-
   const fetchData = async (start?: string, end?: string, isAllTime?: boolean) => {
     setLoading(true)
     try {
@@ -60,7 +53,7 @@ export function AdminStatisticsTab() {
       const queryAllTime = isAllTime !== undefined ? isAllTime : preset === "all-time"
       const [evaluationsData, classroomsData] = await Promise.all([
         queryAllTime ? getAllEvaluationHistory() : getEvaluationsByDateRange(queryStart, queryEnd),
-        getClassrooms(),
+        getClassrooms()
       ])
 
       setEvaluations(evaluationsData)
@@ -72,6 +65,31 @@ export function AdminStatisticsTab() {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    let cancelled = false
+    async function loadInitial() {
+      const now = new Date()
+      try {
+        const [evaluationData, classroomData] = await Promise.all([
+          getEvaluationsByDateRange(format(startOfMonth(now), "yyyy-MM-dd"), format(endOfMonth(now), "yyyy-MM-dd")),
+          getClassrooms()
+        ])
+        if (cancelled) return
+        setEvaluations(evaluationData)
+        setClassrooms(classroomData)
+        setClassroomStats(buildClassroomStats(classroomData, evaluationData))
+      } catch (error) {
+        console.error("Error fetching statistics:", error)
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    void loadInitial()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const handlePresetChange = (presetValue: string) => {
     setPreset(presetValue)
@@ -101,9 +119,14 @@ export function AdminStatisticsTab() {
     fetchData(formattedStart, formattedEnd, allTime)
   }
 
-  const filteredClassrooms = selectedDivision === "all" ? classrooms : classrooms.filter((c) => c.division === selectedDivision)
-  const filteredEvaluations = selectedDivision === "all" ? evaluations : evaluations.filter((e) => e.classroom?.division === selectedDivision)
-  const filteredClassroomStats = selectedDivision === "all" ? classroomStats : classroomStats.filter((stat) => stat.classroom.division === selectedDivision)
+  const filteredClassrooms =
+    selectedDivision === "all" ? classrooms : classrooms.filter((c) => c.division === selectedDivision)
+  const filteredEvaluations =
+    selectedDivision === "all" ? evaluations : evaluations.filter((e) => e.classroom?.division === selectedDivision)
+  const filteredClassroomStats =
+    selectedDivision === "all"
+      ? classroomStats
+      : classroomStats.filter((stat) => stat.classroom.division === selectedDivision)
   const displaySupervisorStats = buildSupervisorStats(filteredEvaluations)
 
   if (loading) return <StatisticsLoading />
@@ -116,7 +139,11 @@ export function AdminStatisticsTab() {
         title="Score Analytics"
         description="Explore school-wide score distributions, division leaderboards, and historical performance metrics."
       />
-      <OverviewStats selectedDivision={selectedDivision} filteredEvaluations={filteredEvaluations} filteredClassrooms={filteredClassrooms} />
+      <OverviewStats
+        selectedDivision={selectedDivision}
+        filteredEvaluations={filteredEvaluations}
+        filteredClassrooms={filteredClassrooms}
+      />
       <StatisticsFilters
         preset={preset}
         startDate={startDate}
@@ -161,20 +188,33 @@ function buildClassroomStats(classroomsData: Classroom[], evaluationsData: Evalu
     .map((stats) => ({
       classroom: stats.classroom,
       evaluationCount: stats.evaluations.length,
-      averageScore: stats.scores.length > 0 ? Math.round(stats.scores.reduce((sum, score) => sum + score, 0) / stats.scores.length) : 0,
-      lastEvaluated: stats.evaluations.length > 0
-        ? stats.evaluations.sort((a, b) => new Date(b.evaluation_date).getTime() - new Date(a.evaluation_date).getTime())[0]?.evaluation_date || ""
-        : "Never",
+      averageScore:
+        stats.scores.length > 0
+          ? Math.round(stats.scores.reduce((sum, score) => sum + score, 0) / stats.scores.length)
+          : 0,
+      lastEvaluated:
+        stats.evaluations.length > 0
+          ? stats.evaluations.sort(
+              (a, b) => new Date(b.evaluation_date).getTime() - new Date(a.evaluation_date).getTime()
+            )[0]?.evaluation_date || ""
+          : "Never"
     }))
     .sort((a, b) => b.evaluationCount - a.evaluationCount)
 }
 
 function buildSupervisorStats(filteredEvaluations: Evaluation[]): SupervisorStats[] {
-  const supervisorStatsMap = new Map<string, { supervisor: { name: string; email: string }; evaluations: Evaluation[]; scores: number[] }>()
+  const supervisorStatsMap = new Map<
+    string,
+    { supervisor: { name: string; email: string }; evaluations: Evaluation[]; scores: number[] }
+  >()
   filteredEvaluations.forEach((evaluation) => {
     if (evaluation.supervisor) {
       if (!supervisorStatsMap.has(evaluation.supervisor_id)) {
-        supervisorStatsMap.set(evaluation.supervisor_id, { supervisor: evaluation.supervisor, evaluations: [], scores: [] })
+        supervisorStatsMap.set(evaluation.supervisor_id, {
+          supervisor: evaluation.supervisor,
+          evaluations: [],
+          scores: []
+        })
       }
       const stats = supervisorStatsMap.get(evaluation.supervisor_id)!
       stats.evaluations.push(evaluation)
@@ -186,50 +226,74 @@ function buildSupervisorStats(filteredEvaluations: Evaluation[]): SupervisorStat
     .map((stats) => ({
       supervisor: stats.supervisor,
       evaluationCount: stats.evaluations.length,
-      averageScore: stats.scores.length > 0 ? Math.round(stats.scores.reduce((sum, score) => sum + score, 0) / stats.scores.length) : 0,
+      averageScore:
+        stats.scores.length > 0
+          ? Math.round(stats.scores.reduce((sum, score) => sum + score, 0) / stats.scores.length)
+          : 0
     }))
     .sort((a, b) => b.evaluationCount - a.evaluationCount)
 }
 
 function StatisticsLoading() {
-  return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {[1, 2, 3].map((i) => (
-          <Card key={i}>
-            <CardContent className="py-12 text-center">
-              <p className="text-muted-foreground text-sm">Loading...</p>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    </div>
-  )
+  return <EcoLoader title="Gathering campus insights" />
 }
 
 function OverviewStats({
   selectedDivision,
   filteredEvaluations,
-  filteredClassrooms,
+  filteredClassrooms
 }: {
   selectedDivision: string
   filteredEvaluations: Evaluation[]
   filteredClassrooms: Classroom[]
 }) {
-  const averageScore = filteredEvaluations.length > 0
-    ? Math.round(filteredEvaluations.reduce((sum, e) => sum + e.total_score, 0) / filteredEvaluations.length)
-    : 0
+  const averageScore =
+    filteredEvaluations.length > 0
+      ? Math.round(filteredEvaluations.reduce((sum, e) => sum + e.total_score, 0) / filteredEvaluations.length)
+      : 0
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <OverviewStatCard title="Total Evaluations" icon={<LeafIcon className="h-4 w-4 text-primary" />} value={filteredEvaluations.length} description={selectedDivision === "all" ? "Across all divisions" : `In ${getDivisionDisplayName(selectedDivision)}`} />
-      <OverviewStatCard title="Active Classrooms" icon={<TrophyIcon className="h-4 w-4 text-primary" />} value={filteredClassrooms.length} description={selectedDivision === "all" ? "Registered classrooms" : `In ${getDivisionDisplayName(selectedDivision)}`} />
-      <OverviewStatCard title="Average Score" icon={<StarIcon className="h-4 w-4 text-primary" />} value={averageScore} description={selectedDivision === "all" ? "Overall average" : `In ${getDivisionDisplayName(selectedDivision)}`} primary />
+      <OverviewStatCard
+        title="Total Evaluations"
+        icon={<LeafIcon className="h-4 w-4 text-primary" />}
+        value={filteredEvaluations.length}
+        description={
+          selectedDivision === "all" ? "Across all divisions" : `In ${getDivisionDisplayName(selectedDivision)}`
+        }
+      />
+      <OverviewStatCard
+        title="Active Classrooms"
+        icon={<TrophyIcon className="h-4 w-4 text-primary" />}
+        value={filteredClassrooms.length}
+        description={
+          selectedDivision === "all" ? "Registered classrooms" : `In ${getDivisionDisplayName(selectedDivision)}`
+        }
+      />
+      <OverviewStatCard
+        title="Average Score"
+        icon={<StarIcon className="h-4 w-4 text-primary" />}
+        value={averageScore}
+        description={selectedDivision === "all" ? "Overall average" : `In ${getDivisionDisplayName(selectedDivision)}`}
+        primary
+      />
     </div>
   )
 }
 
-function OverviewStatCard({ title, icon, value, description, primary }: { title: string; icon: React.ReactNode; value: number; description: string; primary?: boolean }) {
+function OverviewStatCard({
+  title,
+  icon,
+  value,
+  description,
+  primary
+}: {
+  title: string
+  icon: React.ReactNode
+  value: number
+  description: string
+  primary?: boolean
+}) {
   return (
     <Card className="border-border/80 shadow-sm transition-[background-color,border-color,color,box-shadow,opacity,transform] duration-300 hover:shadow-md">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -269,12 +333,26 @@ function StatisticsFilters(props: {
         <CardContent>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
             <DatePresetSelect preset={props.preset} onPresetChange={props.onPresetChange} />
-            <DateInput id="start-date" label="Start Date" value={props.startDate} disabled={props.preset === "all-time"} onChange={props.onStartDateChange} />
-            <DateInput id="end-date" label="End Date" value={props.endDate} disabled={props.preset === "all-time"} onChange={props.onEndDateChange} />
+            <DateInput
+              id="start-date"
+              label="Start Date"
+              value={props.startDate}
+              disabled={props.preset === "all-time"}
+              onChange={props.onStartDateChange}
+            />
+            <DateInput
+              id="end-date"
+              label="End Date"
+              value={props.endDate}
+              disabled={props.preset === "all-time"}
+              onChange={props.onEndDateChange}
+            />
           </div>
           {props.preset === "custom" && (
             <div className="mt-4 flex justify-end">
-              <Button onClick={props.onApplyCustom} disabled={props.loading} size="sm">{props.loading ? "Applying..." : "Apply Custom Range"}</Button>
+              <Button onClick={props.onApplyCustom} disabled={props.loading} size="sm">
+                {props.loading ? "Applying..." : "Apply Custom Range"}
+              </Button>
             </div>
           )}
         </CardContent>
@@ -296,7 +374,9 @@ function StatisticsFilters(props: {
             <SelectContent>
               <SelectItem value="all">All Divisions</SelectItem>
               {DIVISION_OPTIONS.map((option) => (
-                <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -320,14 +400,28 @@ function DatePresetSelect({ preset, onPresetChange }: { preset: string; onPreset
           <SelectItem value="last-3-months">Last 3 Months</SelectItem>
           <SelectItem value="this-year">This Year</SelectItem>
           <SelectItem value="all-time">All Time</SelectItem>
-          <SelectItem value="custom" disabled>Custom Range</SelectItem>
+          <SelectItem value="custom" disabled>
+            Custom Range
+          </SelectItem>
         </SelectContent>
       </Select>
     </div>
   )
 }
 
-function DateInput({ id, label, value, disabled, onChange }: { id: string; label: string; value: string; disabled: boolean; onChange: (value: string) => void }) {
+function DateInput({
+  id,
+  label,
+  value,
+  disabled,
+  onChange
+}: {
+  id: string
+  label: string
+  value: string
+  disabled: boolean
+  onChange: (value: string) => void
+}) {
   return (
     <div className="grid w-full items-center gap-1.5">
       <Label htmlFor={id}>{label}</Label>
@@ -336,29 +430,53 @@ function DateInput({ id, label, value, disabled, onChange }: { id: string; label
   )
 }
 
-function ClassroomRankingSection({ selectedDivision, filteredClassroomStats }: { selectedDivision: string; filteredClassroomStats: ClassroomStats[] }) {
+function ClassroomRankingSection({
+  selectedDivision,
+  filteredClassroomStats
+}: {
+  selectedDivision: string
+  filteredClassroomStats: ClassroomStats[]
+}) {
   const evaluatedStats = filteredClassroomStats.filter((stat) => stat.evaluationCount > 0)
   const topScores = [...evaluatedStats].sort((a, b) => b.averageScore - a.averageScore).slice(0, 10)
   const maxScore = Math.max(...evaluatedStats.map((s) => s.averageScore), 0)
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <RankingCard title="Most Evaluated Classrooms" description={selectedDivision === "all" ? "Classrooms with the highest evaluation count in selected date range" : `${getDivisionDisplayName(selectedDivision)} classrooms with the highest evaluation count`}>
+      <RankingCard
+        title="Most Evaluated Classrooms"
+        description={
+          selectedDivision === "all"
+            ? "Classrooms with the highest evaluation count in selected date range"
+            : `${getDivisionDisplayName(selectedDivision)} classrooms with the highest evaluation count`
+        }
+      >
         {filteredClassroomStats.length === 0 ? (
           <p className="text-center text-muted-foreground py-8">No classrooms found</p>
         ) : (
           <div className="space-y-3">
-            {filteredClassroomStats.slice(0, 10).map((stat, index) => <ClassroomEvaluationRow key={stat.classroom.id} stat={stat} index={index} />)}
+            {filteredClassroomStats.slice(0, 10).map((stat, index) => (
+              <ClassroomEvaluationRow key={stat.classroom.id} stat={stat} index={index} />
+            ))}
           </div>
         )}
       </RankingCard>
 
-      <RankingCard title="Top Performing Classrooms" description={selectedDivision === "all" ? "Classrooms with the highest average scores in selected date range" : `${getDivisionDisplayName(selectedDivision)} classrooms with the highest average scores`}>
+      <RankingCard
+        title="Top Performing Classrooms"
+        description={
+          selectedDivision === "all"
+            ? "Classrooms with the highest average scores in selected date range"
+            : `${getDivisionDisplayName(selectedDivision)} classrooms with the highest average scores`
+        }
+      >
         {evaluatedStats.length === 0 ? (
           <p className="text-center text-muted-foreground py-8">No evaluated classrooms found</p>
         ) : (
           <div className="space-y-4">
-            {topScores.map((stat, index) => <ClassroomScoreRow key={stat.classroom.id} stat={stat} index={index} maxScore={maxScore} />)}
+            {topScores.map((stat, index) => (
+              <ClassroomScoreRow key={stat.classroom.id} stat={stat} index={index} maxScore={maxScore} />
+            ))}
           </div>
         )}
       </RankingCard>
@@ -366,7 +484,15 @@ function ClassroomRankingSection({ selectedDivision, filteredClassroomStats }: {
   )
 }
 
-function RankingCard({ title, description, children }: { title: string; description: string; children: React.ReactNode }) {
+function RankingCard({
+  title,
+  description,
+  children
+}: {
+  title: string
+  description: string
+  children: React.ReactNode
+}) {
   return (
     <Card className="border-border/80 shadow-sm">
       <CardHeader>
@@ -382,7 +508,9 @@ function ClassroomEvaluationRow({ stat, index }: { stat: ClassroomStats; index: 
   return (
     <div className="flex items-center justify-between p-3 rounded-lg border bg-card transition-[background-color,border-color,color,box-shadow,opacity,transform] duration-200 hover:bg-muted/30">
       <div className="flex items-center gap-3">
-        <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">{index + 1}</div>
+        <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">
+          {index + 1}
+        </div>
         <div>
           <p className="font-medium text-sm sm:text-base">{stat.classroom.name}</p>
           <p className="text-xs sm:text-sm text-muted-foreground">
@@ -406,7 +534,9 @@ function ClassroomScoreRow({ stat, index, maxScore }: { stat: ClassroomStats; in
     <div className="space-y-2">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-5 h-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">{index + 1}</div>
+          <div className="w-5 h-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">
+            {index + 1}
+          </div>
           <div>
             <p className="font-medium text-sm">{stat.classroom.name}</p>
             <p className="text-xs text-muted-foreground">
@@ -421,18 +551,31 @@ function ClassroomScoreRow({ stat, index, maxScore }: { stat: ClassroomStats; in
         </div>
       </div>
       <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
-        <div className="bg-primary h-2 rounded-full transition-[background-color,border-color,color,box-shadow,opacity,transform] duration-500 ease-out" style={{ width: `${percentage}%` }} />
+        <div
+          className="bg-primary h-2 rounded-full transition-[background-color,border-color,color,box-shadow,opacity,transform] duration-500 ease-out"
+          style={{ width: `${percentage}%` }}
+        />
       </div>
     </div>
   )
 }
 
-function RecentEvaluationsSection({ selectedDivision, filteredEvaluations }: { selectedDivision: string; filteredEvaluations: Evaluation[] }) {
+function RecentEvaluationsSection({
+  selectedDivision,
+  filteredEvaluations
+}: {
+  selectedDivision: string
+  filteredEvaluations: Evaluation[]
+}) {
   return (
     <Card className="border-border/80 shadow-sm">
       <CardHeader>
         <CardTitle className="text-lg">Recent Evaluations</CardTitle>
-        <CardDescription>{selectedDivision === "all" ? "All evaluations sorted by date" : `Evaluations for ${getDivisionDisplayName(selectedDivision)} classrooms`}</CardDescription>
+        <CardDescription>
+          {selectedDivision === "all"
+            ? "All evaluations sorted by date"
+            : `Evaluations for ${getDivisionDisplayName(selectedDivision)} classrooms`}
+        </CardDescription>
       </CardHeader>
       <CardContent>
         {filteredEvaluations.length === 0 ? (
@@ -440,9 +583,14 @@ function RecentEvaluationsSection({ selectedDivision, filteredEvaluations }: { s
         ) : (
           <div className="space-y-3">
             {filteredEvaluations.slice(0, 10).map((evaluation) => (
-              <div key={evaluation.id} className="flex items-center justify-between p-4 rounded-lg border bg-card transition-[background-color,border-color,color,box-shadow,opacity,transform] duration-200 hover:bg-muted/30">
+              <div
+                key={evaluation.id}
+                className="flex items-center justify-between p-4 rounded-lg border bg-card transition-[background-color,border-color,color,box-shadow,opacity,transform] duration-200 hover:bg-muted/30"
+              >
                 <div className="flex-1">
-                  <h4 className="font-semibold text-foreground text-sm sm:text-base">{evaluation.classroom?.name || "Unknown Classroom"}</h4>
+                  <h4 className="font-semibold text-foreground text-sm sm:text-base">
+                    {evaluation.classroom?.name || "Unknown Classroom"}
+                  </h4>
                   <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
                     Evaluated by {evaluation.supervisor?.name || "Unknown"} - {formatDate(evaluation.evaluation_date)}
                   </p>
@@ -460,12 +608,22 @@ function RecentEvaluationsSection({ selectedDivision, filteredEvaluations }: { s
   )
 }
 
-function SupervisorActivitySection({ selectedDivision, displaySupervisorStats }: { selectedDivision: string; displaySupervisorStats: SupervisorStats[] }) {
+function SupervisorActivitySection({
+  selectedDivision,
+  displaySupervisorStats
+}: {
+  selectedDivision: string
+  displaySupervisorStats: SupervisorStats[]
+}) {
   return (
     <Card className="border-border/80 shadow-sm">
       <CardHeader>
         <CardTitle className="text-lg">Supervisor Activity</CardTitle>
-        <CardDescription>{selectedDivision === "all" ? "Most active supervisors by evaluation count" : `Supervisor activity in ${getDivisionDisplayName(selectedDivision)} division`}</CardDescription>
+        <CardDescription>
+          {selectedDivision === "all"
+            ? "Most active supervisors by evaluation count"
+            : `Supervisor activity in ${getDivisionDisplayName(selectedDivision)} division`}
+        </CardDescription>
       </CardHeader>
       <CardContent>
         {displaySupervisorStats.length === 0 ? (
@@ -473,9 +631,14 @@ function SupervisorActivitySection({ selectedDivision, displaySupervisorStats }:
         ) : (
           <div className="space-y-3">
             {displaySupervisorStats.slice(0, 5).map((stat, index) => (
-              <div key={stat.supervisor.email} className="flex items-center justify-between p-3 rounded-lg border bg-card transition-[background-color,border-color,color,box-shadow,opacity,transform] duration-200 hover:bg-muted/30">
+              <div
+                key={stat.supervisor.email}
+                className="flex items-center justify-between p-3 rounded-lg border bg-card transition-[background-color,border-color,color,box-shadow,opacity,transform] duration-200 hover:bg-muted/30"
+              >
                 <div className="flex items-center gap-3">
-                  <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">{index + 1}</div>
+                  <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">
+                    {index + 1}
+                  </div>
                   <div>
                     <p className="font-medium text-sm sm:text-base">{stat.supervisor.name}</p>
                     <p className="text-xs sm:text-sm text-muted-foreground">{stat.supervisor.email}</p>

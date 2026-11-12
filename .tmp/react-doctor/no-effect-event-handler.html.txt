@@ -1,0 +1,129 @@
+react-doctor/no-effect-event-handler - Docs | React Doctor
+New
+Introducing React Bench, see how different models perform on React code
+Features
+Docs
+Blog
+Changelog
+Collapse all
+Overview
+What Is React Doctor?
+Quickstart
+React Maintainability
+Install for Coding Agents
+How to Fix Issues
+CI & PRs
+GitHub Actions Setup
+Updating CI
+Other CI Providers
+Migrating to CI v2
+Configuration
+Config Files
+ESLint & oxlint Plugins
+Add Custom Rules
+Reference
+CLI Reference
+GitHub Action Reference
+Node.js API
+Community
+Changelog
+Legal
+Modified MIT License
+Terms of Service
+Privacy Policy
+Data Use
+Security
+Company
+Support
+Rules
+Rules reference
+Rules reference
+/
+State & Effects
+react-doctor/no-effect-event-handler
+Move the conditional logic into onClick, onChange, or onSubmit handlers directly
+Status
+Active
+Category
+State & Effects
+Assessment
+Evidence-required risk
+Required evidence
+source code
+Default configuration
+Enabled
+Default severity
+warn
+Show technical metadata
+Scope
+All supported frameworks
+Active when
+always
+Requirements
+react
+Tags
+test-noise
+Priority
+40 (P3)
+Source
+oxlint-plugin-react-doctor
+Rule set
+oxlint-plugin-react-doctor 0.9.3 (prompt schema 2)
+On this page
+Validation prompt
+Evidence boundary
+Fix prompt
+Repository-wide copy prompt
+Validation prompt
+Confirm the detector match and collect the required evidence before deciding whether an edit is warranted.
+Fires when a useEffect body is a single IfStatement whose test references a prop also listed in the deps, AND the consequent contains an event-shaped side effect: fetch, post, navigate, toast, capture, track, document.classList mutations, etc. The early-return + post-if event-like statements shape also triggers. Prop identity is tracked through the per-component prop-stack. Suppress when the prop can change programmatically or externally, or when post-commit timing, DOM observation, batching, or coalescing is part of the behavior.
+Evidence boundary
+The diagnostic proves only that the detector’s modeled source pattern matched. It does not prove runtime impact, product intent, rendered failure, or that one remediation is correct.
+Establish the environment, repository policy, exceptions, and required rendered or runtime evidence before deciding the occurrence.
+Record one outcome:
+Confirmed failure:
+The required evidence establishes the violation.
+Rejected:
+A documented exception or false-positive predicate applies.
+Needs evidence:
+Named evidence can still be collected.
+Unavailable:
+Required evidence cannot be collected in this run.
+Waived with evidence:
+An authorized, scoped exception applies to an established failure.
+Observation:
+The review records an optional tradeoff without claiming a defect.
+A waiver records its scope, authority, evidence, and review condition. It is not a pass or false positive.
+Default severity is registry metadata. Use the occurrence’s JSON severity after repository configuration when ordering real findings.
+Fix prompt
+Apply this candidate correction only after the required evidence confirms the risk.
+When one user event exclusively owns the side effect and synchronous timing is equivalent, call it from that event handler (or the parent's handler) instead of routing through a prop and Effect. Keep the Effect when the change can come from routing, subscriptions, or other programmatic sources, or when the work intentionally runs after commit; do not change post-commit work into a pre-commit call merely to silence the rule. See
+https://react.dev/learn/you-might-not-need-an-effect#sharing-logic-between-event-handlers
+Repository-wide copy prompt
+Use this repository-wide prompt only after validating each occurrence. For one occurrence, use the guidance above.
+Show repository-wide prompt
+Fix every confirmed
+react-doctor/no-effect-event-handler
+diagnostic in the current repository.
+Required change:
+When one user event exclusively owns the side effect and synchronous timing is equivalent, call it from that event handler (or the parent's handler) instead of routing through a prop and Effect. Keep the Effect when the change can come from routing, subscriptions, or other programmatic sources, or when the work intentionally runs after commit; do not change post-commit work into a pre-commit call merely to silence the rule. See
+https://react.dev/learn/you-might-not-need-an-effect#sharing-logic-between-event-handlers
+.
+Validation before editing:
+Fires when a useEffect body is a single IfStatement whose test references a prop also listed in the deps, AND the consequent contains an event-shaped side effect: fetch, post, navigate, toast, capture, track, document.classList mutations, etc. The early-return + post-if event-like statements shape also triggers. Prop identity is tracked through the per-component prop-stack. Suppress when the prop can change programmatically or externally, or when post-commit timing, DOM observation, batching, or coalescing is part of the behavior.
+Constraints:
+Make the smallest change that fixes the root cause.
+Preserve behavior and interfaces unrelated to this diagnostic.
+Reuse existing project components, utilities, and conventions.
+Do not introduce render-phase side effects, render-phase state updates, or Hooks rule violations.
+Adapt identifiers and framework details instead of copying blindly.
+Do not disable the rule or suppress matching code.
+Assessment:
+Record detector evidence, applicability facts, assumptions, missing evidence, and the rule class for this occurrence.
+Return one outcome: Confirmed failure, Rejected, Needs evidence, Unavailable, Waived with evidence, or Observation.
+A waiver records the established failure, scope, authority, evidence, and review or expiry condition. It is not a pass or false positive.
+Verification:
+Run focused tests for the changed behavior.
+Run React Doctor and confirm this diagnostic no longer appears from changed code.
+Run an unfiltered scan of the affected scope before claiming no cross-category regression.
+Report the files changed and any checks you could not run.

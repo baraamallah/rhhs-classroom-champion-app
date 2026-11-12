@@ -1,3 +1,4 @@
+import { PODIUM_BADGE_ASSETS } from "@/lib/podium-badge-assets"
 import type React from "react"
 import { cn } from "@/lib/utils"
 
@@ -5,27 +6,6 @@ export type PodiumLogoProps = React.ComponentPropsWithoutRef<"img"> & {
   viewBox?: string
   fill?: string
 }
-
-export const PODIUM_BADGE_ASSETS = {
-  1: {
-    png: "/badges/badge-1st.png",
-    webp: "/badges/badge-1st.webp",
-    title: "1st Place Grand Champion",
-    alt: "1st Place Grand Eco Champion Gold & Emerald Badge",
-  },
-  2: {
-    png: "/badges/badge-2nd.png",
-    webp: "/badges/badge-2nd.webp",
-    title: "2nd Place Distinguished Eco Ambassador",
-    alt: "2nd Place Silver & Platinum Medallion Distinction Badge",
-  },
-  3: {
-    png: "/badges/badge-3rd.png",
-    webp: "/badges/badge-3rd.webp",
-    title: "3rd Place Eco Trailblazer",
-    alt: "3rd Place Bronze Shield & Oak Leaf Honors Badge",
-  },
-} as const
 
 /**
  * 1st Place Grand Eco Champion Emblem
@@ -129,12 +109,7 @@ export function ThirdPlaceLogo({
 /**
  * Helper component to render rank-appropriate podium emblem
  */
-export function PodiumRankBadge({
-  rank,
-  className = "w-12 h-12",
-  alt,
-  ...props
-}: PodiumLogoProps & { rank: number }) {
+export function PodiumRankBadge({ rank, className = "w-12 h-12", alt, ...props }: PodiumLogoProps & { rank: number }) {
   if (rank === 1) return <FirstPlaceLogo className={className} alt={alt} {...props} />
   if (rank === 2) return <SecondPlaceLogo className={className} alt={alt} {...props} />
   if (rank === 3) return <ThirdPlaceLogo className={className} alt={alt} {...props} />

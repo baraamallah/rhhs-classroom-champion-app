@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useState, useTransition } from "react"
+import React, { useEffect, useState, useRef, useTransition } from "react"
 import Image from "next/image"
 import { Download, Share2, PlusSquare, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -17,7 +17,7 @@ const DISMISS_DURATION_MS = 7 * 24 * 60 * 60 * 1000 // 7 days
 
 export function PwaInstallBanner() {
   const { hasDecided } = useConsent()
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
+  const deferredPrompt = useRef<BeforeInstallPromptEvent | null>(null)
   const [isIos, setIsIos] = useState(false)
   const [showIosGuide, setShowIosGuide] = useState(false)
   const [isVisible, setIsVisible] = useState(false)
@@ -57,9 +57,7 @@ export function PwaInstallBanner() {
 
     // 4. Detect iOS / iPadOS (Safari & iOS 16.4+ modern browsers)
     const ua = window.navigator.userAgent
-    const isIosDevice =
-      /iPad|iPhone|iPod/.test(ua) ||
-      (window.navigator.maxTouchPoints > 1 && /Macintosh/.test(ua))
+    const isIosDevice = /iPad|iPhone|iPod/.test(ua) || (window.navigator.maxTouchPoints > 1 && /Macintosh/.test(ua))
 
     if (isIosDevice) {
       startTransition(() => {
@@ -72,7 +70,7 @@ export function PwaInstallBanner() {
     const handleBeforeInstall = (e: Event) => {
       e.preventDefault()
       startTransition(() => {
-        setDeferredPrompt(e as BeforeInstallPromptEvent)
+        deferredPrompt.current = e as BeforeInstallPromptEvent
         setIsVisible(true)
       })
     }
@@ -80,7 +78,7 @@ export function PwaInstallBanner() {
     // 6. Listen for appinstalled
     const handleAppInstalled = () => {
       startTransition(() => {
-        setDeferredPrompt(null)
+        deferredPrompt.current = null
         setIsVisible(false)
       })
     }
@@ -95,18 +93,18 @@ export function PwaInstallBanner() {
   }, [])
 
   const handleInstallClick = async () => {
-    if (!deferredPrompt) return
+    if (!deferredPrompt.current) return
 
     try {
-      await deferredPrompt.prompt()
-      const { outcome } = await deferredPrompt.userChoice
+      await deferredPrompt.current.prompt()
+      const { outcome } = await deferredPrompt.current.userChoice
       if (outcome === "accepted") {
         setIsVisible(false)
       }
     } catch {
       // Prompt error or unsupported
     } finally {
-      setDeferredPrompt(null)
+      deferredPrompt.current = null
     }
   }
 
@@ -128,24 +126,16 @@ export function PwaInstallBanner() {
   return (
     <aside
       aria-label="Install App Banner"
-      className="fixed bottom-16 sm:bottom-6 left-3 right-3 sm:left-auto sm:right-6 sm:max-w-md z-40 bg-card/95 backdrop-blur-xl border border-primary/20 shadow-2xl rounded-2xl p-4 transition-all duration-300 animate-in fade-in slide-in-from-bottom-5"
+      className="fixed bottom-16 sm:bottom-6 left-3 right-3 sm:left-auto sm:right-6 sm:max-w-md z-40 bg-card/95 backdrop-blur-xl border border-primary/20 shadow-2xl rounded-2xl p-4 transition-[color,background-color,border-color,box-shadow] duration-300 animate-in fade-in slide-in-from-bottom-5"
     >
       <div className="flex items-start gap-3.5">
         <div className="relative h-12 w-12 shrink-0 rounded-xl overflow-hidden bg-primary/10 border border-primary/20 flex items-center justify-center p-1">
-          <Image
-            src="/Eco Champ.png"
-            alt="RHHS Eco Champion Logo"
-            width={48}
-            height={48}
-            className="object-contain"
-          />
+          <Image src="/Eco Champ.png" alt="RHHS Eco Champion Logo" width={48} height={48} className="object-contain" />
         </div>
 
         <div className="flex-1 min-w-0 pr-6">
           <div className="flex items-center gap-2">
-            <h2 className="text-sm font-semibold text-foreground tracking-tight">
-              Install RHHS Eco Champion
-            </h2>
+            <h2 className="text-sm font-semibold text-foreground tracking-tight">Install RHHS Eco Champion</h2>
             <span className="text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-primary/15 text-primary border border-primary/25">
               PWA
             </span>

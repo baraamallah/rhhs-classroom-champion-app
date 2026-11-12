@@ -15,11 +15,7 @@ interface SimpleClassroomCardProps {
   maxScore?: number
 }
 
-export function SimpleClassroomCard({
-  classroom,
-  rank,
-  maxScore = 100,
-}: SimpleClassroomCardProps) {
+export function SimpleClassroomCard({ classroom, rank, maxScore = 100 }: SimpleClassroomCardProps) {
   const scoreColor = getScoreColor(classroom.averageScore)
   const scoreRange = getScoreRange(classroom.averageScore)
   const isChampion = rank === 1
@@ -27,10 +23,7 @@ export function SimpleClassroomCard({
   const isThirdPlace = rank === 3
 
   // Progress relative to highest score or 100
-  const progressPercent = Math.min(
-    Math.round((classroom.totalScore / (maxScore > 0 ? maxScore : 100)) * 100),
-    100
-  )
+  const progressPercent = Math.min(Math.round((classroom.totalScore / (maxScore > 0 ? maxScore : 100)) * 100), 100)
 
   return (
     <m.div
@@ -38,7 +31,7 @@ export function SimpleClassroomCard({
       transition={{
         type: "spring",
         stiffness: 350,
-        damping: 24,
+        damping: 24
       }}
     >
       <Card
@@ -47,10 +40,10 @@ export function SimpleClassroomCard({
           isChampion
             ? "border-amber-400/80 dark:border-amber-500/70 bg-linear-to-r from-amber-500/10 via-yellow-500/5 to-card shadow-md shadow-amber-500/10 hover:shadow-lg hover:shadow-amber-500/15"
             : isRunnerUp
-            ? "border-slate-300 dark:border-slate-600/80 bg-linear-to-r from-slate-200/40 via-transparent to-card dark:from-slate-800/30 shadow-xs hover:shadow-md hover:border-slate-400 dark:hover:border-slate-500"
-            : isThirdPlace
-            ? "border-amber-600/40 dark:border-amber-700/60 bg-linear-to-r from-amber-700/10 via-transparent to-card dark:from-amber-950/30 shadow-xs hover:shadow-md hover:border-amber-600/60"
-            : "border-border/70 bg-card/90 hover:border-primary/40 hover:bg-muted/30 shadow-2xs hover:shadow-sm"
+              ? "border-slate-300 dark:border-slate-600/80 bg-linear-to-r from-slate-200/40 via-transparent to-card dark:from-slate-800/30 shadow-xs hover:shadow-md hover:border-slate-400 dark:hover:border-slate-500"
+              : isThirdPlace
+                ? "border-amber-600/40 dark:border-amber-700/60 bg-linear-to-r from-amber-700/10 via-transparent to-card dark:from-amber-950/30 shadow-xs hover:shadow-md hover:border-amber-600/60"
+                : "border-border/70 bg-card/90 hover:border-primary/40 hover:bg-muted/30 shadow-2xs hover:shadow-sm"
         )}
       >
         {/* Subtle decorative glow for champion */}
@@ -82,78 +75,14 @@ export function SimpleClassroomCard({
             </div>
 
             {/* Classroom Info */}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-1.5 xs:gap-2 flex-wrap mb-0.5">
-                <h3
-                  className="text-sm xs:text-base sm:text-lg font-bold text-foreground truncate tracking-tight group-hover:text-primary transition-colors"
-                  title={classroom.classroom.name}
-                >
-                  {classroom.classroom.name}
-                </h3>
-                {isChampion && (
-                  <span className="inline-flex items-center gap-1 text-[9px] xs:text-[10px] font-extrabold uppercase tracking-wider px-1.5 xs:px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-900 dark:text-amber-200 border border-amber-500/40 shrink-0">
-                    <TrophyIcon className="h-2.5 w-2.5 xs:h-3 xs:w-3 text-amber-600 dark:text-amber-300" />
-                    Champion
-                  </span>
-                )}
-                {isRunnerUp && (
-                  <span className="text-[9px] xs:text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-slate-200/80 dark:bg-slate-700/70 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-600 shrink-0">
-                    2nd Place
-                  </span>
-                )}
-                {isThirdPlace && (
-                  <span className="text-[9px] xs:text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-orange-100/90 dark:bg-amber-950/80 text-amber-950 dark:text-amber-200 border border-amber-600/30 dark:border-amber-700/50 shrink-0">
-                    3rd Place
-                  </span>
-                )}
-              </div>
-
-              <p className="text-xs sm:text-sm text-muted-foreground mb-1">
-                Grade {classroom.classroom.grade}
-              </p>
-
-              {/* Bottom Info Row */}
-              <div className="flex flex-wrap items-center gap-1.5 xs:gap-2 sm:gap-3 text-[10px] xs:text-[11px] sm:text-xs">
-                <div className="inline-flex items-center gap-1 text-muted-foreground bg-muted/60 dark:bg-muted/30 px-1.5 xs:px-2 py-0.5 rounded-md">
-                  <LeafIcon className="h-3 w-3 text-primary shrink-0" />
-                  <span>
-                    {classroom.evaluationCount} eval{classroom.evaluationCount !== 1 ? "s" : ""}
-                  </span>
-                </div>
-
-                <span
-                  className={cn(
-                    "px-1.5 xs:px-2 py-0.5 rounded-md font-semibold text-[9px] xs:text-[10px] sm:text-[11px]",
-                    scoreRange.color
-                  )}
-                >
-                  {scoreRange.label}
-                </span>
-
-                <span className="text-muted-foreground/70 hidden sm:inline">
-                  Avg: <strong className="text-foreground">{Number(classroom.averageScore).toFixed(1)}</strong>
-                </span>
-              </div>
-
-              {/* Subtle Eco-Progress Bar */}
-              <div className="mt-2 w-full h-1.5 bg-muted/80 rounded-full overflow-hidden">
-                <m.div
-                  className={cn(
-                    "h-full rounded-full",
-                    isChampion
-                      ? "bg-linear-to-r from-amber-500 to-yellow-400"
-                      : isRunnerUp
-                      ? "bg-linear-to-r from-slate-400 to-slate-300 dark:from-slate-500 dark:to-slate-400"
-                      : isThirdPlace
-                      ? "bg-linear-to-r from-amber-700 to-amber-600"
-                      : "bg-linear-to-r from-emerald-500 to-primary"
-                  )}
-                  initial={{ width: 0 }}
-                  animate={{ width: `${progressPercent}%` }}
-                  transition={{ duration: 0.8, ease: "easeOut" }}
-                />
-              </div>
-            </div>
+            <ClassroomScoreDetails
+              classroom={classroom}
+              isChampion={isChampion}
+              isRunnerUp={isRunnerUp}
+              isThirdPlace={isThirdPlace}
+              progressPercent={progressPercent}
+              scoreRange={scoreRange}
+            />
 
             {/* Score Display */}
             <div className="shrink-0 text-right flex items-center gap-1 sm:gap-2">
@@ -167,9 +96,7 @@ export function SimpleClassroomCard({
                   >
                     <AnimatedCounter value={classroom.totalScore} />
                   </span>
-                  <span className="text-[10px] xs:text-[11px] font-semibold text-muted-foreground uppercase">
-                    pts
-                  </span>
+                  <span className="text-[10px] xs:text-[11px] font-semibold text-muted-foreground uppercase">pts</span>
                 </div>
                 <span className="text-[9px] xs:text-[10px] sm:text-[11px] text-muted-foreground font-medium">
                   Total Score
@@ -180,5 +107,93 @@ export function SimpleClassroomCard({
         </CardContent>
       </Card>
     </m.div>
+  )
+}
+
+function ClassroomScoreDetails({
+  classroom,
+  isChampion,
+  isRunnerUp,
+  isThirdPlace,
+  progressPercent,
+  scoreRange
+}: Pick<NonNullable<Parameters<typeof SimpleClassroomCard>[0]>, "classroom"> & {
+  isChampion: boolean
+  isRunnerUp: boolean
+  isThirdPlace: boolean
+  progressPercent: number
+  scoreRange: { label: string; color: string }
+}) {
+  return (
+    <div className="flex-1 min-w-0">
+      <div className="flex items-center gap-1.5 xs:gap-2 flex-wrap mb-0.5">
+        <h3
+          className="text-sm xs:text-base sm:text-lg font-bold text-foreground truncate tracking-tight group-hover:text-primary transition-colors"
+          title={classroom.classroom.name}
+        >
+          {classroom.classroom.name}
+        </h3>
+        {isChampion && (
+          <span className="inline-flex items-center gap-1 text-[9px] xs:text-[10px] font-extrabold uppercase tracking-wider px-1.5 xs:px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-900 dark:text-amber-200 border border-amber-500/40 shrink-0">
+            <TrophyIcon className="h-2.5 w-2.5 xs:h-3 xs:w-3 text-amber-600 dark:text-amber-300" />
+            Champion
+          </span>
+        )}
+        {isRunnerUp && (
+          <span className="text-[9px] xs:text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-slate-200/80 dark:bg-slate-700/70 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-600 shrink-0">
+            2nd Place
+          </span>
+        )}
+        {isThirdPlace && (
+          <span className="text-[9px] xs:text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-orange-100/90 dark:bg-amber-950/80 text-amber-950 dark:text-amber-200 border border-amber-600/30 dark:border-amber-700/50 shrink-0">
+            3rd Place
+          </span>
+        )}
+      </div>
+
+      <p className="text-xs sm:text-sm text-muted-foreground mb-1">Grade {classroom.classroom.grade}</p>
+
+      {/* Bottom Info Row */}
+      <div className="flex flex-wrap items-center gap-1.5 xs:gap-2 sm:gap-3 text-[10px] xs:text-[11px] sm:text-xs">
+        <div className="inline-flex items-center gap-1 text-muted-foreground bg-muted/60 dark:bg-muted/30 px-1.5 xs:px-2 py-0.5 rounded-md">
+          <LeafIcon className="h-3 w-3 text-primary shrink-0" />
+          <span>
+            {classroom.evaluationCount} eval{classroom.evaluationCount !== 1 ? "s" : ""}
+          </span>
+        </div>
+
+        <span
+          className={cn(
+            "px-1.5 xs:px-2 py-0.5 rounded-md font-semibold text-[9px] xs:text-[10px] sm:text-[11px]",
+            scoreRange.color
+          )}
+        >
+          {scoreRange.label}
+        </span>
+
+        <span className="text-muted-foreground/70 hidden sm:inline">
+          Avg: <strong className="text-foreground">{Number(classroom.averageScore).toFixed(1)}</strong>
+        </span>
+      </div>
+
+      {/* Subtle Eco-Progress Bar */}
+      <div className="mt-2 w-full h-1.5 bg-muted/80 rounded-full overflow-hidden">
+        <m.div
+          className={cn(
+            "h-full w-full origin-left rounded-full",
+            isChampion
+              ? "bg-linear-to-r from-amber-500 to-yellow-400"
+              : isRunnerUp
+                ? "bg-linear-to-r from-slate-400 to-slate-300 dark:from-slate-500 dark:to-slate-400"
+                : isThirdPlace
+                  ? "bg-linear-to-r from-amber-700 to-amber-600"
+                  : "bg-linear-to-r from-emerald-500 to-primary"
+          )}
+          initial={{ scaleX: 0 }}
+          animate={{ scaleX: progressPercent / 100 }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+        />
+      </div>
+    </div>
   )
 }

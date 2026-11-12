@@ -1,5 +1,6 @@
 "use client"
 
+import { SettingHelp } from "./setting-help"
 import { useState, useEffect, useRef } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
@@ -18,23 +19,25 @@ export function LeaderboardSettingsToggle({ initialShowMonthly }: LeaderboardSet
   const [loading, setLoading] = useState(initialShowMonthly === undefined)
   const [saving, setSaving] = useState(false)
 
-  const hasLoaded = useRef(false)
-
   useEffect(() => {
-    if (initialShowMonthly !== undefined || hasLoaded.current) return
-    hasLoaded.current = true
-    loadSetting()
-  }, [])
-
-  const loadSetting = async () => {
-    setLoading(true)
-    try {
-      const result = await getLeaderboardPointsSetting()
-      if (result.success) setShowMonthly(result.showMonthly ?? false)
-    } finally {
-      setLoading(false)
+    if (initialShowMonthly !== undefined) return
+    let cancelled = false
+    async function load() {
+      try {
+        const result = await getLeaderboardPointsSetting()
+        if (cancelled) return
+        if (result.success) setShowMonthly(result.showMonthly ?? false)
+      } catch (error) {
+        console.error("Could not load setting", error)
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
     }
-  }
+    void load()
+    return () => {
+      cancelled = true
+    }
+  }, [initialShowMonthly])
 
   const handleToggle = async (checked: boolean) => {
     setSaving(true)
@@ -46,13 +49,13 @@ export function LeaderboardSettingsToggle({ initialShowMonthly }: LeaderboardSet
           title: "Setting Updated",
           description: checked
             ? "Leaderboard will now show points for the current month only."
-            : "Leaderboard will now show all-time accumulated points.",
+            : "Leaderboard will now show all-time accumulated points."
         })
       } else {
         toast({
           title: "Error updating setting",
           description: result.error || "Failed to update leaderboard setting.",
-          variant: "destructive",
+          variant: "destructive"
         })
       }
     } finally {
@@ -81,8 +84,8 @@ export function LeaderboardSettingsToggle({ initialShowMonthly }: LeaderboardSet
               {loading
                 ? "Loading configuration..."
                 : showMonthly
-                ? "Showing evaluations for the current calendar month only."
-                : "Showing all-time accumulated points for the entire academic term."}
+                  ? "Showing evaluations for the current calendar month only."
+                  : "Showing all-time accumulated points for the entire academic term."}
             </p>
           </div>
 
@@ -112,20 +115,17 @@ export function LeaderboardSettingsToggle({ initialShowMonthly }: LeaderboardSet
         </div>
 
         {!loading && (
-          <div className="mt-4 p-3.5 bg-primary/5 rounded-lg border border-primary/10 flex items-start gap-2.5">
-            <HelpCircle className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              {showMonthly ? (
-                <span>
-                  <strong>Monthly Mode:</strong> Classrooms start fresh every 1st of the month.
-                </span>
-              ) : (
-                <span>
-                  <strong>All-Time Mode:</strong> Points accumulate across the entire academic year.
-                </span>
-              )}
-            </p>
-          </div>
+          <SettingHelp>
+            {showMonthly ? (
+              <span>
+                <strong>Monthly Mode:</strong> Classrooms start fresh every 1st of the month.
+              </span>
+            ) : (
+              <span>
+                <strong>All-Time Mode:</strong> Points accumulate across the entire academic year.
+              </span>
+            )}
+          </SettingHelp>
         )}
       </CardContent>
     </Card>

@@ -36,7 +36,7 @@ export function Footer() {
               href="https://rhhs.edu.lb"
               target="_blank"
               rel="noopener noreferrer"
-              className="group transition-all duration-300 hover:scale-105 min-h-11 flex items-center"
+              className="group transition-transform duration-300 hover:scale-105 min-h-11 flex items-center"
               aria-label="Rafic Hariri High School Official Website"
             >
               <Image
@@ -50,7 +50,7 @@ export function Footer() {
               />
             </a>
 
-            <div className="transition-all duration-300 hover:scale-105 min-h-11 flex items-center">
+            <div className="transition-transform duration-300 hover:scale-105 min-h-11 flex items-center">
               <Image
                 src="/rhi-logo.png"
                 alt="Rafic Hariri Technical Institute Logo"
@@ -62,7 +62,7 @@ export function Footer() {
               />
             </div>
 
-            <div className="transition-all duration-300 hover:scale-105 min-h-11 flex items-center">
+            <div className="transition-transform duration-300 hover:scale-105 min-h-11 flex items-center">
               <Image
                 src="/Eco Champ.png"
                 alt="Eco Champ Logo"
@@ -82,7 +82,7 @@ export function Footer() {
               href="https://www.instagram.com/rhhs_saida/"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border/60 hover:border-pink-500/50 hover:bg-pink-500/10 hover:text-pink-600 dark:hover:text-pink-400 transition-all text-muted-foreground min-h-9 font-medium shadow-2xs"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border/60 hover:border-pink-500/50 hover:bg-pink-500/10 hover:text-pink-600 dark:hover:text-pink-400 transition-[color,background-color,border-color,box-shadow] text-muted-foreground min-h-9 font-medium shadow-2xs"
               aria-label="Follow RHHS Official on Instagram"
             >
               <InstagramIcon className="h-3.5 w-3.5 text-pink-500" />
@@ -94,7 +94,7 @@ export function Footer() {
               href="https://www.instagram.com/ecoclubrhhs2526/"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border/60 hover:border-emerald-500/50 hover:bg-emerald-500/10 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all text-muted-foreground min-h-9 font-medium shadow-2xs"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border/60 hover:border-emerald-500/50 hover:bg-emerald-500/10 hover:text-emerald-600 dark:hover:text-emerald-400 transition-[color,background-color,border-color,box-shadow] text-muted-foreground min-h-9 font-medium shadow-2xs"
               aria-label="Follow RHHS ECO Club on Instagram"
             >
               <InstagramIcon className="h-3.5 w-3.5 text-emerald-500" />
@@ -144,7 +144,7 @@ export function Footer() {
             <button
               type="button"
               onClick={scrollToTop}
-              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] sm:text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 border border-border/40 transition-all cursor-pointer min-h-9"
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] sm:text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 border border-border/40 transition-colors cursor-pointer min-h-9"
               aria-label="Scroll back to top"
             >
               <span>Back to Top</span>

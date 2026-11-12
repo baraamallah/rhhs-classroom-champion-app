@@ -8,9 +8,11 @@
     "dev:plain": "next dev -H 0.0.0.0",
     "lint": "eslint .",
     "test:monthly": "node --test scripts/monthly-scoring.test.js",
+    "test:react-doctor": "node --test scripts/react-doctor-regressions.test.cjs",
     "start": "node scripts/show-qr.js && next start -H 0.0.0.0",
     "start:plain": "next start -H 0.0.0.0",
-    "qr": "node scripts/show-qr.js"
+    "qr": "node scripts/show-qr.js",
+    "doctor": "npx react-doctor@latest"
   },
   "dependencies": {
     "@emotion/is-prop-valid": "latest",

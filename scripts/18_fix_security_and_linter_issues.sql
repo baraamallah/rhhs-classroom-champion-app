@@ -100,6 +100,19 @@ ALTER TABLE IF EXISTS public.classroom_supervisors ENABLE ROW LEVEL SECURITY;
 
 -- 4. CONFIGURE RLS POLICIES FOR USERS & JUNCTION TABLES
 
+-- Resolve the signed-in database administrator without recursively reading users through its own policy.
+CREATE OR REPLACE FUNCTION public.is_active_database_admin()
+RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = ''
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.users
+    WHERE id = auth.uid() AND is_active = true AND role IN ('admin', 'super_admin')
+  );
+$$;
+REVOKE ALL ON FUNCTION public.is_active_database_admin() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.is_active_database_admin() TO authenticated;
+
 -- Users policies
 DROP POLICY IF EXISTS "Allow read access for all users" ON public.users;
 DROP POLICY IF EXISTS "Allow public read on users" ON public.users;
@@ -107,14 +120,10 @@ CREATE POLICY "Allow public read on users" ON public.users
   FOR SELECT USING (true);
 
 DROP POLICY IF EXISTS "Allow admin modify on users" ON public.users;
-CREATE POLICY "Allow admin modify on users" ON public.users 
-  FOR ALL USING (
-    auth.role() = 'service_role' OR 
-    EXISTS (
-      SELECT 1 FROM public.users 
-      WHERE id = auth.uid() AND role IN ('admin', 'super_admin')
-    )
-  );
+CREATE POLICY "Allow admin modify on users" ON public.users
+  FOR ALL TO authenticated
+  USING (auth.uid() IS NOT NULL AND public.is_active_database_admin())
+  WITH CHECK (auth.uid() IS NOT NULL AND public.is_active_database_admin());
 
 -- Checklist Item Assignments policies
 DROP POLICY IF EXISTS "Allow authenticated read" ON public.checklist_item_assignments;
@@ -127,8 +136,7 @@ CREATE POLICY "Allow public read on checklist_item_assignments" ON public.checkl
 DROP POLICY IF EXISTS "Allow all for authenticated and service on checklist_item_assignments" ON public.checklist_item_assignments;
 CREATE POLICY "Allow all for authenticated and service on checklist_item_assignments" ON public.checklist_item_assignments 
   FOR ALL USING (
-    auth.role() = 'authenticated' OR 
-    auth.role() = 'service_role'
+    auth.uid() IS NOT NULL AND public.is_active_database_admin()
   );
 
 -- Classroom Supervisors policies
@@ -142,8 +150,7 @@ CREATE POLICY "Allow public read on classroom_supervisors" ON public.classroom_s
 DROP POLICY IF EXISTS "Allow all for authenticated and service on classroom_supervisors" ON public.classroom_supervisors;
 CREATE POLICY "Allow all for authenticated and service on classroom_supervisors" ON public.classroom_supervisors 
   FOR ALL USING (
-    auth.role() = 'authenticated' OR 
-    auth.role() = 'service_role'
+    auth.uid() IS NOT NULL AND public.is_active_database_admin()
   );
 
 

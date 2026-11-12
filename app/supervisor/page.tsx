@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect, useTransition } from "react"
+import { TodayLabel } from "@/components/common/today-label"
+import { useState, useEffect, useTransition, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { ProtectedRoute } from "@/components/providers/protected-route"
 import { DashboardHeader } from "@/components/layout/dashboard-header"
@@ -8,13 +9,7 @@ import { SupervisorEvaluationsHistory } from "@/components/features/evaluations/
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import {
   Select,
   SelectContent,
@@ -22,7 +17,7 @@ import {
   SelectItem,
   SelectLabel,
   SelectTrigger,
-  SelectValue,
+  SelectValue
 } from "@/components/ui/select"
 import {
   ClipboardCheck,
@@ -41,13 +36,13 @@ import {
   ChevronDown,
   Sun,
   Check,
-  CalendarOff,
+  CalendarOff
 } from "lucide-react"
 import type { User, Classroom } from "@/lib/types"
 import {
   getSupervisorDailyStatus,
   type SupervisorDailyOverview,
-  type DayCalendarStatus,
+  type DayCalendarStatus
 } from "@/app/actions/calendar-actions"
 import { cn } from "@/lib/utils"
 import { format, addMonths, subMonths, parseISO, isToday } from "date-fns"
@@ -56,7 +51,7 @@ interface SupervisorDashboardContentProps {
   currentUser?: User
 }
 
-function SupervisorDashboardContent({ currentUser }: SupervisorDashboardContentProps) {
+function useSupervisorDashboardContentController({ currentUser }: SupervisorDashboardContentProps) {
   const router = useRouter()
   const [currentMonthDate, setCurrentMonthDate] = useState<Date>(new Date())
   const [overview, setOverview] = useState<SupervisorDailyOverview | null>(null)
@@ -71,25 +66,32 @@ function SupervisorDashboardContent({ currentUser }: SupervisorDashboardContentP
   const [isQueueOpen, setIsQueueOpen] = useState(true)
   const [queueFilter, setQueueFilter] = useState<"all" | "pending" | "done">("all")
 
-  const loadData = async (monthDate: Date) => {
-    if (!currentUser) return
-    setLoading(true)
-    try {
-      const monthStr = format(monthDate, "yyyy-MM-dd")
-      const res = await getSupervisorDailyStatus(currentUser.id, monthStr)
-      if (res.success && res.data) {
-        setOverview(res.data)
+  const loadData = useCallback(
+    async (monthDate: Date, signal?: AbortSignal) => {
+      if (!currentUser) return
+      setLoading(true)
+      try {
+        const monthStr = format(monthDate, "yyyy-MM-dd")
+        const res = await getSupervisorDailyStatus(currentUser.id, monthStr)
+        if (signal?.aborted) return
+        if (res.success && res.data) {
+          setOverview(res.data)
+        }
+      } catch (err) {
+        if (signal?.aborted) return
+        console.error("Error loading supervisor daily data:", err)
+      } finally {
+        if (!signal?.aborted) setLoading(false)
       }
-    } catch (err) {
-      console.error("Error loading supervisor daily data:", err)
-    } finally {
-      setLoading(false)
-    }
-  }
+    },
+    [currentUser]
+  )
 
   useEffect(() => {
-    loadData(currentMonthDate)
-  }, [currentUser, currentMonthDate])
+    const controller = new AbortController()
+    void loadData(currentMonthDate, controller.signal)
+    return () => controller.abort()
+  }, [loadData, currentMonthDate])
 
   const handlePrevMonth = () => setCurrentMonthDate((prev) => subMonths(prev, 1))
   const handleNextMonth = () => setCurrentMonthDate((prev) => addMonths(prev, 1))
@@ -123,8 +125,6 @@ function SupervisorDashboardContent({ currentUser }: SupervisorDashboardContentP
     }
   }
 
-  if (!currentUser) return null
-
   const classrooms = overview?.classrooms || []
   const missedDays = overview?.missedDays || []
   const calendarDays = overview?.calendarDays || []
@@ -132,6 +132,65 @@ function SupervisorDashboardContent({ currentUser }: SupervisorDashboardContentP
   const todayPendingCount = overview?.todayPendingCount ?? 0
   const todayCompletedCount = overview?.todayCompletedCount ?? 0
   const totalAssignedCount = overview?.totalAssignedCount ?? 0
+  return {
+    calendarDays,
+    classrooms,
+    currentMonthDate,
+    handleCalendarDayClick,
+    handleCurrentMonth,
+    handleNextMonth,
+    handlePrevMonth,
+    handleStartBackfillEvaluation,
+    handleStartTodayEvaluation,
+    isBackfillDialogOpen,
+    isQueueOpen,
+    isTodayWorkingDay,
+    loading,
+    missedDays,
+    overview,
+    queueFilter,
+    router,
+    selectedCalendarDay,
+    setIsBackfillDialogOpen,
+    setIsQueueOpen,
+    setQueueFilter,
+    setSelectedCalendarDay,
+    todayCompletedCount,
+    todayPendingCount,
+    totalAssignedCount
+  }
+}
+
+function SupervisorDashboardContent({ currentUser }: SupervisorDashboardContentProps) {
+  const {
+    calendarDays,
+    classrooms,
+    currentMonthDate,
+    handleCalendarDayClick,
+    handleCurrentMonth,
+    handleNextMonth,
+    handlePrevMonth,
+    handleStartBackfillEvaluation,
+    handleStartTodayEvaluation,
+    isBackfillDialogOpen,
+    isQueueOpen,
+    isTodayWorkingDay,
+    loading,
+    missedDays,
+    overview,
+    queueFilter,
+    router,
+    selectedCalendarDay,
+    setIsBackfillDialogOpen,
+    setIsQueueOpen,
+    setQueueFilter,
+    setSelectedCalendarDay,
+    todayCompletedCount,
+    todayPendingCount,
+    totalAssignedCount
+  } = useSupervisorDashboardContentController({ currentUser })
+
+  if (!currentUser) return null
 
   return (
     <div className="min-h-screen bg-linear-to-b from-background via-background to-primary/5 flex flex-col">
@@ -162,7 +221,7 @@ function SupervisorDashboardContent({ currentUser }: SupervisorDashboardContentP
             <Button
               size="lg"
               onClick={() => handleStartTodayEvaluation()}
-              className="w-full sm:w-auto h-11 px-5 rounded-xl font-bold bg-primary hover:bg-primary/90 text-primary-foreground shadow-md transition-all active:scale-95"
+              className="w-full sm:w-auto h-11 px-5 rounded-xl font-bold bg-primary hover:bg-primary/90 text-primary-foreground shadow-md transition-[color,background-color,border-color,box-shadow,transform,scale,rotate,translate] active:scale-95"
             >
               <ClipboardCheck className="mr-2 h-5 w-5" /> Start Today&apos;s Inspection ({todayPendingCount} pending)
             </Button>
@@ -176,742 +235,67 @@ function SupervisorDashboardContent({ currentUser }: SupervisorDashboardContentP
             <div className="h-4 w-72 bg-muted rounded" />
           </Card>
         ) : (
-          <div className="space-y-3">
-            {/* Primary Banner: Today's Status */}
-            {isTodayWorkingDay ? (
-              todayPendingCount > 0 ? (
-                <Card className="rounded-2xl border-amber-500/40 bg-amber-500/10 shadow-xs overflow-hidden">
-                  <div className="p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                    <div className="flex items-start gap-3">
-                      <div className="h-10 w-10 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
-                        <AlertTriangle className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h3 className="text-sm sm:text-base font-bold text-amber-900 dark:text-amber-100">
-                            Today&apos;s Inspection Pending
-                          </h3>
-                          <Badge variant="outline" className="bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/40 text-[10px]">
-                            {todayPendingCount} Room{todayPendingCount !== 1 ? "s" : ""} Left
-                          </Badge>
-                        </div>
-                        <p className="text-xs text-amber-800/80 dark:text-amber-200/80 mt-0.5">
-                          Daily inspections for <strong>{format(new Date(), "EEEE, MMMM d")}</strong> are not yet completed for all assigned rooms.
-                        </p>
-                      </div>
-                    </div>
-
-                    <Button
-                      size="sm"
-                      onClick={() => handleStartTodayEvaluation()}
-                      className="w-full sm:w-auto h-9 rounded-xl font-bold bg-amber-600 hover:bg-amber-700 text-white shadow-xs shrink-0"
-                    >
-                      Inspect Today <ArrowRight className="ml-1.5 h-4 w-4" />
-                    </Button>
-                  </div>
-                </Card>
-              ) : (
-                <Card className="rounded-2xl border-emerald-500/40 bg-emerald-500/10 shadow-xs overflow-hidden">
-                  <div className="p-4 sm:p-5 flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
-                      <CheckCircle2 className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <h3 className="text-sm sm:text-base font-bold text-emerald-900 dark:text-emerald-100">
-                        All Caught Up for Today!
-                      </h3>
-                      <p className="text-xs text-emerald-800/80 dark:text-emerald-200/80 mt-0.5">
-                        All {totalAssignedCount} assigned classrooms have been inspected and locked for today. Great job!
-                      </p>
-                    </div>
-                  </div>
-                </Card>
-              )
-            ) : (
-              <Card className="rounded-2xl border-border bg-card/60 shadow-xs overflow-hidden">
-                <div className="p-4 sm:p-5 flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-xl bg-muted text-muted-foreground flex items-center justify-center shrink-0">
-                    <CalendarOff className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm sm:text-base font-bold text-foreground">
-                      School Day Off ({overview?.todayReason || "Weekend"})
-                    </h3>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Today is marked as a non-working day. Daily evaluations are not required.
-                    </p>
-                  </div>
-                </div>
-              </Card>
-            )}
-
-            {/* Secondary Banner: Missed Past Working Days */}
-            {missedDays.length > 0 && (
-              <Card className="rounded-2xl border-amber-500/30 bg-amber-500/5 shadow-xs overflow-hidden">
-                <div className="p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                  <div className="flex items-start gap-3">
-                    <div className="h-10 w-10 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
-                      <Clock className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h3 className="text-sm sm:text-base font-bold text-foreground">
-                          {missedDays.length} Missed Inspection Day{missedDays.length !== 1 ? "s" : ""} in Active Term
-                        </h3>
-                        <Badge variant="outline" className="text-amber-600 border-amber-500/30 text-[10px]">
-                          Backfill Available
-                        </Badge>
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        You can backfill points for past missed working days so classrooms don&apos;t lose points.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Button
-                      size="sm"
-                      onClick={() => {
-                        const firstMissed = missedDays[0]
-                        if (firstMissed) {
-                          router.push(`/supervisor/evaluate?date=${firstMissed.date}`)
-                        }
-                      }}
-                      className="h-9 px-3.5 rounded-xl text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white shrink-0 cursor-pointer shadow-xs"
-                    >
-                      Backfill {format(parseISO(missedDays[0].date), "EEE, MMM d")} ({missedDays[0].missingClassroomIds.length} left)
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        const firstMissed = missedDays[0]
-                        if (firstMissed) {
-                          const targetCalDay = calendarDays.find((d) => d.date === firstMissed.date)
-                          if (targetCalDay) {
-                            setSelectedCalendarDay(targetCalDay)
-                          } else {
-                            setSelectedCalendarDay({
-                              date: firstMissed.date,
-                              dayNumber: parseInt(firstMissed.date.split("-")[2], 10),
-                              isCurrentMonth: true,
-                              isWeekend: false,
-                              isHoliday: false,
-                              isToday: false,
-                              isPast: true,
-                              isFuture: false,
-                              status: "missing",
-                              evaluatedCount: 0,
-                              totalAssigned: totalAssignedCount,
-                            })
-                          }
-                          setIsBackfillDialogOpen(true)
-                        }
-                      }}
-                      className="h-9 rounded-xl text-xs font-semibold shrink-0"
-                    >
-                      View Day Rooms
-                    </Button>
-                  </div>
-                </div>
-              </Card>
-            )}
-          </div>
+          <SupervisorStatusBanners
+            calendarDays={calendarDays}
+            handleStartTodayEvaluation={handleStartTodayEvaluation}
+            isTodayWorkingDay={isTodayWorkingDay}
+            missedDays={missedDays}
+            overview={overview}
+            router={router}
+            setIsBackfillDialogOpen={setIsBackfillDialogOpen}
+            setSelectedCalendarDay={setSelectedCalendarDay}
+            todayPendingCount={todayPendingCount}
+            totalAssignedCount={totalAssignedCount}
+          />
         )}
 
         {/* 2. KPI OVERVIEW METRICS */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
-          <Card className="p-3 xs:p-4 rounded-2xl border-border bg-card shadow-xs">
-            <span className="text-[10px] xs:text-[11px] font-semibold text-muted-foreground uppercase block">
-              Assigned Classrooms
-            </span>
-            <p className="text-xl xs:text-2xl font-black text-foreground mt-0.5">{totalAssignedCount}</p>
-            <span className="text-[10px] text-muted-foreground mt-0.5 block truncate">In your division</span>
-          </Card>
-
-          <Card className="p-3 xs:p-4 rounded-2xl border-border bg-card shadow-xs">
-            <span className="text-[10px] xs:text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 uppercase block">
-              Today&apos;s Done
-            </span>
-            <p className="text-xl xs:text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-0.5">
-              {todayCompletedCount}
-            </p>
-            <span className="text-[10px] text-muted-foreground mt-0.5 block truncate">
-              {todayCompletedCount === totalAssignedCount && totalAssignedCount > 0
-                ? "All rooms locked ✓"
-                : `${todayPendingCount} awaiting`}
-            </span>
-          </Card>
-
-          <Card className="p-3 xs:p-4 rounded-2xl border-border bg-card shadow-xs">
-            <span className="text-[10px] xs:text-[11px] font-semibold text-amber-600 dark:text-amber-400 uppercase block">
-              Missed Past Days
-            </span>
-            <p className="text-xl xs:text-2xl font-black text-amber-600 dark:text-amber-400 mt-0.5">
-              {missedDays.length}
-            </p>
-            <span className="text-[10px] text-muted-foreground mt-0.5 block truncate">Eligible to backfill</span>
-          </Card>
-
-          <Card className="p-3 xs:p-4 rounded-2xl border-border bg-card shadow-xs">
-            <span className="text-[10px] xs:text-[11px] font-semibold text-primary uppercase block">
-              Inspection Rule
-            </span>
-            <p className="text-base xs:text-lg sm:text-xl font-bold text-foreground mt-1">1 / Day</p>
-            <span className="text-[10px] text-muted-foreground mt-0.5 block truncate">Locks once submitted</span>
-          </Card>
-        </div>
+        <SupervisorSummaryMetrics
+          missedDays={missedDays}
+          todayCompletedCount={todayCompletedCount}
+          todayPendingCount={todayPendingCount}
+          totalAssignedCount={totalAssignedCount}
+        />
 
         {/* 3. TODAY'S CLASSROOM INSPECTIONS ACTION QUEUE (DROPDOWN COLLAPSIBLE & QUICK SELECTOR) */}
-        {(() => {
-          const pendingRooms = classrooms.filter((c) => !c.isEvaluatedToday)
-          const completedRooms = classrooms.filter((c) => c.isEvaluatedToday)
-          const displayedRooms =
-            queueFilter === "pending"
-              ? pendingRooms
-              : queueFilter === "done"
-              ? completedRooms
-              : classrooms
-
-          return (
-            <Card className="rounded-2xl border-border shadow-xs overflow-hidden transition-all">
-              {/* Dropdown Header Trigger */}
-              <CardHeader
-                onClick={() => setIsQueueOpen((prev) => !prev)}
-                className="p-4 sm:p-5 border-b border-border/60 bg-muted/20 cursor-pointer hover:bg-muted/30 transition-colors select-none"
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                      <ClipboardCheck className="h-5 w-5" />
-                    </div>
-                    <div className="min-w-0">
-                      <CardTitle className="text-base sm:text-lg font-bold flex items-center gap-2 truncate">
-                        Today&apos;s Classroom Queue
-                      </CardTitle>
-                      <CardDescription className="text-xs truncate">
-                        {format(new Date(), "EEEE, MMMM d, yyyy")} &bull;{" "}
-                        {isTodayWorkingDay ? "Daily Working Inspection" : "Non-Working Day"}
-                      </CardDescription>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 shrink-0">
-                    {todayPendingCount > 0 ? (
-                      <Badge
-                        variant="outline"
-                        className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30 text-xs font-semibold"
-                      >
-                        {todayPendingCount} Pending
-                      </Badge>
-                    ) : (
-                      <Badge
-                        variant="outline"
-                        className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 text-xs font-semibold"
-                      >
-                        All Complete ✓
-                      </Badge>
-                    )}
-                    <Badge variant="outline" className="text-xs hidden sm:inline-flex">
-                      {todayCompletedCount} / {totalAssignedCount} Done
-                    </Badge>
-                    <div
-                      className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground"
-                      aria-label={isQueueOpen ? "Collapse queue" : "Expand queue"}
-                    >
-                      <ChevronDown
-                        className={cn(
-                          "h-5 w-5 transition-transform duration-300",
-                          isQueueOpen ? "rotate-180" : "rotate-0"
-                        )}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </CardHeader>
-
-              {/* Collapsible Dropdown Content */}
-              {isQueueOpen && (
-                <CardContent className="p-3 sm:p-5 space-y-4 animate-in fade-in-50 duration-200">
-                  {classrooms.length === 0 ? (
-                    <div className="py-8 text-center text-xs text-muted-foreground">
-                      No classrooms currently assigned to your supervisor account.
-                    </div>
-                  ) : (
-                    <>
-                      {/* Top Action Bar: Quick Classroom Selector Dropdown & Filter Pills */}
-                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pb-3 border-b border-border/50">
-                        {/* Quick Selection Dropdown */}
-                        <div className="w-full sm:w-80">
-                          <Select
-                            onValueChange={(classroomId) => {
-                              if (classroomId) {
-                                handleStartTodayEvaluation(classroomId)
-                              }
-                            }}
-                          >
-                            <SelectTrigger className="w-full h-10 rounded-xl bg-card border-border/80 shadow-2xs font-medium text-xs sm:text-sm">
-                              <SelectValue placeholder="Quick jump to classroom..." />
-                            </SelectTrigger>
-                            <SelectContent className="max-h-80">
-                              {pendingRooms.length > 0 && (
-                                <SelectGroup>
-                                  <SelectLabel className="text-amber-600 dark:text-amber-400 font-bold text-xs">
-                                    Pending Inspection ({pendingRooms.length})
-                                  </SelectLabel>
-                                  {pendingRooms.map((room) => (
-                                    <SelectItem key={room.id} value={room.id} className="cursor-pointer">
-                                      <span className="font-semibold text-foreground">{room.name}</span>
-                                      <span className="text-xs text-muted-foreground ml-2">Grade {room.grade}</span>
-                                    </SelectItem>
-                                  ))}
-                                </SelectGroup>
-                              )}
-                              {completedRooms.length > 0 && (
-                                <SelectGroup>
-                                  <SelectLabel className="text-emerald-600 dark:text-emerald-400 font-bold text-xs mt-2">
-                                    Completed Today ({completedRooms.length})
-                                  </SelectLabel>
-                                  {completedRooms.map((room) => (
-                                    <SelectItem key={room.id} value={room.id} className="cursor-pointer">
-                                      <span className="text-foreground">{room.name}</span>
-                                      <span className="text-xs text-emerald-600 dark:text-emerald-400 ml-2 font-bold">
-                                        Score: {room.todayScore}/{room.todayMaxScore}
-                                      </span>
-                                    </SelectItem>
-                                  ))}
-                                </SelectGroup>
-                              )}
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        {/* Filter Tabs / Pills */}
-                        <div className="flex items-center gap-1 bg-muted/60 p-1 rounded-xl self-start sm:self-auto">
-                          <button
-                            type="button"
-                            onClick={() => setQueueFilter("all")}
-                            className={cn(
-                              "px-3 py-1 text-xs font-semibold rounded-lg transition-colors cursor-pointer",
-                              queueFilter === "all"
-                                ? "bg-card text-foreground shadow-2xs font-bold"
-                                : "text-muted-foreground hover:text-foreground"
-                            )}
-                          >
-                            All ({classrooms.length})
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setQueueFilter("pending")}
-                            className={cn(
-                              "px-3 py-1 text-xs font-semibold rounded-lg transition-colors cursor-pointer",
-                              queueFilter === "pending"
-                                ? "bg-amber-500/20 text-amber-700 dark:text-amber-300 font-bold"
-                                : "text-muted-foreground hover:text-foreground"
-                            )}
-                          >
-                            Pending ({todayPendingCount})
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setQueueFilter("done")}
-                            className={cn(
-                              "px-3 py-1 text-xs font-semibold rounded-lg transition-colors cursor-pointer",
-                              queueFilter === "done"
-                                ? "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-bold"
-                                : "text-muted-foreground hover:text-foreground"
-                            )}
-                          >
-                            Done ({todayCompletedCount})
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Filtered Classroom Cards Grid */}
-                      {displayedRooms.length === 0 ? (
-                        <div className="py-8 text-center text-xs text-muted-foreground">
-                          {queueFilter === "pending"
-                            ? "All classrooms have been inspected today! Great work."
-                            : "No classrooms in this filter."}
-                        </div>
-                      ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                          {displayedRooms.map((room) => (
-                            <div
-                              key={room.id}
-                              className={cn(
-                                "p-3.5 rounded-2xl border transition-all flex flex-col justify-between gap-3 shadow-2xs",
-                                room.isEvaluatedToday
-                                  ? "bg-card/70 border-border/70"
-                                  : "bg-card border-primary/30 hover:border-primary/60 hover:shadow-xs"
-                              )}
-                            >
-                              <div className="flex items-start justify-between gap-2">
-                                <div className="min-w-0">
-                                  <p className="font-bold text-sm sm:text-base text-foreground truncate">
-                                    {room.name}
-                                  </p>
-                                  <p className="text-xs text-muted-foreground">
-                                    Grade {room.grade} {room.division ? `• ${room.division}` : ""}
-                                  </p>
-                                </div>
-
-                                {room.isEvaluatedToday ? (
-                                  <Badge
-                                    variant="outline"
-                                    className="bg-emerald-500/10 text-emerald-600 border-emerald-500/30 text-[10px] shrink-0"
-                                  >
-                                    <Lock className="h-3 w-3 mr-1" /> Locked
-                                  </Badge>
-                                ) : (
-                                  <Badge
-                                    variant="outline"
-                                    className="bg-amber-500/10 text-amber-600 border-amber-500/30 text-[10px] shrink-0"
-                                  >
-                                    Pending
-                                  </Badge>
-                                )}
-                              </div>
-
-                              <div className="pt-2 border-t border-border/60 flex items-center justify-between">
-                                {room.isEvaluatedToday ? (
-                                  <div className="text-xs">
-                                    <span className="font-bold text-foreground">
-                                      Score: {room.todayScore} / {room.todayMaxScore}
-                                    </span>
-                                  </div>
-                                ) : (
-                                  <span className="text-[11px] text-muted-foreground">Not submitted today</span>
-                                )}
-
-                                {room.isEvaluatedToday ? (
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      handleStartTodayEvaluation(room.id)
-                                    }}
-                                    className="min-h-11 px-3 text-xs rounded-xl text-muted-foreground hover:text-foreground cursor-pointer"
-                                  >
-                                    View Record
-                                  </Button>
-                                ) : (
-                                  <Button
-                                    size="sm"
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      handleStartTodayEvaluation(room.id)
-                                    }}
-                                    disabled={!isTodayWorkingDay}
-                                    className="min-h-11 px-3.5 text-xs rounded-xl font-bold bg-primary hover:bg-primary/90 text-primary-foreground cursor-pointer"
-                                  >
-                                    Inspect Room <ArrowRight className="ml-1 h-3 w-3" />
-                                  </Button>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </>
-                  )}
-                </CardContent>
-              )}
-            </Card>
-          )
-        })()}
+        <SupervisorClassroomQueue
+          classrooms={classrooms}
+          handleStartTodayEvaluation={handleStartTodayEvaluation}
+          isQueueOpen={isQueueOpen}
+          isTodayWorkingDay={isTodayWorkingDay}
+          queueFilter={queueFilter}
+          setIsQueueOpen={setIsQueueOpen}
+          setQueueFilter={setQueueFilter}
+          todayCompletedCount={todayCompletedCount}
+          todayPendingCount={todayPendingCount}
+          totalAssignedCount={totalAssignedCount}
+        />
 
         {/* 4. SUPERVISOR MONTHLY INSPECTION CALENDAR (WITH BACKFILL ABILITY) */}
-        <Card className="rounded-2xl border-border shadow-xs overflow-hidden">
-          <CardHeader className="p-4 sm:p-5 border-b border-border/60 bg-muted/20">
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-base sm:text-lg font-bold flex items-center gap-2">
-                  <CalendarIcon className="h-5 w-5 text-primary" /> Daily Inspection Calendar
-                </CardTitle>
-                <CardDescription className="text-xs">
-                  {overview?.monthLabel || format(currentMonthDate, "MMMM yyyy")} &bull; Click any missed day to backfill points.
-                </CardDescription>
-              </div>
-
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={handlePrevMonth}
-                  className="min-h-11 min-w-11 rounded-lg cursor-pointer"
-                  aria-label="Previous month"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleCurrentMonth}
-                  className="min-h-11 px-3 rounded-lg text-xs font-semibold cursor-pointer"
-                >
-                  Today
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={handleNextMonth}
-                  className="min-h-11 min-w-11 rounded-lg cursor-pointer"
-                  aria-label="Next month"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </CardHeader>
-
-          <CardContent className="p-3 sm:p-5 space-y-0">
-            {/* Days header bar */}
-            <div className="grid grid-cols-7 border-t border-x border-border/80 text-center text-[11px] sm:text-xs font-bold tracking-wider text-muted-foreground uppercase bg-muted/40 py-2.5 rounded-t-xl">
-              <div>Mon</div>
-              <div>Tue</div>
-              <div>Wed</div>
-              <div>Thu</div>
-              <div>Fri</div>
-              <div className="text-muted-foreground/60">Sat</div>
-              <div className="text-muted-foreground/60">Sun</div>
-            </div>
-
-            {/* Calendar grid with 1px border dividers */}
-            <div className="grid grid-cols-7 gap-px bg-border/80 border border-border/80 rounded-b-xl overflow-hidden shadow-xs">
-              {calendarDays.map((day) => {
-                const isClickable =
-                  day.isCurrentMonth &&
-                  (day.status === "missing" || day.status === "partial" || (day.isToday && day.status !== "weekend" && day.status !== "holiday" && day.status !== "outside_term"))
-
-                return (
-                  <button
-                    key={day.date}
-                    onClick={() => isClickable && handleCalendarDayClick(day)}
-                    disabled={!isClickable}
-                    type="button"
-                    className={cn(
-                      "min-h-16 sm:min-h-25 p-1.5 sm:p-2.5 text-left transition-all flex flex-col justify-between select-none relative group",
-                      !day.isCurrentMonth
-                        ? "bg-muted/15 text-muted-foreground/30 cursor-default"
-                        : day.status === "outside_term"
-                        ? "bg-muted/35 text-muted-foreground/50 cursor-not-allowed"
-                        : day.status === "completed"
-                        ? "bg-card hover:bg-emerald-500/5 text-foreground"
-                        : day.status === "partial"
-                        ? "bg-card hover:bg-amber-500/10 text-foreground cursor-pointer"
-                        : day.status === "missing"
-                        ? "bg-card hover:bg-destructive/10 text-foreground cursor-pointer"
-                        : day.status === "holiday"
-                        ? "bg-muted/30 text-muted-foreground/70 cursor-not-allowed"
-                        : day.status === "weekend"
-                        ? "bg-muted/20 text-muted-foreground/40 cursor-not-allowed"
-                        : "bg-card text-muted-foreground/60 cursor-default"
-                    )}
-                  >
-                    {/* Top Row: Day number & Quick Badge */}
-                    <div className="flex items-center justify-between w-full">
-                      <span
-                        className={cn(
-                          "text-xs sm:text-sm font-bold tracking-tight",
-                          !day.isCurrentMonth && "text-muted-foreground/30 font-medium",
-                          day.isToday && day.isCurrentMonth && "w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[10px] sm:text-xs font-black shadow-xs"
-                        )}
-                      >
-                        {day.dayNumber}
-                      </span>
-
-                      {/* Status indicator badge */}
-                      {day.isCurrentMonth && (
-                        <>
-                          {day.status === "completed" && (
-                            <span className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-                              <Check className="h-3 w-3 stroke-3" />
-                              <span className="sr-only">All inspections complete</span>
-                            </span>
-                          )}
-                          {(day.status === "missing" || day.status === "partial") && (
-                            <span className="text-[9px] font-bold px-1 py-0.5 rounded bg-amber-500/20 text-amber-700 dark:text-amber-300">
-                              {day.evaluatedCount}/{day.totalAssigned}
-                            </span>
-                          )}
-                          {day.status === "holiday" && (
-                            <span className="text-[9px] text-muted-foreground/60 uppercase font-semibold">Off</span>
-                          )}
-                          {day.status === "weekend" && (
-                            <span className="text-[9px] text-muted-foreground/40 font-medium hidden sm:inline">Off</span>
-                          )}
-                          {day.status === "outside_term" && (
-                            <span className="text-[9px] text-muted-foreground/50 font-medium hidden sm:inline">Break</span>
-                          )}
-                        </>
-                      )}
-                    </div>
-
-                    {/* Event Pill inside the cell (like Google/Apple calendar) */}
-                    <div className="mt-1 w-full">
-                      {day.isCurrentMonth && day.status === "completed" && (
-                        <div className="px-1.5 py-0.5 rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20 text-[9px] sm:text-[10px] font-semibold truncate flex items-center gap-1 shadow-2xs">
-                          <Check className="h-2.5 w-2.5 stroke-3 shrink-0" /> All {day.totalAssigned} Done
-                        </div>
-                      )}
-                      {day.isCurrentMonth && day.status === "partial" && (
-                        <div className="px-1.5 py-0.5 rounded-md bg-amber-500/20 text-amber-800 dark:text-amber-200 border border-amber-500/30 text-[9px] sm:text-[10px] font-semibold truncate group-hover:bg-amber-500/30 transition-colors shadow-2xs">
-                          ⚠️ Finish Day
-                        </div>
-                      )}
-                      {day.isCurrentMonth && day.status === "missing" && (
-                        <div className="px-1.5 py-0.5 rounded-md bg-destructive/15 text-destructive border border-destructive/25 text-[9px] sm:text-[10px] font-semibold truncate group-hover:bg-destructive/25 transition-colors shadow-2xs">
-                          + Backfill
-                        </div>
-                      )}
-                      {day.isCurrentMonth && day.status === "holiday" && (
-                        <div className="text-[9px] sm:text-[10px] text-muted-foreground truncate hidden sm:block">
-                          🏖️ {day.holidayReason || "School Off"}
-                        </div>
-                      )}
-                      {day.isCurrentMonth && day.status === "outside_term" && (
-                        <div className="text-[9px] text-muted-foreground/50 truncate hidden sm:block">
-                          {day.holidayReason || "Outside Term"}
-                        </div>
-                      )}
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
-
-            {/* Legend */}
-            <div className="mt-4 pt-3 border-t border-border flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-              <div className="flex items-center gap-1.5">
-                <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
-                <span>All Rooms Completed</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="h-2.5 w-2.5 rounded-full bg-amber-500" />
-                <span>Missed / Needs Backfill (Clickable)</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="h-2.5 w-2.5 rounded-full bg-muted border" />
-                <span>Holiday / Weekend Off</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="h-2.5 w-2.5 rounded-full bg-primary" />
-                <span>Today</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <SupervisorMonthCalendar
+          calendarDays={calendarDays}
+          currentMonthDate={currentMonthDate}
+          handleCalendarDayClick={handleCalendarDayClick}
+          handleCurrentMonth={handleCurrentMonth}
+          handleNextMonth={handleNextMonth}
+          handlePrevMonth={handlePrevMonth}
+          overview={overview}
+        />
 
         {/* 5. SUPERVISOR EVALUATION HISTORY */}
         <SupervisorEvaluationsHistory supervisorId={currentUser.id} />
       </main>
 
       {/* BACKFILL SELECTION DIALOG */}
-      <Dialog open={isBackfillDialogOpen} onOpenChange={setIsBackfillDialogOpen}>
-        <DialogContent className="sm:max-w-md rounded-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-base sm:text-lg font-bold">
-              {selectedCalendarDay?.isToday ? "Today's Inspection" : "Backfill Missed Inspection"}
-            </DialogTitle>
-            <DialogDescription className="text-xs">
-              {selectedCalendarDay?.date &&
-                format(parseISO(selectedCalendarDay.date), "EEEE, MMMM d, yyyy")}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-3 py-2">
-            <p className="text-xs text-muted-foreground">
-              Select an assigned classroom to evaluate for this date. Completed inspections are locked.
-            </p>
-
-            <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-              {classrooms.map((room) => {
-                const missedRecord = missedDays.find((m) => m.date === selectedCalendarDay?.date)
-                const isRoomPending = selectedCalendarDay?.isToday
-                  ? !room.isEvaluatedToday
-                  : missedRecord
-                  ? missedRecord.missingClassroomIds.includes(room.id)
-                  : true
-
-                return (
-                  <div
-                    key={room.id}
-                    className="p-3 rounded-xl border border-border flex items-center justify-between gap-3 bg-card shadow-2xs"
-                  >
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-bold text-foreground truncate">{room.name}</p>
-                        {!isRoomPending && (
-                          <Badge
-                            variant="outline"
-                            className="bg-emerald-500/10 text-emerald-600 border-emerald-500/30 text-[10px] px-1.5 py-0.2"
-                          >
-                            <Check className="h-2.5 w-2.5 mr-0.5" /> Done
-                          </Badge>
-                        )}
-                        {isRoomPending && (
-                          <Badge
-                            variant="outline"
-                            className="bg-amber-500/10 text-amber-600 border-amber-500/30 text-[10px] px-1.5 py-0.2"
-                          >
-                            Pending
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="text-xs text-muted-foreground">Grade {room.grade} {room.division ? `• ${room.division}` : ""}</p>
-                    </div>
-
-                    <Button
-                      size="sm"
-                      variant={isRoomPending ? "default" : "outline"}
-                      onClick={() =>
-                        selectedCalendarDay?.date &&
-                        handleStartBackfillEvaluation(room.id, selectedCalendarDay.date)
-                      }
-                      className={cn(
-                        "min-h-9 px-3 text-xs rounded-xl font-semibold shrink-0 cursor-pointer",
-                        isRoomPending
-                          ? "bg-primary hover:bg-primary/90 text-primary-foreground shadow-xs"
-                          : "text-muted-foreground hover:text-foreground"
-                      )}
-                    >
-                      {isRoomPending ? (
-                        <>
-                          Backfill <ArrowRight className="ml-1 h-3 w-3" />
-                        </>
-                      ) : (
-                        "View Record"
-                      )}
-                    </Button>
-                  </div>
-                )
-              })}
-            </div>
-
-            {/* Direct Link to Full Evaluation Center for this date */}
-            <div className="pt-3 border-t border-border/70 flex items-center justify-between gap-2">
-              <span className="text-xs text-muted-foreground">
-                Need to inspect multiple rooms?
-              </span>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  if (selectedCalendarDay?.date) {
-                    setIsBackfillDialogOpen(false)
-                    router.push(`/supervisor/evaluate?date=${selectedCalendarDay.date}`)
-                  }
-                }}
-                className="rounded-xl text-xs h-8 font-semibold cursor-pointer border-primary/40 text-primary hover:bg-primary/10"
-              >
-                Open Evaluation Workspace →
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <SupervisorBackfillDialog
+        classrooms={classrooms}
+        handleStartBackfillEvaluation={handleStartBackfillEvaluation}
+        isBackfillDialogOpen={isBackfillDialogOpen}
+        missedDays={missedDays}
+        router={router}
+        selectedCalendarDay={selectedCalendarDay}
+        setIsBackfillDialogOpen={setIsBackfillDialogOpen}
+      />
     </div>
   )
 }
@@ -921,5 +305,1014 @@ export default function SupervisorPage() {
     <ProtectedRoute allowedRoles={["supervisor"]}>
       <SupervisorDashboardContent />
     </ProtectedRoute>
+  )
+}
+
+function SupervisorStatusBanners({
+  calendarDays,
+  handleStartTodayEvaluation,
+  isTodayWorkingDay,
+  missedDays,
+  overview,
+  router,
+  setIsBackfillDialogOpen,
+  setSelectedCalendarDay,
+  todayPendingCount,
+  totalAssignedCount
+}: Pick<
+  ReturnType<typeof useSupervisorDashboardContentController>,
+  | "calendarDays"
+  | "handleStartTodayEvaluation"
+  | "isTodayWorkingDay"
+  | "missedDays"
+  | "overview"
+  | "router"
+  | "setIsBackfillDialogOpen"
+  | "setSelectedCalendarDay"
+  | "todayPendingCount"
+  | "totalAssignedCount"
+>) {
+  return (
+    <SupervisorDailyAlerts
+      calendarDays={calendarDays}
+      handleStartTodayEvaluation={handleStartTodayEvaluation}
+      isTodayWorkingDay={isTodayWorkingDay}
+      missedDays={missedDays}
+      overview={overview}
+      router={router}
+      setIsBackfillDialogOpen={setIsBackfillDialogOpen}
+      setSelectedCalendarDay={setSelectedCalendarDay}
+      todayPendingCount={todayPendingCount}
+      totalAssignedCount={totalAssignedCount}
+    />
+  )
+}
+
+function SupervisorMonthCalendar({
+  calendarDays,
+  currentMonthDate,
+  handleCalendarDayClick,
+  handleCurrentMonth,
+  handleNextMonth,
+  handlePrevMonth,
+  overview
+}: Pick<
+  ReturnType<typeof useSupervisorDashboardContentController>,
+  | "calendarDays"
+  | "currentMonthDate"
+  | "handleCalendarDayClick"
+  | "handleCurrentMonth"
+  | "handleNextMonth"
+  | "handlePrevMonth"
+  | "overview"
+>) {
+  return (
+    <Card className="rounded-2xl border-border shadow-xs overflow-hidden">
+      <SupervisorCalendarControls
+        currentMonthDate={currentMonthDate}
+        handleCurrentMonth={handleCurrentMonth}
+        handleNextMonth={handleNextMonth}
+        handlePrevMonth={handlePrevMonth}
+        overview={overview}
+      />
+
+      <SupervisorCalendarDays calendarDays={calendarDays} handleCalendarDayClick={handleCalendarDayClick} />
+    </Card>
+  )
+}
+
+function SupervisorBackfillDialog({
+  classrooms,
+  handleStartBackfillEvaluation,
+  isBackfillDialogOpen,
+  missedDays,
+  router,
+  selectedCalendarDay,
+  setIsBackfillDialogOpen
+}: Pick<
+  ReturnType<typeof useSupervisorDashboardContentController>,
+  | "classrooms"
+  | "handleStartBackfillEvaluation"
+  | "isBackfillDialogOpen"
+  | "missedDays"
+  | "router"
+  | "selectedCalendarDay"
+  | "setIsBackfillDialogOpen"
+>) {
+  return (
+    <SupervisorBackfillOptions
+      classrooms={classrooms}
+      handleStartBackfillEvaluation={handleStartBackfillEvaluation}
+      isBackfillDialogOpen={isBackfillDialogOpen}
+      missedDays={missedDays}
+      router={router}
+      selectedCalendarDay={selectedCalendarDay}
+      setIsBackfillDialogOpen={setIsBackfillDialogOpen}
+    />
+  )
+}
+
+function SupervisorSummaryMetrics({
+  missedDays,
+  todayCompletedCount,
+  todayPendingCount,
+  totalAssignedCount
+}: Pick<
+  ReturnType<typeof useSupervisorDashboardContentController>,
+  "missedDays" | "todayCompletedCount" | "todayPendingCount" | "totalAssignedCount"
+>) {
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
+      <Card className="p-3 xs:p-4 rounded-2xl border-border bg-card shadow-xs">
+        <span className="text-[10px] xs:text-[11px] font-semibold text-muted-foreground uppercase block">
+          Assigned Classrooms
+        </span>
+        <p className="text-xl xs:text-2xl font-black text-foreground mt-0.5">{totalAssignedCount}</p>
+        <span className="text-[10px] text-muted-foreground mt-0.5 block truncate">In your division</span>
+      </Card>
+
+      <Card className="p-3 xs:p-4 rounded-2xl border-border bg-card shadow-xs">
+        <span className="text-[10px] xs:text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 uppercase block">
+          Today&apos;s Done
+        </span>
+        <p className="text-xl xs:text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-0.5">
+          {todayCompletedCount}
+        </p>
+        <span className="text-[10px] text-muted-foreground mt-0.5 block truncate">
+          {todayCompletedCount === totalAssignedCount && totalAssignedCount > 0
+            ? "All rooms locked ✓"
+            : `${todayPendingCount} awaiting`}
+        </span>
+      </Card>
+
+      <Card className="p-3 xs:p-4 rounded-2xl border-border bg-card shadow-xs">
+        <span className="text-[10px] xs:text-[11px] font-semibold text-amber-600 dark:text-amber-400 uppercase block">
+          Missed Past Days
+        </span>
+        <p className="text-xl xs:text-2xl font-black text-amber-600 dark:text-amber-400 mt-0.5">{missedDays.length}</p>
+        <span className="text-[10px] text-muted-foreground mt-0.5 block truncate">Eligible to backfill</span>
+      </Card>
+
+      <Card className="p-3 xs:p-4 rounded-2xl border-border bg-card shadow-xs">
+        <span className="text-[10px] xs:text-[11px] font-semibold text-primary uppercase block">Inspection Rule</span>
+        <p className="text-base xs:text-lg sm:text-xl font-bold text-foreground mt-1">1 / Day</p>
+        <span className="text-[10px] text-muted-foreground mt-0.5 block truncate">Locks once submitted</span>
+      </Card>
+    </div>
+  )
+}
+
+function SupervisorDailyAlerts({
+  calendarDays,
+  handleStartTodayEvaluation,
+  isTodayWorkingDay,
+  missedDays,
+  overview,
+  router,
+  setIsBackfillDialogOpen,
+  setSelectedCalendarDay,
+  todayPendingCount,
+  totalAssignedCount
+}: Pick<
+  NonNullable<Parameters<typeof SupervisorStatusBanners>[0]>,
+  | "calendarDays"
+  | "handleStartTodayEvaluation"
+  | "isTodayWorkingDay"
+  | "missedDays"
+  | "overview"
+  | "router"
+  | "setIsBackfillDialogOpen"
+  | "setSelectedCalendarDay"
+  | "todayPendingCount"
+  | "totalAssignedCount"
+>) {
+  return (
+    <div className="space-y-3">
+      {/* Primary Banner: Today's Status */}
+      {isTodayWorkingDay ? (
+        todayPendingCount > 0 ? (
+          <Card className="rounded-2xl border-amber-500/40 bg-amber-500/10 shadow-xs overflow-hidden">
+            <div className="p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="flex items-start gap-3">
+                <div className="h-10 w-10 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
+                  <AlertTriangle className="h-5 w-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm sm:text-base font-bold text-amber-900 dark:text-amber-100">
+                      Today&apos;s Inspection Pending
+                    </h3>
+                    <Badge
+                      variant="outline"
+                      className="bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/40 text-[10px]"
+                    >
+                      {todayPendingCount} Room{todayPendingCount !== 1 ? "s" : ""} Left
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-amber-800/80 dark:text-amber-200/80 mt-0.5">
+                    Daily inspections for{" "}
+                    <strong>
+                      <TodayLabel />
+                    </strong>{" "}
+                    are not yet completed for all assigned rooms.
+                  </p>
+                </div>
+              </div>
+
+              <Button
+                size="sm"
+                onClick={() => handleStartTodayEvaluation()}
+                className="w-full sm:w-auto h-9 rounded-xl font-bold bg-amber-600 hover:bg-amber-700 text-white shadow-xs shrink-0"
+              >
+                Inspect Today <ArrowRight className="ml-1.5 h-4 w-4" />
+              </Button>
+            </div>
+          </Card>
+        ) : (
+          <Card className="rounded-2xl border-emerald-500/40 bg-emerald-500/10 shadow-xs overflow-hidden">
+            <div className="p-4 sm:p-5 flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                <CheckCircle2 className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-sm sm:text-base font-bold text-emerald-900 dark:text-emerald-100">
+                  All Caught Up for Today!
+                </h3>
+                <p className="text-xs text-emerald-800/80 dark:text-emerald-200/80 mt-0.5">
+                  All {totalAssignedCount} assigned classrooms have been inspected and locked for today. Great job!
+                </p>
+              </div>
+            </div>
+          </Card>
+        )
+      ) : (
+        <Card className="rounded-2xl border-border bg-card/60 shadow-xs overflow-hidden">
+          <div className="p-4 sm:p-5 flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-muted text-muted-foreground flex items-center justify-center shrink-0">
+              <CalendarOff className="h-5 w-5" />
+            </div>
+            <div>
+              <h3 className="text-sm sm:text-base font-bold text-foreground">
+                School Day Off ({overview?.todayReason || "Weekend"})
+              </h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Today is marked as a non-working day. Daily evaluations are not required.
+              </p>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Secondary Banner: Missed Past Working Days */}
+      {missedDays.length > 0 && (
+        <Card className="rounded-2xl border-amber-500/30 bg-amber-500/5 shadow-xs overflow-hidden">
+          <div className="p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <div className="h-10 w-10 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
+                <Clock className="h-5 w-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm sm:text-base font-bold text-foreground">
+                    {missedDays.length} Missed Inspection Day{missedDays.length !== 1 ? "s" : ""} in Active Term
+                  </h3>
+                  <Badge variant="outline" className="text-amber-600 border-amber-500/30 text-[10px]">
+                    Backfill Available
+                  </Badge>
+                </div>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  You can backfill points for past missed working days so classrooms don&apos;t lose points.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                size="sm"
+                onClick={() => {
+                  const firstMissed = missedDays[0]
+                  if (firstMissed) {
+                    router.push(`/supervisor/evaluate?date=${firstMissed.date}`)
+                  }
+                }}
+                className="h-9 px-3.5 rounded-xl text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white shrink-0 cursor-pointer shadow-xs"
+              >
+                Backfill {format(parseISO(missedDays[0].date), "EEE, MMM d")} (
+                {missedDays[0].missingClassroomIds.length} left)
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  const firstMissed = missedDays[0]
+                  if (firstMissed) {
+                    const targetCalDay = calendarDays.find((d) => d.date === firstMissed.date)
+                    if (targetCalDay) {
+                      setSelectedCalendarDay(targetCalDay)
+                    } else {
+                      setSelectedCalendarDay({
+                        date: firstMissed.date,
+                        dayNumber: parseInt(firstMissed.date.split("-")[2], 10),
+                        isCurrentMonth: true,
+                        isWeekend: false,
+                        isHoliday: false,
+                        isToday: false,
+                        isPast: true,
+                        isFuture: false,
+                        status: "missing",
+                        evaluatedCount: 0,
+                        totalAssigned: totalAssignedCount
+                      })
+                    }
+                    setIsBackfillDialogOpen(true)
+                  }
+                }}
+                className="h-9 rounded-xl text-xs font-semibold shrink-0"
+              >
+                View Day Rooms
+              </Button>
+            </div>
+          </div>
+        </Card>
+      )}
+    </div>
+  )
+}
+
+function SupervisorCalendarControls({
+  currentMonthDate,
+  handleCurrentMonth,
+  handleNextMonth,
+  handlePrevMonth,
+  overview
+}: Pick<
+  NonNullable<Parameters<typeof SupervisorMonthCalendar>[0]>,
+  "currentMonthDate" | "handleCurrentMonth" | "handleNextMonth" | "handlePrevMonth" | "overview"
+>) {
+  return (
+    <CardHeader className="p-4 sm:p-5 border-b border-border/60 bg-muted/20">
+      <div className="flex items-center justify-between">
+        <div>
+          <CardTitle className="text-base sm:text-lg font-bold flex items-center gap-2">
+            <CalendarIcon className="h-5 w-5 text-primary" /> Daily Inspection Calendar
+          </CardTitle>
+          <CardDescription className="text-xs">
+            {overview?.monthLabel || format(currentMonthDate, "MMMM yyyy")} &bull; Click any missed day to backfill
+            points.
+          </CardDescription>
+        </div>
+
+        <div className="flex items-center gap-1">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={handlePrevMonth}
+            className="min-h-11 min-w-11 rounded-lg cursor-pointer"
+            aria-label="Previous month"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleCurrentMonth}
+            className="min-h-11 px-3 rounded-lg text-xs font-semibold cursor-pointer"
+          >
+            Today
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={handleNextMonth}
+            className="min-h-11 min-w-11 rounded-lg cursor-pointer"
+            aria-label="Next month"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+    </CardHeader>
+  )
+}
+
+function SupervisorCalendarDays({
+  calendarDays,
+  handleCalendarDayClick
+}: Pick<NonNullable<Parameters<typeof SupervisorMonthCalendar>[0]>, "calendarDays" | "handleCalendarDayClick">) {
+  return (
+    <CardContent className="p-3 sm:p-5 space-y-0">
+      {/* Days header bar */}
+      <div className="grid grid-cols-7 border-t border-x border-border/80 text-center text-[11px] sm:text-xs font-bold tracking-wider text-muted-foreground uppercase bg-muted/40 py-2.5 rounded-t-xl">
+        <div>Mon</div>
+        <div>Tue</div>
+        <div>Wed</div>
+        <div>Thu</div>
+        <div>Fri</div>
+        <div className="text-muted-foreground/60">Sat</div>
+        <div className="text-muted-foreground/60">Sun</div>
+      </div>
+
+      {/* Calendar grid with 1px border dividers */}
+      <div className="grid grid-cols-7 gap-px bg-border/80 border border-border/80 rounded-b-xl overflow-hidden shadow-xs">
+        {calendarDays.map((day) => {
+          const isClickable =
+            day.isCurrentMonth &&
+            (day.status === "missing" ||
+              day.status === "partial" ||
+              (day.isToday && day.status !== "weekend" && day.status !== "holiday" && day.status !== "outside_term"))
+
+          return (
+            <button
+              key={day.date}
+              onClick={() => isClickable && handleCalendarDayClick(day)}
+              disabled={!isClickable}
+              type="button"
+              className={cn(
+                "min-h-16 sm:min-h-25 p-1.5 sm:p-2.5 text-left transition-colors flex flex-col justify-between select-none relative group",
+                !day.isCurrentMonth
+                  ? "bg-muted/15 text-muted-foreground/30 cursor-default"
+                  : day.status === "outside_term"
+                    ? "bg-muted/35 text-muted-foreground/50 cursor-not-allowed"
+                    : day.status === "completed"
+                      ? "bg-card hover:bg-emerald-500/5 text-foreground"
+                      : day.status === "partial"
+                        ? "bg-card hover:bg-amber-500/10 text-foreground cursor-pointer"
+                        : day.status === "missing"
+                          ? "bg-card hover:bg-destructive/10 text-foreground cursor-pointer"
+                          : day.status === "holiday"
+                            ? "bg-muted/30 text-muted-foreground/70 cursor-not-allowed"
+                            : day.status === "weekend"
+                              ? "bg-muted/20 text-muted-foreground/40 cursor-not-allowed"
+                              : "bg-card text-muted-foreground/60 cursor-default"
+              )}
+            >
+              {/* Top Row: Day number & Quick Badge */}
+              <div className="flex items-center justify-between w-full">
+                <span
+                  className={cn(
+                    "text-xs sm:text-sm font-bold tracking-tight",
+                    !day.isCurrentMonth && "text-muted-foreground/30 font-medium",
+                    day.isToday &&
+                      day.isCurrentMonth &&
+                      "w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[10px] sm:text-xs font-black shadow-xs"
+                  )}
+                >
+                  {day.dayNumber}
+                </span>
+
+                {/* Status indicator badge */}
+                {day.isCurrentMonth && (
+                  <>
+                    {day.status === "completed" && (
+                      <span className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                        <Check className="h-3 w-3 stroke-3" />
+                        <span className="sr-only">All inspections complete</span>
+                      </span>
+                    )}
+                    {(day.status === "missing" || day.status === "partial") && (
+                      <span className="text-[9px] font-bold px-1 py-0.5 rounded bg-amber-500/20 text-amber-700 dark:text-amber-300">
+                        {day.evaluatedCount}/{day.totalAssigned}
+                      </span>
+                    )}
+                    {day.status === "holiday" && (
+                      <span className="text-[9px] text-muted-foreground/60 uppercase font-semibold">Off</span>
+                    )}
+                    {day.status === "weekend" && (
+                      <span className="text-[9px] text-muted-foreground/40 font-medium hidden sm:inline">Off</span>
+                    )}
+                    {day.status === "outside_term" && (
+                      <span className="text-[9px] text-muted-foreground/50 font-medium hidden sm:inline">Break</span>
+                    )}
+                  </>
+                )}
+              </div>
+
+              {/* Event Pill inside the cell (like Google/Apple calendar) */}
+              <div className="mt-1 w-full">
+                {day.isCurrentMonth && day.status === "completed" && (
+                  <div className="px-1.5 py-0.5 rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20 text-[9px] sm:text-[10px] font-semibold truncate flex items-center gap-1 shadow-2xs">
+                    <Check className="h-2.5 w-2.5 stroke-3 shrink-0" /> All {day.totalAssigned} Done
+                  </div>
+                )}
+                {day.isCurrentMonth && day.status === "partial" && (
+                  <div className="px-1.5 py-0.5 rounded-md bg-amber-500/20 text-amber-800 dark:text-amber-200 border border-amber-500/30 text-[9px] sm:text-[10px] font-semibold truncate group-hover:bg-amber-500/30 transition-colors shadow-2xs">
+                    ⚠️ Finish Day
+                  </div>
+                )}
+                {day.isCurrentMonth && day.status === "missing" && (
+                  <div className="px-1.5 py-0.5 rounded-md bg-destructive/15 text-destructive border border-destructive/25 text-[9px] sm:text-[10px] font-semibold truncate group-hover:bg-destructive/25 transition-colors shadow-2xs">
+                    + Backfill
+                  </div>
+                )}
+                {day.isCurrentMonth && day.status === "holiday" && (
+                  <div className="text-[9px] sm:text-[10px] text-muted-foreground truncate hidden sm:block">
+                    🏖️ {day.holidayReason || "School Off"}
+                  </div>
+                )}
+                {day.isCurrentMonth && day.status === "outside_term" && (
+                  <div className="text-[9px] text-muted-foreground/50 truncate hidden sm:block">
+                    {day.holidayReason || "Outside Term"}
+                  </div>
+                )}
+              </div>
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Legend */}
+      <div className="mt-4 pt-3 border-t border-border flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+        <div className="flex items-center gap-1.5">
+          <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
+          <span>All Rooms Completed</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="h-2.5 w-2.5 rounded-full bg-amber-500" />
+          <span>Missed / Needs Backfill (Clickable)</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="h-2.5 w-2.5 rounded-full bg-muted border" />
+          <span>Holiday / Weekend Off</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="h-2.5 w-2.5 rounded-full bg-primary" />
+          <span>Today</span>
+        </div>
+      </div>
+    </CardContent>
+  )
+}
+
+function SupervisorBackfillOptions({
+  classrooms,
+  handleStartBackfillEvaluation,
+  isBackfillDialogOpen,
+  missedDays,
+  router,
+  selectedCalendarDay,
+  setIsBackfillDialogOpen
+}: Pick<
+  NonNullable<Parameters<typeof SupervisorBackfillDialog>[0]>,
+  | "classrooms"
+  | "handleStartBackfillEvaluation"
+  | "isBackfillDialogOpen"
+  | "missedDays"
+  | "router"
+  | "selectedCalendarDay"
+  | "setIsBackfillDialogOpen"
+>) {
+  return (
+    <Dialog open={isBackfillDialogOpen} onOpenChange={setIsBackfillDialogOpen}>
+      <DialogContent className="sm:max-w-md rounded-2xl">
+        <DialogHeader>
+          <DialogTitle className="text-base sm:text-lg font-bold">
+            {selectedCalendarDay?.isToday ? "Today's Inspection" : "Backfill Missed Inspection"}
+          </DialogTitle>
+          <DialogDescription className="text-xs">
+            {selectedCalendarDay?.date && format(parseISO(selectedCalendarDay.date), "EEEE, MMMM d, yyyy")}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-3 py-2">
+          <p className="text-xs text-muted-foreground">
+            Select an assigned classroom to evaluate for this date. Completed inspections are locked.
+          </p>
+
+          <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+            {classrooms.map((room) => {
+              const missedRecord = missedDays.find((m) => m.date === selectedCalendarDay?.date)
+              const isRoomPending = selectedCalendarDay?.isToday
+                ? !room.isEvaluatedToday
+                : missedRecord
+                  ? missedRecord.missingClassroomIds.includes(room.id)
+                  : true
+
+              return (
+                <div
+                  key={room.id}
+                  className="p-3 rounded-xl border border-border flex items-center justify-between gap-3 bg-card shadow-2xs"
+                >
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-bold text-foreground truncate">{room.name}</p>
+                      {!isRoomPending && (
+                        <Badge
+                          variant="outline"
+                          className="bg-emerald-500/10 text-emerald-600 border-emerald-500/30 text-[10px] px-1.5 py-0.2"
+                        >
+                          <Check className="h-2.5 w-2.5 mr-0.5" /> Done
+                        </Badge>
+                      )}
+                      {isRoomPending && (
+                        <Badge
+                          variant="outline"
+                          className="bg-amber-500/10 text-amber-600 border-amber-500/30 text-[10px] px-1.5 py-0.2"
+                        >
+                          Pending
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Grade {room.grade} {room.division ? `• ${room.division}` : ""}
+                    </p>
+                  </div>
+
+                  <Button
+                    size="sm"
+                    variant={isRoomPending ? "default" : "outline"}
+                    onClick={() =>
+                      selectedCalendarDay?.date && handleStartBackfillEvaluation(room.id, selectedCalendarDay.date)
+                    }
+                    className={cn(
+                      "min-h-9 px-3 text-xs rounded-xl font-semibold shrink-0 cursor-pointer",
+                      isRoomPending
+                        ? "bg-primary hover:bg-primary/90 text-primary-foreground shadow-xs"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    {isRoomPending ? (
+                      <>
+                        Backfill <ArrowRight className="ml-1 h-3 w-3" />
+                      </>
+                    ) : (
+                      "View Record"
+                    )}
+                  </Button>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Direct Link to Full Evaluation Center for this date */}
+          <div className="pt-3 border-t border-border/70 flex items-center justify-between gap-2">
+            <span className="text-xs text-muted-foreground">Need to inspect multiple rooms?</span>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                if (selectedCalendarDay?.date) {
+                  setIsBackfillDialogOpen(false)
+                  router.push(`/supervisor/evaluate?date=${selectedCalendarDay.date}`)
+                }
+              }}
+              className="rounded-xl text-xs h-8 font-semibold cursor-pointer border-primary/40 text-primary hover:bg-primary/10"
+            >
+              Open Evaluation Workspace →
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function SupervisorClassroomQueue({
+  classrooms,
+  handleStartTodayEvaluation,
+  isQueueOpen,
+  isTodayWorkingDay,
+  queueFilter,
+  setIsQueueOpen,
+  setQueueFilter,
+  todayCompletedCount,
+  todayPendingCount,
+  totalAssignedCount
+}: Pick<
+  ReturnType<typeof useSupervisorDashboardContentController>,
+  | "classrooms"
+  | "handleStartTodayEvaluation"
+  | "isQueueOpen"
+  | "isTodayWorkingDay"
+  | "queueFilter"
+  | "setIsQueueOpen"
+  | "setQueueFilter"
+  | "todayCompletedCount"
+  | "todayPendingCount"
+  | "totalAssignedCount"
+>) {
+  const pendingRooms = classrooms.filter((c) => !c.isEvaluatedToday)
+  const completedRooms = classrooms.filter((c) => c.isEvaluatedToday)
+  const displayedRooms = queueFilter === "pending" ? pendingRooms : queueFilter === "done" ? completedRooms : classrooms
+
+  return (
+    <Card className="rounded-2xl border-border shadow-xs overflow-hidden transition-[color,background-color,border-color,box-shadow]">
+      {/* Dropdown Header Trigger */}
+      <SupervisorQueueHeader
+        isQueueOpen={isQueueOpen}
+        isTodayWorkingDay={isTodayWorkingDay}
+        setIsQueueOpen={setIsQueueOpen}
+        todayCompletedCount={todayCompletedCount}
+        todayPendingCount={todayPendingCount}
+        totalAssignedCount={totalAssignedCount}
+      />
+
+      {/* Collapsible Dropdown Content */}
+      {isQueueOpen && (
+        <CardContent className="p-3 sm:p-5 space-y-4 animate-in fade-in-50 duration-200">
+          {classrooms.length === 0 ? (
+            <div className="py-8 text-center text-xs text-muted-foreground">
+              No classrooms currently assigned to your supervisor account.
+            </div>
+          ) : (
+            <>
+              {/* Top Action Bar: Quick Classroom Selector Dropdown & Filter Pills */}
+              <SupervisorQueueFilters
+                classrooms={classrooms}
+                completedRooms={completedRooms}
+                handleStartTodayEvaluation={handleStartTodayEvaluation}
+                pendingRooms={pendingRooms}
+                queueFilter={queueFilter}
+                setQueueFilter={setQueueFilter}
+                todayCompletedCount={todayCompletedCount}
+                todayPendingCount={todayPendingCount}
+              />
+
+              {/* Filtered Classroom Cards Grid */}
+              {displayedRooms.length === 0 ? (
+                <div className="py-8 text-center text-xs text-muted-foreground">
+                  {queueFilter === "pending"
+                    ? "All classrooms have been inspected today! Great work."
+                    : "No classrooms in this filter."}
+                </div>
+              ) : (
+                <SupervisorQueueRooms
+                  displayedRooms={displayedRooms}
+                  handleStartTodayEvaluation={handleStartTodayEvaluation}
+                  isTodayWorkingDay={isTodayWorkingDay}
+                />
+              )}
+            </>
+          )}
+        </CardContent>
+      )}
+    </Card>
+  )
+}
+
+function SupervisorQueueHeader({
+  isQueueOpen,
+  isTodayWorkingDay,
+  setIsQueueOpen,
+  todayCompletedCount,
+  todayPendingCount,
+  totalAssignedCount
+}: Pick<
+  NonNullable<Parameters<typeof SupervisorClassroomQueue>[0]>,
+  | "isQueueOpen"
+  | "isTodayWorkingDay"
+  | "setIsQueueOpen"
+  | "todayCompletedCount"
+  | "todayPendingCount"
+  | "totalAssignedCount"
+>) {
+  return (
+    <CardHeader
+      onClick={() => setIsQueueOpen((prev) => !prev)}
+      className="p-4 sm:p-5 border-b border-border/60 bg-muted/20 cursor-pointer hover:bg-muted/30 transition-colors select-none"
+    >
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+            <ClipboardCheck className="h-5 w-5" />
+          </div>
+          <div className="min-w-0">
+            <CardTitle className="text-base sm:text-lg font-bold flex items-center gap-2 truncate">
+              Today&apos;s Classroom Queue
+            </CardTitle>
+            <CardDescription className="text-xs truncate">
+              <TodayLabel /> &bull; {isTodayWorkingDay ? "Daily Working Inspection" : "Non-Working Day"}
+            </CardDescription>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          {todayPendingCount > 0 ? (
+            <Badge
+              variant="outline"
+              className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30 text-xs font-semibold"
+            >
+              {todayPendingCount} Pending
+            </Badge>
+          ) : (
+            <Badge
+              variant="outline"
+              className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 text-xs font-semibold"
+            >
+              All Complete ✓
+            </Badge>
+          )}
+          <Badge variant="outline" className="text-xs hidden sm:inline-flex">
+            {todayCompletedCount} / {totalAssignedCount} Done
+          </Badge>
+          <div
+            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground"
+            aria-label={isQueueOpen ? "Collapse queue" : "Expand queue"}
+          >
+            <ChevronDown
+              className={cn("h-5 w-5 transition-transform duration-300", isQueueOpen ? "rotate-180" : "rotate-0")}
+            />
+          </div>
+        </div>
+      </div>
+    </CardHeader>
+  )
+}
+
+function SupervisorQueueFilters({
+  classrooms,
+  completedRooms,
+  handleStartTodayEvaluation,
+  pendingRooms,
+  queueFilter,
+  setQueueFilter,
+  todayCompletedCount,
+  todayPendingCount
+}: Pick<
+  NonNullable<Parameters<typeof SupervisorClassroomQueue>[0]>,
+  | "classrooms"
+  | "handleStartTodayEvaluation"
+  | "queueFilter"
+  | "setQueueFilter"
+  | "todayCompletedCount"
+  | "todayPendingCount"
+> & {
+  completedRooms: import("@/app/actions/calendar-actions").DailyClassroomStatus[]
+  pendingRooms: import("@/app/actions/calendar-actions").DailyClassroomStatus[]
+}) {
+  return (
+    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pb-3 border-b border-border/50">
+      {/* Quick Selection Dropdown */}
+      <div className="w-full sm:w-80">
+        <Select
+          onValueChange={(classroomId) => {
+            if (classroomId) {
+              handleStartTodayEvaluation(classroomId)
+            }
+          }}
+        >
+          <SelectTrigger className="w-full h-10 rounded-xl bg-card border-border/80 shadow-2xs font-medium text-xs sm:text-sm">
+            <SelectValue placeholder="Quick jump to classroom..." />
+          </SelectTrigger>
+          <SelectContent className="max-h-80">
+            {pendingRooms.length > 0 && (
+              <SelectGroup>
+                <SelectLabel className="text-amber-600 dark:text-amber-400 font-bold text-xs">
+                  Pending Inspection ({pendingRooms.length})
+                </SelectLabel>
+                {pendingRooms.map((room) => (
+                  <SelectItem key={room.id} value={room.id} className="cursor-pointer">
+                    <span className="font-semibold text-foreground">{room.name}</span>
+                    <span className="text-xs text-muted-foreground ml-2">Grade {room.grade}</span>
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            )}
+            {completedRooms.length > 0 && (
+              <SelectGroup>
+                <SelectLabel className="text-emerald-600 dark:text-emerald-400 font-bold text-xs mt-2">
+                  Completed Today ({completedRooms.length})
+                </SelectLabel>
+                {completedRooms.map((room) => (
+                  <SelectItem key={room.id} value={room.id} className="cursor-pointer">
+                    <span className="text-foreground">{room.name}</span>
+                    <span className="text-xs text-emerald-600 dark:text-emerald-400 ml-2 font-bold">
+                      Score: {room.todayScore}/{room.todayMaxScore}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            )}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Filter Tabs / Pills */}
+      <div className="flex items-center gap-1 bg-muted/60 p-1 rounded-xl self-start sm:self-auto">
+        <button
+          type="button"
+          onClick={() => setQueueFilter("all")}
+          className={cn(
+            "px-3 py-1 text-xs font-semibold rounded-lg transition-colors cursor-pointer",
+            queueFilter === "all"
+              ? "bg-card text-foreground shadow-2xs font-bold"
+              : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          All ({classrooms.length})
+        </button>
+        <button
+          type="button"
+          onClick={() => setQueueFilter("pending")}
+          className={cn(
+            "px-3 py-1 text-xs font-semibold rounded-lg transition-colors cursor-pointer",
+            queueFilter === "pending"
+              ? "bg-amber-500/20 text-amber-700 dark:text-amber-300 font-bold"
+              : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          Pending ({todayPendingCount})
+        </button>
+        <button
+          type="button"
+          onClick={() => setQueueFilter("done")}
+          className={cn(
+            "px-3 py-1 text-xs font-semibold rounded-lg transition-colors cursor-pointer",
+            queueFilter === "done"
+              ? "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-bold"
+              : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          Done ({todayCompletedCount})
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function SupervisorQueueRooms({
+  displayedRooms,
+  handleStartTodayEvaluation,
+  isTodayWorkingDay
+}: Pick<
+  NonNullable<Parameters<typeof SupervisorClassroomQueue>[0]>,
+  "handleStartTodayEvaluation" | "isTodayWorkingDay"
+> & { displayedRooms: import("@/app/actions/calendar-actions").DailyClassroomStatus[] }) {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      {displayedRooms.map((room) => (
+        <div
+          key={room.id}
+          className={cn(
+            "p-3.5 rounded-2xl border transition-[color,background-color,border-color,box-shadow] flex flex-col justify-between gap-3 shadow-2xs",
+            room.isEvaluatedToday
+              ? "bg-card/70 border-border/70"
+              : "bg-card border-primary/30 hover:border-primary/60 hover:shadow-xs"
+          )}
+        >
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <p className="font-bold text-sm sm:text-base text-foreground truncate">{room.name}</p>
+              <p className="text-xs text-muted-foreground">
+                Grade {room.grade} {room.division ? `• ${room.division}` : ""}
+              </p>
+            </div>
+
+            {room.isEvaluatedToday ? (
+              <Badge
+                variant="outline"
+                className="bg-emerald-500/10 text-emerald-600 border-emerald-500/30 text-[10px] shrink-0"
+              >
+                <Lock className="h-3 w-3 mr-1" /> Locked
+              </Badge>
+            ) : (
+              <Badge
+                variant="outline"
+                className="bg-amber-500/10 text-amber-600 border-amber-500/30 text-[10px] shrink-0"
+              >
+                Pending
+              </Badge>
+            )}
+          </div>
+
+          <div className="pt-2 border-t border-border/60 flex items-center justify-between">
+            {room.isEvaluatedToday ? (
+              <div className="text-xs">
+                <span className="font-bold text-foreground">
+                  Score: {room.todayScore} / {room.todayMaxScore}
+                </span>
+              </div>
+            ) : (
+              <span className="text-[11px] text-muted-foreground">Not submitted today</span>
+            )}
+
+            {room.isEvaluatedToday ? (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleStartTodayEvaluation(room.id)
+                }}
+                className="min-h-11 px-3 text-xs rounded-xl text-muted-foreground hover:text-foreground cursor-pointer"
+              >
+                View Record
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleStartTodayEvaluation(room.id)
+                }}
+                disabled={!isTodayWorkingDay}
+                className="min-h-11 px-3.5 text-xs rounded-xl font-bold bg-primary hover:bg-primary/90 text-primary-foreground cursor-pointer"
+              >
+                Inspect Room <ArrowRight className="ml-1 h-3 w-3" />
+              </Button>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
   )
 }

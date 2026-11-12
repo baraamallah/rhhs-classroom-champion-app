@@ -1,0 +1,129 @@
+react-doctor/js-set-map-lookups - Docs | React Doctor
+New
+Introducing React Bench, see how different models perform on React code
+Features
+Docs
+Blog
+Changelog
+Collapse all
+Overview
+What Is React Doctor?
+Quickstart
+React Maintainability
+Install for Coding Agents
+How to Fix Issues
+CI & PRs
+GitHub Actions Setup
+Updating CI
+Other CI Providers
+Migrating to CI v2
+Configuration
+Config Files
+ESLint & oxlint Plugins
+Add Custom Rules
+Reference
+CLI Reference
+GitHub Action Reference
+Node.js API
+Community
+Changelog
+Legal
+Modified MIT License
+Terms of Service
+Privacy Policy
+Data Use
+Security
+Company
+Support
+Rules
+Rules reference
+Rules reference
+/
+Performance
+react-doctor/js-set-map-lookups
+Use Set or Map only when repeated lookups amortize construction for a stable collection
+Status
+Active
+Category
+Performance
+Assessment
+Evidence-required risk
+Required evidence
+source code, runtime behavior, measurement
+Default configuration
+Enabled
+Default severity
+warn
+Show technical metadata
+Scope
+All supported frameworks
+Active when
+always
+Tags
+test-noise
+Priority
+48 (P3)
+Source
+oxlint-plugin-react-doctor
+Rule set
+oxlint-plugin-react-doctor 0.9.3 (prompt schema 2)
+On this page
+Validation prompt
+Evidence boundary
+Fix prompt
+Repository-wide copy prompt
+Validation prompt
+Confirm the detector match and collect the required evidence before deciding whether an edit is warranted.
+The rule fires on array includes or indexOf inside a loop after excluding string-like receivers. Confirm the same stable collection serves enough repeated lookups to amortize Set construction, and preserve indexOf position or -1 semantics when callers use them. Do not infer a universal input-size cutoff.
+Evidence boundary
+The diagnostic proves only that the detector’s modeled source pattern matched. It does not prove runtime impact, product intent, rendered failure, or that one remediation is correct.
+Establish the environment, repository policy, exceptions, and required rendered or runtime evidence before deciding the occurrence.
+Record one outcome:
+Confirmed failure:
+The required evidence establishes the violation.
+Rejected:
+A documented exception or false-positive predicate applies.
+Needs evidence:
+Named evidence can still be collected.
+Unavailable:
+Required evidence cannot be collected in this run.
+Waived with evidence:
+An authorized, scoped exception applies to an established failure.
+Observation:
+The review records an optional tradeoff without claiming a defect.
+A waiver records its scope, authority, evidence, and review condition. It is not a pass or false positive.
+Default severity is registry metadata. Use the occurrence’s JSON severity after repository configuration when ordering real findings.
+Fix prompt
+Apply this candidate correction only after the required evidence confirms the risk.
+For confirmed repeated membership checks, build one Set outside the loop and reuse it. Keep indexOf when the position matters, preserve SameValueZero and duplicate semantics, and measure the real workload including construction and memory. Use a Map only for an actual key-to-value contract. See
+https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Set
+Repository-wide copy prompt
+Use this repository-wide prompt only after validating each occurrence. For one occurrence, use the guidance above.
+Show repository-wide prompt
+Fix every confirmed
+react-doctor/js-set-map-lookups
+diagnostic in the current repository.
+Required change:
+For confirmed repeated membership checks, build one Set outside the loop and reuse it. Keep indexOf when the position matters, preserve SameValueZero and duplicate semantics, and measure the real workload including construction and memory. Use a Map only for an actual key-to-value contract. See
+https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Set
+.
+Validation before editing:
+The rule fires on array includes or indexOf inside a loop after excluding string-like receivers. Confirm the same stable collection serves enough repeated lookups to amortize Set construction, and preserve indexOf position or -1 semantics when callers use them. Do not infer a universal input-size cutoff.
+Constraints:
+Make the smallest change that fixes the root cause.
+Preserve behavior and interfaces unrelated to this diagnostic.
+Reuse existing project components, utilities, and conventions.
+Preserve resource ownership and cleanup. Do not move work into a hotter render or frame path.
+If syntax proves only a candidate cost, require a relevant trace, bundle report, payload measurement, or metric before editing.
+Without evidence, record Needs evidence. Compare the same scenario before and after; keep the change only when its target metric improves without regression.
+Adapt identifiers and framework details instead of copying blindly.
+Do not disable the rule or suppress matching code.
+Assessment:
+Record detector evidence, applicability facts, assumptions, missing evidence, and the rule class for this occurrence.
+Return one outcome: Confirmed failure, Rejected, Needs evidence, Unavailable, Waived with evidence, or Observation.
+A waiver records the established failure, scope, authority, evidence, and review or expiry condition. It is not a pass or false positive.
+Verification:
+Run focused tests for the changed behavior.
+Run React Doctor and confirm this diagnostic no longer appears from changed code.
+Run an unfiltered scan of the affected scope before claiming no cross-category regression.
+Report the files changed and any checks you could not run.

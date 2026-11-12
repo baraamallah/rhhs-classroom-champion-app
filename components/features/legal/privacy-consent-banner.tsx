@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import { Shield, Settings, Check, Lock, Info } from "lucide-react"
 import { useConsent } from "@/components/providers/consent-provider"
@@ -13,40 +13,32 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogFooter,
+  DialogFooter
 } from "@/components/ui/dialog"
 
 export function PrivacyConsentBanner() {
-  const {
-    consent,
-    hasDecided,
-    isModalOpen,
-    openModal,
-    closeModal,
-    updateConsent,
-    acceptAll,
-    rejectNonEssential,
-  } = useConsent()
+  const { consent, hasDecided, isModalOpen, openModal, closeModal, updateConsent, acceptAll, rejectNonEssential } =
+    useConsent()
 
   // Modal switches state (defaults to current consent or false for non-essential)
   const [analyticsEnabled, setAnalyticsEnabled] = useState(false)
-  const [functionalEnabled, setFunctionalEnabled] = useState(false)
+  const functionalEnabled = useRef(false)
 
   useEffect(() => {
     if (consent) {
       setAnalyticsEnabled(consent.analytics)
-      setFunctionalEnabled(consent.functional)
+      functionalEnabled.current = consent.functional
     } else {
       // Affirmative consent requirement: Non-essential defaults to OFF
       setAnalyticsEnabled(false)
-      setFunctionalEnabled(false)
+      functionalEnabled.current = false
     }
   }, [consent, isModalOpen])
 
   const handleSaveCustom = () => {
     updateConsent({
       analytics: analyticsEnabled,
-      functional: functionalEnabled,
+      functional: functionalEnabled.current
     })
   }
 
@@ -65,11 +57,11 @@ export function PrivacyConsentBanner() {
                   <Shield className="h-5 w-5" />
                 </div>
                 <div className="space-y-1 text-xs sm:text-sm text-muted-foreground leading-relaxed">
-                  <p className="text-foreground font-semibold text-sm sm:text-base">
-                    Privacy &amp; Cookie Preferences
-                  </p>
+                  <p className="text-foreground font-semibold text-sm sm:text-base">Privacy &amp; Cookie Preferences</p>
                   <p>
-                    We use essential browser storage for website display preferences under Lebanese Law No. 81/2018. With your consent, we also gather anonymized performance metrics (Vercel Web Analytics &amp; Speed Insights) to help optimize page loading speeds on school networks.
+                    We use essential browser storage for website display preferences under Lebanese Law No. 81/2018.
+                    With your consent, we also gather anonymized performance metrics (Vercel Web Analytics &amp; Speed
+                    Insights) to help optimize page loading speeds on school networks.
                   </p>
                   <div className="flex items-center gap-3 pt-1 text-xs">
                     <Link
@@ -125,12 +117,11 @@ export function PrivacyConsentBanner() {
           <DialogHeader className="space-y-2">
             <div className="flex items-center gap-2 text-primary">
               <Shield className="h-5 w-5" />
-              <DialogTitle className="text-lg font-bold text-foreground">
-                Privacy &amp; Cookie Preferences
-              </DialogTitle>
+              <DialogTitle className="text-lg font-bold text-foreground">Privacy &amp; Cookie Preferences</DialogTitle>
             </div>
             <DialogDescription className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-              Customize which categories of storage and telemetry you allow. You can adjust your preferences at any time via the Cookie Settings link in the footer.
+              Customize which categories of storage and telemetry you allow. You can adjust your preferences at any time
+              via the Cookie Settings link in the footer.
             </DialogDescription>
           </DialogHeader>
 
@@ -140,16 +131,15 @@ export function PrivacyConsentBanner() {
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <Lock className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-semibold text-foreground">
-                    Essential Browser Storage
-                  </span>
+                  <span className="text-sm font-semibold text-foreground">Essential Browser Storage</span>
                 </div>
                 <Badge variant="secondary" className="text-[11px] font-semibold bg-muted text-muted-foreground">
                   Always Active
                 </Badge>
               </div>
               <p className="text-xs text-muted-foreground leading-relaxed">
-                Remembers your chosen interface display theme (Light/Dark mode) and affirmative privacy choices. These are strictly necessary for basic site usability and cannot be disabled.
+                Remembers your chosen interface display theme (Light/Dark mode) and affirmative privacy choices. These
+                are strictly necessary for basic site usability and cannot be disabled.
               </p>
             </div>
 
@@ -157,9 +147,7 @@ export function PrivacyConsentBanner() {
             <div className="pt-4 space-y-2">
               <div className="flex items-center justify-between gap-3">
                 <div className="space-y-0.5">
-                  <span className="text-sm font-semibold text-foreground">
-                    Performance &amp; Analytics Telemetry
-                  </span>
+                  <span className="text-sm font-semibold text-foreground">Performance &amp; Analytics Telemetry</span>
                   <p className="text-[11px] text-muted-foreground">
                     Cookie-free, aggregated Web Vitals and route latency metrics
                   </p>
@@ -172,7 +160,9 @@ export function PrivacyConsentBanner() {
                 />
               </div>
               <p className="text-xs text-muted-foreground leading-relaxed">
-                Measures page loading speeds and aggregated platform stability across school Wi-Fi and mobile networks using Vercel Web Analytics and Speed Insights. It does not track individual students, student IDs, or personal IP addresses.
+                Measures page loading speeds and aggregated platform stability across school Wi-Fi and mobile networks
+                using Vercel Web Analytics and Speed Insights. It does not track individual students, student IDs, or
+                personal IP addresses.
               </p>
             </div>
           </div>
@@ -180,16 +170,13 @@ export function PrivacyConsentBanner() {
           <div className="p-3 rounded-xl bg-muted/50 border border-border/50 text-[11px] text-muted-foreground flex items-start gap-2">
             <Info className="h-4 w-4 shrink-0 text-primary mt-0.5" />
             <span>
-              Rafic Hariri High School complies with Lebanese Law No. 81/2018. Student data is processed solely for school educational stewardship without commercial monetization.
+              Rafic Hariri High School complies with Lebanese Law No. 81/2018. Student data is processed solely for
+              school educational stewardship without commercial monetization.
             </span>
           </div>
 
           <DialogFooter className="flex-col sm:flex-row gap-2 pt-2">
-            <Button
-              variant="outline"
-              onClick={rejectNonEssential}
-              className="w-full sm:w-auto min-h-11 text-xs"
-            >
+            <Button variant="outline" onClick={rejectNonEssential} className="w-full sm:w-auto min-h-11 text-xs">
               Essential Only
             </Button>
             <div className="flex items-center gap-2 w-full sm:w-auto">

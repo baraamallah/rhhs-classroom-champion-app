@@ -1,18 +1,21 @@
 export const SCHOOL_TIME_ZONE = "Asia/Beirut"
 
 const monthFormatter = new Intl.DateTimeFormat("en-US", {
-  timeZone: SCHOOL_TIME_ZONE, year: "numeric", month: "numeric",
+  timeZone: SCHOOL_TIME_ZONE,
+  year: "numeric",
+  month: "numeric"
 })
 const offsetFormatter = new Intl.DateTimeFormat("en-US", {
-  timeZone: SCHOOL_TIME_ZONE, timeZoneName: "longOffset",
+  timeZone: SCHOOL_TIME_ZONE,
+  timeZoneName: "longOffset"
 })
 
 export function getSchoolMonth(now = new Date()) {
   const parts = monthFormatter.formatToParts(now)
-  return {
-    year: Number(parts.find((part) => part.type === "year")!.value),
-    month: Number(parts.find((part) => part.type === "month")!.value),
-  }
+  const year = parts.find((part) => part.type === "year")?.value
+  const month = parts.find((part) => part.type === "month")?.value
+  if (!year || !month) throw new Error("School calendar date could not be formatted")
+  return { year: Number(year), month: Number(month) }
 }
 
 export function getSchoolMonthKey(now = new Date()) {
@@ -25,7 +28,8 @@ function schoolMidnight(year: number, month: number) {
   let instant = midnight
   // Resolve the offset at the target date, including daylight saving changes.
   for (let i = 0; i < 3; i++) {
-    const offset = offsetFormatter.formatToParts(new Date(instant)).find((part) => part.type === "timeZoneName")!.value
+    const offset = offsetFormatter.formatToParts(new Date(instant)).find((part) => part.type === "timeZoneName")?.value
+    if (!offset) throw new Error("School time-zone offset could not be resolved")
     const match = offset.match(/GMT([+-])(\d{2}):(\d{2})/)
     const minutes = match ? (Number(match[2]) * 60 + Number(match[3])) * (match[1] === "+" ? 1 : -1) : 0
     instant = midnight - minutes * 60_000
@@ -40,7 +44,7 @@ export function getMonthPeriod(year: number, month: number) {
   return {
     key: `${year}-${String(month).padStart(2, "0")}`,
     start: schoolMidnight(year, month),
-    end: schoolMidnight(month === 12 ? year + 1 : year, month === 12 ? 1 : month + 1),
+    end: schoolMidnight(month === 12 ? year + 1 : year, month === 12 ? 1 : month + 1)
   }
 }
 

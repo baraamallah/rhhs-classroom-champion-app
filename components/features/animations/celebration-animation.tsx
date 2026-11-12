@@ -46,7 +46,7 @@ export function CelebrationAnimation({ show, title, subtitle }: CelebrationAnima
         <div className="absolute inset-0 pointer-events-none">
           {STAR_POSITIONS.map((position, i) => (
             <m.div
-              key={i}
+              key={`${position.top}-${position.left}`}
               className="absolute"
               style={{
                 top: position.top,

@@ -1,5 +1,6 @@
 "use client"
 
+import { SettingHelp } from "./setting-help"
 import { useState, useEffect, useRef } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
@@ -18,23 +19,25 @@ export function WinnerRevealModeToggle({ initialEnabled }: WinnerRevealModeToggl
   const [loading, setLoading] = useState(initialEnabled === undefined)
   const [saving, setSaving] = useState(false)
 
-  const hasLoaded = useRef(false)
-
   useEffect(() => {
-    if (initialEnabled !== undefined || hasLoaded.current) return
-    hasLoaded.current = true
-    loadSetting()
-  }, [])
-
-  const loadSetting = async () => {
-    setLoading(true)
-    try {
-      const result = await getWinnerRevealMode()
-      if (result.success) setEnabled(result.enabled ?? false)
-    } finally {
-      setLoading(false)
+    if (initialEnabled !== undefined) return
+    let cancelled = false
+    async function load() {
+      try {
+        const result = await getWinnerRevealMode()
+        if (cancelled) return
+        if (result.success) setEnabled(result.enabled ?? false)
+      } catch (error) {
+        console.error("Could not load setting", error)
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
     }
-  }
+    void load()
+    return () => {
+      cancelled = true
+    }
+  }, [initialEnabled])
 
   const handleToggle = async (checked: boolean) => {
     setSaving(true)
@@ -46,13 +49,13 @@ export function WinnerRevealModeToggle({ initialEnabled }: WinnerRevealModeToggl
           title: "Winner Reveal Mode Updated",
           description: checked
             ? "The homepage will now show a winner reveal button instead of the leaderboard."
-            : "The homepage will now show the normal leaderboard.",
+            : "The homepage will now show the normal leaderboard."
         })
       } else {
         toast({
           title: "Error updating setting",
           description: result.error || "Failed to update winner reveal mode.",
-          variant: "destructive",
+          variant: "destructive"
         })
       }
     } finally {
@@ -81,8 +84,8 @@ export function WinnerRevealModeToggle({ initialEnabled }: WinnerRevealModeToggl
               {loading
                 ? "Loading configuration..."
                 : enabled
-                ? "Leaderboard is currently hidden for all users."
-                : "Leaderboard is currently visible."}
+                  ? "Leaderboard is currently hidden for all users."
+                  : "Leaderboard is currently visible."}
             </p>
           </div>
 
@@ -112,20 +115,19 @@ export function WinnerRevealModeToggle({ initialEnabled }: WinnerRevealModeToggl
         </div>
 
         {!loading && (
-          <div className="mt-4 p-3.5 bg-primary/5 rounded-lg border border-primary/10 flex items-start gap-2.5">
-            <HelpCircle className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              {enabled ? (
-                <span>
-                  <strong>Winner Reveal Active:</strong> Users visiting the homepage will see a "Check Winner" button. Clicking it reveals the winners with a confetti animation.
-                </span>
-              ) : (
-                <span>
-                  <strong>Standard Mode:</strong> The homepage displays the real-time leaderboard filtered by the selected points aggregation mode.
-                </span>
-              )}
-            </p>
-          </div>
+          <SettingHelp>
+            {enabled ? (
+              <span>
+                <strong>Winner Reveal Active:</strong> Users visiting the homepage will see a "Check Winner" button.
+                Clicking it reveals the winners with a confetti animation.
+              </span>
+            ) : (
+              <span>
+                <strong>Standard Mode:</strong> The homepage displays the real-time leaderboard filtered by the selected
+                points aggregation mode.
+              </span>
+            )}
+          </SettingHelp>
         )}
       </CardContent>
     </Card>

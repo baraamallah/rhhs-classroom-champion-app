@@ -1,6 +1,7 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import Link from "next/link"
+import { useEffect, useState, useRef } from "react"
 import { AlertTriangle, Copy, Check, RefreshCw, Home, Mail, ShieldAlert } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
@@ -11,10 +12,10 @@ interface GlobalErrorProps {
 
 export default function GlobalError({ error, reset }: GlobalErrorProps) {
   const [copied, setCopied] = useState(false)
-  const [timestamp, setTimestamp] = useState("")
+  const timestamp = useRef("")
 
   useEffect(() => {
-    setTimestamp(new Date().toLocaleString())
+    timestamp.current = new Date().toISOString()
   }, [])
 
   const generateReport = () => {
@@ -23,13 +24,13 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
       ``,
       `**Error Message**: ${error.message || "Unknown root error"}`,
       `**Digest ID**: ${error.digest || "None"}`,
-      `**Timestamp**: ${timestamp || new Date().toISOString()}`,
+      `**Timestamp**: ${timestamp.current || new Date().toISOString()}`,
       `**URL**: ${typeof window !== "undefined" ? window.location.href : "N/A"}`,
       ``,
       `#### Stack Trace:`,
       "```",
       error.stack || "No stack trace available",
-      "```",
+      "```"
     ].join("\n")
   }
 
@@ -60,13 +61,12 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
           </div>
 
           <p className="text-neutral-400 text-sm mb-6 leading-relaxed">
-            A critical system error occurred. You can instantly copy the full diagnostic report below and share it with the RHHS technical team.
+            A critical system error occurred. You can instantly copy the full diagnostic report below and share it with
+            the RHHS technical team.
           </p>
 
           <div className="bg-neutral-950 border border-neutral-800 rounded-xl p-4 mb-6 font-mono text-xs space-y-2">
-            <div className="text-red-400 font-semibold break-all">
-              {error.message || "Unexpected critical error."}
-            </div>
+            <div className="text-red-400 font-semibold break-all">{error.message || "Unexpected critical error."}</div>
             {error.digest && (
               <div className="text-neutral-500">
                 Digest: <span className="text-neutral-300">{error.digest}</span>
@@ -100,12 +100,12 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
           </div>
 
           <div className="text-center pt-2">
-            <a
+            <Link
               href="/"
               className="text-xs text-neutral-400 hover:text-white transition-colors inline-flex items-center gap-1"
             >
               <Home className="h-3.5 w-3.5" /> Return to Leaderboard Home
-            </a>
+            </Link>
           </div>
         </div>
       </body>

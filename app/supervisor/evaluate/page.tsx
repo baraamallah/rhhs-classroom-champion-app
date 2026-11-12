@@ -1,6 +1,8 @@
 "use client"
 
-import { Suspense, useState, useEffect, useMemo, useTransition } from "react"
+import { TodayLabel } from "@/components/common/today-label"
+import { EcoLoader } from "@/components/common/eco-loader"
+import { Suspense, useState, useEffect, useMemo, useTransition, useCallback } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { ProtectedRoute } from "@/components/providers/protected-route"
 import { DashboardHeader } from "@/components/layout/dashboard-header"
@@ -10,13 +12,7 @@ import { EvaluationSuccess } from "@/components/features/evaluations/evaluation-
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { getClassrooms } from "@/lib/supabase-data"
 import type { Classroom, User } from "@/lib/types"
@@ -25,7 +21,7 @@ import {
   getDateClassroomEvaluationOverview,
   type DateEvaluationOverview,
   type DateClassroomStatus,
-  type MissedDayRecord,
+  type MissedDayRecord
 } from "@/app/actions/calendar-actions"
 import {
   AlertCircle,
@@ -37,7 +33,7 @@ import {
   CheckCircle2,
   CalendarDays,
   Info,
-  RotateCcw,
+  RotateCcw
 } from "lucide-react"
 import { format, parseISO, isToday, isPast, isFuture, isWeekend } from "date-fns"
 import { cn } from "@/lib/utils"
@@ -48,7 +44,7 @@ interface SupervisorEvaluateContentProps {
   currentUser?: User
 }
 
-function SupervisorEvaluateContent({ currentUser }: SupervisorEvaluateContentProps) {
+function useSupervisorEvaluateContentController({ currentUser }: SupervisorEvaluateContentProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const todayStr = format(new Date(), "yyyy-MM-dd")
@@ -75,7 +71,7 @@ function SupervisorEvaluateContent({ currentUser }: SupervisorEvaluateContentPro
       setCurrentDate(dateParam)
       setCustomDateInput(dateParam)
     }
-  }, [dateParam])
+  }, [dateParam, currentDate])
 
   // 1. Initial system check & fetch classrooms
   useEffect(() => {
@@ -109,26 +105,31 @@ function SupervisorEvaluateContent({ currentUser }: SupervisorEvaluateContentPro
   }, [])
 
   // 2. Load evaluation overview for currentDate
-  const loadDateOverview = async (targetDateStr: string) => {
-    if (!currentUser) return
-    setLoadingOverview(true)
-    try {
-      const res = await getDateClassroomEvaluationOverview(targetDateStr, currentUser.id)
-      if (res.success && res.data) {
-        setDateOverview(res.data)
+  const loadDateOverview = useCallback(
+    async (targetDateStr: string, signal?: AbortSignal) => {
+      if (!currentUser) return
+      setLoadingOverview(true)
+      try {
+        const res = await getDateClassroomEvaluationOverview(targetDateStr, currentUser.id)
+        if (signal?.aborted) return
+        if (res.success && res.data) {
+          setDateOverview(res.data)
+        }
+      } catch (err) {
+        if (signal?.aborted) return
+        console.error("Error loading date overview:", err)
+      } finally {
+        if (!signal?.aborted) setLoadingOverview(false)
       }
-    } catch (err) {
-      console.error("Error loading date overview:", err)
-    } finally {
-      setLoadingOverview(false)
-    }
-  }
+    },
+    [currentUser]
+  )
 
   useEffect(() => {
-    if (currentUser && currentDate) {
-      void loadDateOverview(currentDate)
-    }
-  }, [currentUser?.id, currentDate])
+    const controller = new AbortController()
+    void loadDateOverview(currentDate, controller.signal)
+    return () => controller.abort()
+  }, [loadDateOverview, currentDate])
 
   // 3. Synchronize selected classroom from URL parameters (without viewState dependency trap)
   useEffect(() => {
@@ -149,7 +150,7 @@ function SupervisorEvaluateContent({ currentUser }: SupervisorEvaluateContentPro
       setSelectedClassroom(null)
       setViewState("select")
     }
-  }, [searchParams, classrooms])
+  }, [searchParams, classrooms, viewState])
 
   // Helpers for date status map
   const dateStatusMap = useMemo<Record<string, DateClassroomStatus>>(() => {
@@ -208,6 +209,57 @@ function SupervisorEvaluateContent({ currentUser }: SupervisorEvaluateContentPro
   const handleBackToDashboard = () => {
     router.push("/supervisor")
   }
+  return {
+    currentDate,
+    customDateInput,
+    dateOverview,
+    dateStatusMap,
+    handleBackToDashboard,
+    handleCancel,
+    handleClassroomSelect,
+    handleEvaluationComplete,
+    handleNewEvaluation,
+    handleSwitchDate,
+    isDateInPast,
+    isDatePickerOpen,
+    isDateToday,
+    loading,
+    loadingOverview,
+    missedDaysList,
+    parsedCurrentDate,
+    selectedClassroom,
+    setCustomDateInput,
+    setIsDatePickerOpen,
+    todayStr,
+    viewState
+  }
+}
+
+function SupervisorEvaluateContent({ currentUser }: SupervisorEvaluateContentProps) {
+  const {
+    currentDate,
+    customDateInput,
+    dateOverview,
+    dateStatusMap,
+    handleBackToDashboard,
+    handleCancel,
+    handleClassroomSelect,
+    handleEvaluationComplete,
+    handleNewEvaluation,
+    handleSwitchDate,
+    isDateInPast,
+    isDatePickerOpen,
+    isDateToday,
+    loading,
+    loadingOverview,
+    missedDaysList,
+    parsedCurrentDate,
+    selectedClassroom,
+    setCustomDateInput,
+    setIsDatePickerOpen,
+    todayStr,
+    viewState
+  } = useSupervisorEvaluateContentController({ currentUser })
 
   if (!currentUser) return null
 
@@ -231,9 +283,7 @@ function SupervisorEvaluateContent({ currentUser }: SupervisorEvaluateContentPro
               <span className="text-xs text-muted-foreground">/</span>
               <span className="text-xs font-semibold text-foreground">Classroom Evaluation</span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-foreground">
-              Classroom Evaluation
-            </h1>
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-foreground">Classroom Evaluation</h1>
             <p className="text-xs sm:text-sm text-muted-foreground">
               Record daily eco-friendly practices and points for RHHS classrooms
             </p>
@@ -256,354 +306,56 @@ function SupervisorEvaluateContent({ currentUser }: SupervisorEvaluateContentPro
         {/* INTERACTIVE DATE & BACKFILL CONTROL BAR */}
         {/* ========================================================================= */}
         {viewState !== "closed" && (
-          <Card className="rounded-2xl border-border bg-card shadow-xs overflow-hidden">
-            <div className="p-4 sm:p-5 space-y-3.5">
-              {/* Row 1: Active Date Banner & Switcher */}
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div
-                    className={cn(
-                      "h-11 w-11 rounded-2xl flex items-center justify-center shrink-0 shadow-2xs",
-                      isDateToday
-                        ? "bg-primary/15 text-primary"
-                        : "bg-amber-500/15 text-amber-600 dark:text-amber-400"
-                    )}
-                  >
-                    {isDateToday ? <Sparkles className="h-5 w-5" /> : <Calendar className="h-5 w-5" />}
-                  </div>
-
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-base sm:text-lg font-bold text-foreground">
-                        {format(parsedCurrentDate, "EEEE, MMMM d, yyyy")}
-                      </span>
-                      {isDateToday ? (
-                        <Badge
-                          variant="outline"
-                          className="bg-primary/10 text-primary border-primary/20 text-[10px] px-2 py-0.5 rounded-md"
-                        >
-                          Today&apos;s Live
-                        </Badge>
-                      ) : (
-                        <Badge
-                          variant="outline"
-                          className="bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30 text-[10px] px-2 py-0.5 rounded-md"
-                        >
-                          Backfilling Past Day
-                        </Badge>
-                      )}
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {isDateToday
-                        ? "Evaluations recorded now will count towards today's daily points."
-                        : "Backfilling points for this past date. Completed evaluations will be locked."}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Date Switcher Trigger Button */}
-                <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
-                  {dateOverview && (
-                    <div className="text-right hidden md:block mr-2">
-                      <div className="text-xs font-bold text-foreground">
-                        {dateOverview.completedCount} / {dateOverview.totalAssigned} Rooms Done
-                      </div>
-                      <div className="text-[10px] text-muted-foreground">
-                        {dateOverview.pendingCount} pending for this date
-                      </div>
-                    </div>
-                  )}
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setIsDatePickerOpen(true)}
-                    className="rounded-xl text-xs h-9 px-3 border-border hover:border-primary/50 cursor-pointer shadow-2xs font-semibold"
-                  >
-                    <CalendarDays className="h-4 w-4 mr-1.5 text-primary" />
-                    Change Date
-                  </Button>
-                </div>
-              </div>
-
-              {/* Row 2: Quick Missed Days Shortcuts (Accessible Backfilling) */}
-              {missedDaysList.length > 0 && (
-                <div className="pt-3 border-t border-border/60">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1 shrink-0 mr-1">
-                      <Clock className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
-                      Missed Days to Backfill:
-                    </span>
-
-                    {missedDaysList.slice(0, 5).map((missed) => {
-                      const isSelected = missed.date === currentDate
-                      const parsedMissed = parseISO(missed.date)
-                      return (
-                        <button
-                          key={missed.date}
-                          type="button"
-                          onClick={() => handleSwitchDate(missed.date)}
-                          className={cn(
-                            "px-2.5 py-1 rounded-xl text-xs font-medium transition-all flex items-center gap-1.5 cursor-pointer border select-none",
-                            isSelected
-                              ? "bg-amber-500/20 text-amber-800 dark:text-amber-200 border-amber-500/50 shadow-2xs font-bold"
-                              : "bg-muted/40 text-muted-foreground hover:text-foreground hover:bg-muted/70 border-border/70"
-                          )}
-                        >
-                          <span>{format(parsedMissed, "EEE, MMM d")}</span>
-                          <span
-                            className={cn(
-                              "px-1.5 py-0.2 rounded-full text-[10px] font-bold",
-                              isSelected
-                                ? "bg-amber-600 text-white"
-                                : "bg-amber-500/15 text-amber-700 dark:text-amber-300"
-                            )}
-                          >
-                            {missed.missingClassroomIds.length} left
-                          </span>
-                        </button>
-                      )
-                    })}
-
-                    {missedDaysList.length > 5 && (
-                      <button
-                        type="button"
-                        onClick={() => setIsDatePickerOpen(true)}
-                        className="text-xs text-primary hover:underline font-semibold px-1 cursor-pointer"
-                      >
-                        +{missedDaysList.length - 5} more
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Non-working day warning if selected date is weekend/holiday */}
-              {dateOverview && !dateOverview.isWorkingDay && (
-                <div className="p-3 rounded-xl bg-destructive/10 border border-destructive/30 text-destructive text-xs flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <AlertCircle className="h-4 w-4 shrink-0" />
-                    <span>
-                      {dateOverview.holidayReason
-                        ? `Non-working day: ${dateOverview.holidayReason}. Evaluations cannot be recorded.`
-                        : "Selected date is a weekend (Saturday/Sunday). Daily evaluations are not conducted."}
-                    </span>
-                  </div>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleSwitchDate(todayStr)}
-                    className="text-[11px] h-7 px-2.5 rounded-lg border-destructive/40 bg-background text-foreground"
-                  >
-                    Switch to Today
-                  </Button>
-                </div>
-              )}
-            </div>
-          </Card>
+          <InspectionDateNavigation
+            currentDate={currentDate}
+            dateOverview={dateOverview}
+            handleSwitchDate={handleSwitchDate}
+            isDateToday={isDateToday}
+            missedDaysList={missedDaysList}
+            parsedCurrentDate={parsedCurrentDate}
+            setIsDatePickerOpen={setIsDatePickerOpen}
+            todayStr={todayStr}
+          />
         )}
 
         {/* Main Content Areas */}
         {loading ? (
-          <div className="flex items-center justify-center py-16">
-            <div className="text-center space-y-2">
-              <Clock className="h-6 w-6 animate-spin text-primary mx-auto" />
-              <p className="text-muted-foreground text-sm font-semibold">Loading evaluation center...</p>
-            </div>
-          </div>
+          <EcoLoader title="Preparing the evaluation center" />
         ) : (
-          <>
-            {/* System Closed */}
-            {viewState === "closed" && (
-              <Card className="border-destructive/50 bg-destructive/5 rounded-2xl">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-destructive">
-                    <AlertCircle className="h-5 w-5" />
-                    System Closed
-                  </CardTitle>
-                  <CardDescription>
-                    The evaluation system is currently closed and not accepting new submissions.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">
-                    Please check back later or contact an administrator if you believe this is an error.
-                  </p>
-                  <Button onClick={handleBackToDashboard} className="mt-6 rounded-xl">
-                    Return to Dashboard
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Classroom Selection View */}
-            {viewState === "select" && (
-              <Card className="rounded-2xl border-border shadow-xs">
-                <CardHeader className="p-4 sm:p-5 border-b border-border/60 bg-muted/20">
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                    <div>
-                      <CardTitle className="text-lg sm:text-xl font-bold">
-                        Select Classroom to Inspect
-                      </CardTitle>
-                      <CardDescription className="text-xs mt-0.5">
-                        Choose a room below. Rooms already inspected for{" "}
-                        <strong>{format(parsedCurrentDate, "MMM d, yyyy")}</strong> are locked.
-                      </CardDescription>
-                    </div>
-
-                    {dateOverview && (
-                      <Badge variant="outline" className="text-xs">
-                        {dateOverview.completedCount} / {dateOverview.totalAssigned} Evaluated
-                      </Badge>
-                    )}
-                  </div>
-                </CardHeader>
-
-                <CardContent className="p-4 sm:p-5">
-                  <ClassroomSelector
-                    onSelect={handleClassroomSelect}
-                    targetDate={currentDate}
-                    dateStatuses={dateStatusMap}
-                    isLoadingStatuses={loadingOverview}
-                    isPastDate={isDateInPast}
-                  />
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Evaluation Form View */}
-            {viewState === "evaluate" && selectedClassroom && (
-              <EvaluationForm
-                classroom={selectedClassroom}
-                user={currentUser}
-                initialDate={currentDate}
-                onComplete={handleEvaluationComplete}
-                onCancel={handleCancel}
-                onChangeDate={() => setIsDatePickerOpen(true)}
-                onBackToDashboard={handleBackToDashboard}
-              />
-            )}
-
-            {/* Evaluation Success View */}
-            {viewState === "success" && (
-              <Card className="rounded-2xl border-border shadow-xs">
-                <CardContent className="py-8">
-                  <EvaluationSuccess onNewEvaluation={handleNewEvaluation} />
-                </CardContent>
-              </Card>
-            )}
-          </>
+          <InspectionWorkspace
+            currentDate={currentDate}
+            currentUser={currentUser}
+            dateOverview={dateOverview}
+            dateStatusMap={dateStatusMap}
+            handleBackToDashboard={handleBackToDashboard}
+            handleCancel={handleCancel}
+            handleClassroomSelect={handleClassroomSelect}
+            handleEvaluationComplete={handleEvaluationComplete}
+            handleNewEvaluation={handleNewEvaluation}
+            isDateInPast={isDateInPast}
+            loadingOverview={loadingOverview}
+            parsedCurrentDate={parsedCurrentDate}
+            selectedClassroom={selectedClassroom}
+            setIsDatePickerOpen={setIsDatePickerOpen}
+            viewState={viewState}
+          />
         )}
       </main>
 
       {/* ========================================================================= */}
       {/* DATE PICKER & BACKFILL SELECTOR DIALOG */}
       {/* ========================================================================= */}
-      <Dialog open={isDatePickerOpen} onOpenChange={setIsDatePickerOpen}>
-        <DialogContent className="sm:max-w-md rounded-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-base sm:text-lg font-bold flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-primary" /> Select Inspection Date
-            </DialogTitle>
-            <DialogDescription className="text-xs">
-              Choose today&apos;s date or pick a past working day within the active school year to backfill.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-2">
-            {/* Quick Option: Today */}
-            <div className="p-3 rounded-xl border border-border/80 bg-muted/20 flex items-center justify-between gap-3">
-              <div>
-                <p className="text-sm font-bold text-foreground">Today&apos;s Date</p>
-                <p className="text-xs text-muted-foreground">{format(new Date(), "EEEE, MMMM d, yyyy")}</p>
-              </div>
-              <Button
-                size="sm"
-                onClick={() => handleSwitchDate(todayStr)}
-                className="rounded-xl text-xs h-8 font-semibold cursor-pointer"
-              >
-                Inspect Today
-              </Button>
-            </div>
-
-            {/* Custom Date Input */}
-            <div className="space-y-2">
-              <label className="text-xs font-semibold text-foreground block">
-                Choose Specific Date (Backfill)
-              </label>
-              <div className="flex items-center gap-2">
-                <Input
-                  type="date"
-                  value={customDateInput}
-                  max={todayStr}
-                  min={dateOverview?.schoolStartDate || "2026-09-01"}
-                  onChange={(e) => setCustomDateInput(e.target.value)}
-                  className="rounded-xl text-xs h-10 flex-1"
-                />
-                <Button
-                  size="sm"
-                  onClick={() => customDateInput && handleSwitchDate(customDateInput)}
-                  disabled={!customDateInput}
-                  className="rounded-xl text-xs h-10 px-4 font-semibold cursor-pointer"
-                >
-                  Set Date
-                </Button>
-              </div>
-              <p className="text-[11px] text-muted-foreground">
-                Only valid school working days (Mon–Fri) within the academic term will accept submissions.
-              </p>
-            </div>
-
-            {/* All Missed Working Days List */}
-            {missedDaysList.length > 0 && (
-              <div className="space-y-2 pt-2 border-t border-border/60">
-                <p className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                  <Clock className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
-                  All Missed Days in Term ({missedDaysList.length})
-                </p>
-
-                <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
-                  {missedDaysList.map((missed) => {
-                    const parsedM = parseISO(missed.date)
-                    const isSelected = missed.date === currentDate
-
-                    return (
-                      <div
-                        key={missed.date}
-                        className={cn(
-                          "p-2.5 rounded-xl border flex items-center justify-between gap-2 transition-all",
-                          isSelected
-                            ? "bg-amber-500/15 border-amber-500/40"
-                            : "bg-card border-border/70 hover:border-border"
-                        )}
-                      >
-                        <div>
-                          <p className="text-xs font-bold text-foreground">
-                            {format(parsedM, "EEEE, MMMM d, yyyy")}
-                          </p>
-                          <p className="text-[11px] text-muted-foreground">
-                            {missed.missingClassroomIds.length} classroom
-                            {missed.missingClassroomIds.length !== 1 ? "s" : ""} pending
-                          </p>
-                        </div>
-
-                        <Button
-                          size="sm"
-                          variant={isSelected ? "default" : "outline"}
-                          onClick={() => handleSwitchDate(missed.date)}
-                          className="rounded-lg text-xs h-7 px-2.5 cursor-pointer font-semibold"
-                        >
-                          {isSelected ? "Active" : "Backfill"}
-                        </Button>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+      <InspectionDatePicker
+        currentDate={currentDate}
+        customDateInput={customDateInput}
+        dateOverview={dateOverview}
+        handleSwitchDate={handleSwitchDate}
+        isDatePickerOpen={isDatePickerOpen}
+        missedDaysList={missedDaysList}
+        setCustomDateInput={setCustomDateInput}
+        setIsDatePickerOpen={setIsDatePickerOpen}
+        todayStr={todayStr}
+      />
     </div>
   )
 }
@@ -624,3 +376,417 @@ export default function SupervisorEvaluatePage() {
   )
 }
 
+function InspectionDateNavigation({
+  currentDate,
+  dateOverview,
+  handleSwitchDate,
+  isDateToday,
+  missedDaysList,
+  parsedCurrentDate,
+  setIsDatePickerOpen,
+  todayStr
+}: Pick<
+  ReturnType<typeof useSupervisorEvaluateContentController>,
+  | "currentDate"
+  | "dateOverview"
+  | "handleSwitchDate"
+  | "isDateToday"
+  | "missedDaysList"
+  | "parsedCurrentDate"
+  | "setIsDatePickerOpen"
+  | "todayStr"
+>) {
+  return (
+    <Card className="rounded-2xl border-border bg-card shadow-xs overflow-hidden">
+      <div className="p-4 sm:p-5 space-y-3.5">
+        {/* Row 1: Active Date Banner & Switcher */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div
+              className={cn(
+                "h-11 w-11 rounded-2xl flex items-center justify-center shrink-0 shadow-2xs",
+                isDateToday ? "bg-primary/15 text-primary" : "bg-amber-500/15 text-amber-600 dark:text-amber-400"
+              )}
+            >
+              {isDateToday ? <Sparkles className="h-5 w-5" /> : <Calendar className="h-5 w-5" />}
+            </div>
+
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-base sm:text-lg font-bold text-foreground">
+                  {format(parsedCurrentDate, "EEEE, MMMM d, yyyy")}
+                </span>
+                {isDateToday ? (
+                  <Badge
+                    variant="outline"
+                    className="bg-primary/10 text-primary border-primary/20 text-[10px] px-2 py-0.5 rounded-md"
+                  >
+                    Today&apos;s Live
+                  </Badge>
+                ) : (
+                  <Badge
+                    variant="outline"
+                    className="bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30 text-[10px] px-2 py-0.5 rounded-md"
+                  >
+                    Backfilling Past Day
+                  </Badge>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {isDateToday
+                  ? "Evaluations recorded now will count towards today's daily points."
+                  : "Backfilling points for this past date. Completed evaluations will be locked."}
+              </p>
+            </div>
+          </div>
+
+          {/* Date Switcher Trigger Button */}
+          <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+            {dateOverview && (
+              <div className="text-right hidden md:block mr-2">
+                <div className="text-xs font-bold text-foreground">
+                  {dateOverview.completedCount} / {dateOverview.totalAssigned} Rooms Done
+                </div>
+                <div className="text-[10px] text-muted-foreground">
+                  {dateOverview.pendingCount} pending for this date
+                </div>
+              </div>
+            )}
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsDatePickerOpen(true)}
+              className="rounded-xl text-xs h-9 px-3 border-border hover:border-primary/50 cursor-pointer shadow-2xs font-semibold"
+            >
+              <CalendarDays className="h-4 w-4 mr-1.5 text-primary" />
+              Change Date
+            </Button>
+          </div>
+        </div>
+
+        {/* Row 2: Quick Missed Days Shortcuts (Accessible Backfilling) */}
+        {missedDaysList.length > 0 && (
+          <div className="pt-3 border-t border-border/60">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1 shrink-0 mr-1">
+                <Clock className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+                Missed Days to Backfill:
+              </span>
+
+              {missedDaysList.slice(0, 5).map((missed) => {
+                const isSelected = missed.date === currentDate
+                const parsedMissed = parseISO(missed.date)
+                return (
+                  <button
+                    key={missed.date}
+                    type="button"
+                    onClick={() => handleSwitchDate(missed.date)}
+                    className={cn(
+                      "px-2.5 py-1 rounded-xl text-xs font-medium transition-all flex items-center gap-1.5 cursor-pointer border select-none",
+                      isSelected
+                        ? "bg-amber-500/20 text-amber-800 dark:text-amber-200 border-amber-500/50 shadow-2xs font-bold"
+                        : "bg-muted/40 text-muted-foreground hover:text-foreground hover:bg-muted/70 border-border/70"
+                    )}
+                  >
+                    <span>{format(parsedMissed, "EEE, MMM d")}</span>
+                    <span
+                      className={cn(
+                        "px-1.5 py-0.2 rounded-full text-[10px] font-bold",
+                        isSelected ? "bg-amber-600 text-white" : "bg-amber-500/15 text-amber-700 dark:text-amber-300"
+                      )}
+                    >
+                      {missed.missingClassroomIds.length} left
+                    </span>
+                  </button>
+                )
+              })}
+
+              {missedDaysList.length > 5 && (
+                <button
+                  type="button"
+                  onClick={() => setIsDatePickerOpen(true)}
+                  className="text-xs text-primary hover:underline font-semibold px-1 cursor-pointer"
+                >
+                  +{missedDaysList.length - 5} more
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Non-working day warning if selected date is weekend/holiday */}
+        {dateOverview && !dateOverview.isWorkingDay && (
+          <div className="p-3 rounded-xl bg-destructive/10 border border-destructive/30 text-destructive text-xs flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <span>
+                {dateOverview.holidayReason
+                  ? `Non-working day: ${dateOverview.holidayReason}. Evaluations cannot be recorded.`
+                  : "Selected date is a weekend (Saturday/Sunday). Daily evaluations are not conducted."}
+              </span>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => handleSwitchDate(todayStr)}
+              className="text-[11px] h-7 px-2.5 rounded-lg border-destructive/40 bg-background text-foreground"
+            >
+              Switch to Today
+            </Button>
+          </div>
+        )}
+      </div>
+    </Card>
+  )
+}
+
+function InspectionWorkspace({
+  currentDate,
+  currentUser,
+  dateOverview,
+  dateStatusMap,
+  handleBackToDashboard,
+  handleCancel,
+  handleClassroomSelect,
+  handleEvaluationComplete,
+  handleNewEvaluation,
+  isDateInPast,
+  loadingOverview,
+  parsedCurrentDate,
+  selectedClassroom,
+  setIsDatePickerOpen,
+  viewState
+}: Pick<
+  ReturnType<typeof useSupervisorEvaluateContentController>,
+  | "currentDate"
+  | "dateOverview"
+  | "dateStatusMap"
+  | "handleBackToDashboard"
+  | "handleCancel"
+  | "handleClassroomSelect"
+  | "handleEvaluationComplete"
+  | "handleNewEvaluation"
+  | "isDateInPast"
+  | "loadingOverview"
+  | "parsedCurrentDate"
+  | "selectedClassroom"
+  | "setIsDatePickerOpen"
+  | "viewState"
+> &
+  Pick<NonNullable<Parameters<typeof useSupervisorEvaluateContentController>[0]>, "currentUser">) {
+  if (!currentUser) return null
+  return (
+    <>
+      {/* System Closed */}
+      {viewState === "closed" && (
+        <Card className="border-destructive/50 bg-destructive/5 rounded-2xl">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-destructive">
+              <AlertCircle className="h-5 w-5" />
+              System Closed
+            </CardTitle>
+            <CardDescription>
+              The evaluation system is currently closed and not accepting new submissions.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              Please check back later or contact an administrator if you believe this is an error.
+            </p>
+            <Button onClick={handleBackToDashboard} className="mt-6 rounded-xl">
+              Return to Dashboard
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Classroom Selection View */}
+      {viewState === "select" && (
+        <Card className="rounded-2xl border-border shadow-xs">
+          <CardHeader className="p-4 sm:p-5 border-b border-border/60 bg-muted/20">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+              <div>
+                <CardTitle className="text-lg sm:text-xl font-bold">Select Classroom to Inspect</CardTitle>
+                <CardDescription className="text-xs mt-0.5">
+                  Choose a room below. Rooms already inspected for{" "}
+                  <strong>{format(parsedCurrentDate, "MMM d, yyyy")}</strong> are locked.
+                </CardDescription>
+              </div>
+
+              {dateOverview && (
+                <Badge variant="outline" className="text-xs">
+                  {dateOverview.completedCount} / {dateOverview.totalAssigned} Evaluated
+                </Badge>
+              )}
+            </div>
+          </CardHeader>
+
+          <CardContent className="p-4 sm:p-5">
+            <ClassroomSelector
+              onSelect={handleClassroomSelect}
+              targetDate={currentDate}
+              dateStatuses={dateStatusMap}
+              isLoadingStatuses={loadingOverview}
+              isPastDate={isDateInPast}
+            />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Evaluation Form View */}
+      {viewState === "evaluate" && selectedClassroom && (
+        <EvaluationForm
+          classroom={selectedClassroom}
+          user={currentUser}
+          initialDate={currentDate}
+          onComplete={handleEvaluationComplete}
+          onCancel={handleCancel}
+          onChangeDate={() => setIsDatePickerOpen(true)}
+          onBackToDashboard={handleBackToDashboard}
+        />
+      )}
+
+      {/* Evaluation Success View */}
+      {viewState === "success" && (
+        <Card className="rounded-2xl border-border shadow-xs">
+          <CardContent className="py-8">
+            <EvaluationSuccess onNewEvaluation={handleNewEvaluation} />
+          </CardContent>
+        </Card>
+      )}
+    </>
+  )
+}
+
+function InspectionDatePicker({
+  currentDate,
+  customDateInput,
+  dateOverview,
+  handleSwitchDate,
+  isDatePickerOpen,
+  missedDaysList,
+  setCustomDateInput,
+  setIsDatePickerOpen,
+  todayStr
+}: Pick<
+  ReturnType<typeof useSupervisorEvaluateContentController>,
+  | "currentDate"
+  | "customDateInput"
+  | "dateOverview"
+  | "handleSwitchDate"
+  | "isDatePickerOpen"
+  | "missedDaysList"
+  | "setCustomDateInput"
+  | "setIsDatePickerOpen"
+  | "todayStr"
+>) {
+  return (
+    <Dialog open={isDatePickerOpen} onOpenChange={setIsDatePickerOpen}>
+      <DialogContent className="sm:max-w-md rounded-2xl">
+        <DialogHeader>
+          <DialogTitle className="text-base sm:text-lg font-bold flex items-center gap-2">
+            <Calendar className="h-5 w-5 text-primary" /> Select Inspection Date
+          </DialogTitle>
+          <DialogDescription className="text-xs">
+            Choose today&apos;s date or pick a past working day within the active school year to backfill.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 py-2">
+          {/* Quick Option: Today */}
+          <div className="p-3 rounded-xl border border-border/80 bg-muted/20 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-bold text-foreground">Today&apos;s Date</p>
+              <p className="text-xs text-muted-foreground">
+                <TodayLabel />
+              </p>
+            </div>
+            <Button
+              size="sm"
+              onClick={() => handleSwitchDate(todayStr)}
+              className="rounded-xl text-xs h-8 font-semibold cursor-pointer"
+            >
+              Inspect Today
+            </Button>
+          </div>
+
+          {/* Custom Date Input */}
+          <div className="space-y-2">
+            <label htmlFor="inspection-date" className="text-xs font-semibold text-foreground block">
+              Choose Specific Date (Backfill)
+            </label>
+            <div className="flex items-center gap-2">
+              <Input
+                id="inspection-date"
+                type="date"
+                value={customDateInput}
+                max={todayStr}
+                min={dateOverview?.schoolStartDate || "2026-09-01"}
+                onChange={(e) => setCustomDateInput(e.target.value)}
+                className="rounded-xl text-xs h-10 flex-1"
+              />
+              <Button
+                size="sm"
+                onClick={() => customDateInput && handleSwitchDate(customDateInput)}
+                disabled={!customDateInput}
+                className="rounded-xl text-xs h-10 px-4 font-semibold cursor-pointer"
+              >
+                Set Date
+              </Button>
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              Only valid school working days (Mon–Fri) within the academic term will accept submissions.
+            </p>
+          </div>
+
+          {/* All Missed Working Days List */}
+          {missedDaysList.length > 0 && (
+            <div className="space-y-2 pt-2 border-t border-border/60">
+              <p className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                <Clock className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+                All Missed Days in Term ({missedDaysList.length})
+              </p>
+
+              <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+                {missedDaysList.map((missed) => {
+                  const parsedM = parseISO(missed.date)
+                  const isSelected = missed.date === currentDate
+
+                  return (
+                    <div
+                      key={missed.date}
+                      className={cn(
+                        "p-2.5 rounded-xl border flex items-center justify-between gap-2 transition-all",
+                        isSelected
+                          ? "bg-amber-500/15 border-amber-500/40"
+                          : "bg-card border-border/70 hover:border-border"
+                      )}
+                    >
+                      <div>
+                        <p className="text-xs font-bold text-foreground">{format(parsedM, "EEEE, MMMM d, yyyy")}</p>
+                        <p className="text-[11px] text-muted-foreground">
+                          {missed.missingClassroomIds.length} classroom
+                          {missed.missingClassroomIds.length !== 1 ? "s" : ""} pending
+                        </p>
+                      </div>
+
+                      <Button
+                        size="sm"
+                        variant={isSelected ? "default" : "outline"}
+                        onClick={() => handleSwitchDate(missed.date)}
+                        className="rounded-lg text-xs h-7 px-2.5 cursor-pointer font-semibold"
+                      >
+                        {isSelected ? "Active" : "Backfill"}
+                      </Button>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}

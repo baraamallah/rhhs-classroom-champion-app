@@ -1,7 +1,7 @@
 "use client"
 
 import { resolveCompetitionMonth } from "@/lib/display-period"
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -13,13 +13,10 @@ import {
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogHeader,
-  AlertDialogTitle,
+  AlertDialogTitle
 } from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast"
-import {
-  archiveEvaluations,
-  getAllEvaluationsForManagement,
-} from "@/app/actions/data-management-actions"
+import { archiveEvaluations, getAllEvaluationsForManagement } from "@/app/actions/data-management-actions"
 import { Loader2, Archive, Search, FileSpreadsheet, Trophy } from "lucide-react"
 import { MonthlyWinnersManager } from "@/components/features/leaderboard/monthly-winners-manager"
 import { GlobalSystemControls } from "@/components/features/admin/global-system-controls"
@@ -28,6 +25,8 @@ import { AdminPageHeader } from "@/components/features/admin/admin-page-header"
 import { getAdminSettings } from "@/app/actions/winners-page-actions"
 import type { AdminSettings } from "@/app/actions/winners-page-actions"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+
+const evaluationDateFormatter = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Beirut" })
 
 interface EvaluationData {
   id: string
@@ -39,7 +38,7 @@ interface EvaluationData {
   users: { name: string } | null
 }
 
-export function DataManagementPanel() {
+function useDataManagementPanelController() {
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
   const [archiveDialog, setArchiveDialog] = useState<{
@@ -52,35 +51,50 @@ export function DataManagementPanel() {
   const [selectedEvaluations, setSelectedEvaluations] = useState<string[]>([])
   const [adminSettings, setAdminSettings] = useState<AdminSettings | undefined>(undefined)
 
-  useEffect(() => {
-    loadEvaluations()
-    loadAdminSettings()
-  }, [])
-
-  const loadAdminSettings = async () => {
+  const loadAdminSettings = useCallback(async (signal?: AbortSignal) => {
     const result = await getAdminSettings()
+    if (signal?.aborted) return
     if (result.success && result.settings) {
       setAdminSettings(result.settings)
     }
-  }
+  }, [])
 
-  const loadEvaluations = async () => {
-    setLoading(true)
-    const result = await getAllEvaluationsForManagement()
-    setLoading(false)
+  const loadEvaluations = useCallback(
+    async (signal?: AbortSignal) => {
+      setLoading(true)
+      try {
+        const result = await getAllEvaluationsForManagement()
+        if (signal?.aborted) return
 
-    if (result.success && result.data) {
-      setEvaluations(result.data as EvaluationData[])
-      console.log(`[DataManagementPanel] Loaded ${result.data.length} evaluations`)
-    } else if (result.error) {
-      console.error("[DataManagementPanel] Error loading evaluations:", result.error)
-      toast({
-        title: "Error loading evaluations",
-        description: result.error,
-        variant: "destructive",
-      })
-    }
-  }
+        if (result.success && result.data) {
+          setEvaluations(result.data as EvaluationData[])
+          console.log(`[DataManagementPanel] Loaded ${result.data.length} evaluations`)
+        } else if (result.error) {
+          console.error("[DataManagementPanel] Error loading evaluations:", result.error)
+          toast({
+            title: "Error loading evaluations",
+            description: result.error,
+            variant: "destructive"
+          })
+        }
+      } catch (error) {
+        if (signal?.aborted) return
+        console.error("loadEvaluations failed:", error)
+      } finally {
+        setLoading((current) => (signal?.aborted ? current : false))
+      }
+    },
+    [toast]
+  )
+
+  useEffect(() => {
+    const controller = new AbortController()
+    void loadEvaluations(controller.signal)
+    void loadAdminSettings(controller.signal)
+    return () => controller.abort()
+  }, [loadEvaluations, loadAdminSettings])
+
+  const selectedEvaluationIds = useMemo(() => new Set(selectedEvaluations), [selectedEvaluations])
 
   const filteredEvaluations = useMemo(() => {
     if (!searchTerm) return evaluations
@@ -90,7 +104,7 @@ export function DataManagementPanel() {
         evaluation.classrooms?.name.toLowerCase().includes(term) ||
         evaluation.classrooms?.grade.toLowerCase().includes(term) ||
         evaluation.users?.name.toLowerCase().includes(term) ||
-        new Date(evaluation.evaluation_date).toLocaleDateString().includes(term)
+        evaluationDateFormatter.format(new Date(evaluation.evaluation_date)).includes(term)
     )
   }, [evaluations, searchTerm])
 
@@ -103,7 +117,7 @@ export function DataManagementPanel() {
   }
 
   const toggleSelection = (id: string) => {
-    if (selectedEvaluations.includes(id)) {
+    if (selectedEvaluationIds.has(id)) {
       setSelectedEvaluations(selectedEvaluations.filter((e) => e !== id))
     } else {
       setSelectedEvaluations([...selectedEvaluations, id])
@@ -114,28 +128,134 @@ export function DataManagementPanel() {
     if (selectedEvaluations.length === 0) return
 
     setLoading(true)
-    const result = await archiveEvaluations(selectedEvaluations)
-    setLoading(false)
-    setArchiveDialog({ open: false, count: 0 })
+    try {
+      const result = await archiveEvaluations(selectedEvaluations)
 
-    if (result.success) {
-      toast({
-        title: "Success",
-        description: result.message,
-      })
-      setSelectedEvaluations([])
-      loadEvaluations()
-    } else {
-      toast({
-        title: "Error",
-        description: result.error || "Failed to archive evaluations",
-        variant: "destructive",
-      })
+      setArchiveDialog({ open: false, count: 0 })
+
+      if (result.success) {
+        toast({
+          title: "Success",
+          description: result.message
+        })
+        setSelectedEvaluations([])
+        loadEvaluations()
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || "Failed to archive evaluations",
+          variant: "destructive"
+        })
+      }
+    } catch (error) {
+      console.error("handleArchiveSelected failed:", error)
+    } finally {
+      setLoading(false)
     }
   }
 
-  const competitionMonth = resolveCompetitionMonth(adminSettings?.winners_display_month, adminSettings?.leaderboard_display_month)
+  const competitionMonth = resolveCompetitionMonth(
+    adminSettings?.winners_display_month,
+    adminSettings?.leaderboard_display_month
+  )
+  return {
+    adminSettings,
+    archiveDialog,
+    competitionMonth,
+    evaluations,
+    filteredEvaluations,
+    handleArchiveSelected,
+    handleSelectAll,
+    loadEvaluations,
+    loading,
+    searchTerm,
+    selectedEvaluationIds,
+    selectedEvaluations,
+    setAdminSettings,
+    setArchiveDialog,
+    setSearchTerm,
+    toggleSelection
+  }
+}
 
+export function DataManagementPanel() {
+  const {
+    adminSettings,
+    archiveDialog,
+    competitionMonth,
+    evaluations,
+    filteredEvaluations,
+    handleArchiveSelected,
+    handleSelectAll,
+    loadEvaluations,
+    loading,
+    searchTerm,
+    selectedEvaluationIds,
+    selectedEvaluations,
+    setAdminSettings,
+    setArchiveDialog,
+    setSearchTerm,
+    toggleSelection
+  } = useDataManagementPanelController()
+
+  return (
+    <ArchiveOperationsPanel
+      adminSettings={adminSettings}
+      archiveDialog={archiveDialog}
+      competitionMonth={competitionMonth}
+      evaluations={evaluations}
+      filteredEvaluations={filteredEvaluations}
+      handleArchiveSelected={handleArchiveSelected}
+      handleSelectAll={handleSelectAll}
+      loadEvaluations={loadEvaluations}
+      loading={loading}
+      searchTerm={searchTerm}
+      selectedEvaluationIds={selectedEvaluationIds}
+      selectedEvaluations={selectedEvaluations}
+      setAdminSettings={setAdminSettings}
+      setArchiveDialog={setArchiveDialog}
+      setSearchTerm={setSearchTerm}
+      toggleSelection={toggleSelection}
+    />
+  )
+}
+
+function ArchiveOperationsPanel({
+  adminSettings,
+  archiveDialog,
+  competitionMonth,
+  evaluations,
+  filteredEvaluations,
+  handleArchiveSelected,
+  handleSelectAll,
+  loadEvaluations,
+  loading,
+  searchTerm,
+  selectedEvaluationIds,
+  selectedEvaluations,
+  setAdminSettings,
+  setArchiveDialog,
+  setSearchTerm,
+  toggleSelection
+}: Pick<
+  ReturnType<typeof useDataManagementPanelController>,
+  | "adminSettings"
+  | "archiveDialog"
+  | "competitionMonth"
+  | "evaluations"
+  | "filteredEvaluations"
+  | "handleArchiveSelected"
+  | "handleSelectAll"
+  | "loadEvaluations"
+  | "loading"
+  | "searchTerm"
+  | "selectedEvaluationIds"
+  | "selectedEvaluations"
+  | "setAdminSettings"
+  | "setArchiveDialog"
+  | "setSearchTerm"
+  | "toggleSelection"
+>) {
   return (
     <div className="space-y-6">
       <AdminPageHeader
@@ -144,15 +264,14 @@ export function DataManagementPanel() {
         description="Configure runtime controls, default display months, and evaluation archiving."
       />
 
-      <GlobalSystemControls
-        initialSettings={adminSettings}
-        onSettingsChange={setAdminSettings}
-      />
+      <GlobalSystemControls initialSettings={adminSettings} onSettingsChange={setAdminSettings} />
 
       <DefaultMonthSettings
         initialWinnersMonth={adminSettings?.winners_display_month}
         initialLeaderboardMonth={adminSettings?.leaderboard_display_month}
-        onMonthChange={(key, setting) => setAdminSettings((previous) => previous ? { ...previous, [key]: setting } : previous)}
+        onMonthChange={(key, setting) =>
+          setAdminSettings((previous) => (previous ? { ...previous, [key]: setting } : previous))
+        }
       />
 
       <Tabs defaultValue="archive" className="space-y-6">
@@ -186,7 +305,8 @@ export function DataManagementPanel() {
                 </span>
               </CardTitle>
               <CardDescription className="text-xs">
-                Select active evaluations to move to the archive table. This preserves historical records while clearing the active queue.
+                Select active evaluations to move to the archive table. This preserves historical records while clearing
+                the active queue.
               </CardDescription>
             </CardHeader>
             <CardContent className="p-4 sm:p-6 space-y-4">
@@ -216,8 +336,7 @@ export function DataManagementPanel() {
                 <div className="flex items-center p-3 border-b bg-muted/40 min-h-11">
                   <Checkbox
                     checked={
-                      selectedEvaluations.length === filteredEvaluations.length &&
-                      filteredEvaluations.length > 0
+                      selectedEvaluations.length === filteredEvaluations.length && filteredEvaluations.length > 0
                     }
                     onCheckedChange={handleSelectAll}
                     disabled={loading || filteredEvaluations.length === 0}
@@ -245,7 +364,7 @@ export function DataManagementPanel() {
                         className="flex items-center p-3 border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors"
                       >
                         <Checkbox
-                          checked={selectedEvaluations.includes(evaluation.id)}
+                          checked={selectedEvaluationIds.has(evaluation.id)}
                           onCheckedChange={() => toggleSelection(evaluation.id)}
                           disabled={loading}
                           className="h-5 w-5 rounded shrink-0"
@@ -268,11 +387,9 @@ export function DataManagementPanel() {
                               Score: {evaluation.total_score}/{evaluation.max_score}
                             </p>
                             <p className="text-xs text-muted-foreground">
-                              {new Date(evaluation.evaluation_date).toLocaleDateString()}
+                              {evaluationDateFormatter.format(new Date(evaluation.evaluation_date))}
                             </p>
-                            <p className="text-[10px] text-muted-foreground/70 font-mono truncate">
-                              {evaluation.id}
-                            </p>
+                            <p className="text-[10px] text-muted-foreground/70 font-mono truncate">{evaluation.id}</p>
                           </div>
                         </div>
                       </div>
@@ -281,7 +398,13 @@ export function DataManagementPanel() {
                 </div>
               </div>
               <div className="mt-4">
-                <Button variant="outline" onClick={loadEvaluations} disabled={loading} size="sm" className="min-h-11">
+                <Button
+                  variant="outline"
+                  onClick={() => void loadEvaluations()}
+                  disabled={loading}
+                  size="sm"
+                  className="min-h-11"
+                >
                   {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Archive className="mr-2 h-4 w-4" />}
                   Refresh
                 </Button>
@@ -301,27 +424,33 @@ export function DataManagementPanel() {
                 </span>
               </CardTitle>
               <CardDescription className="text-xs">
-                System database backups, multi-sheet Master Excel reports, and custom filtered evaluation queries are housed in the dedicated <strong>Data Exports</strong> tab in the navigation sidebar. Academic year snapshots and table restores are managed in the <strong>Academic Archive</strong> tab.
+                System database backups, multi-sheet Master Excel reports, and custom filtered evaluation queries are
+                housed in the dedicated <strong>Data Exports</strong> tab in the navigation sidebar. Academic year
+                snapshots and table restores are managed in the <strong>Academic Archive</strong> tab.
               </CardDescription>
             </CardHeader>
           </Card>
         </TabsContent>
 
         <TabsContent value="winners" className="mt-6">
-          {adminSettings ? <MonthlyWinnersManager key={`${competitionMonth.year}-${competitionMonth.month}`} defaultMonth={competitionMonth} /> : <p role="status">Loading competition settings...</p>}
+          {adminSettings ? (
+            <MonthlyWinnersManager
+              key={`${competitionMonth.year}-${competitionMonth.month}`}
+              defaultMonth={competitionMonth}
+            />
+          ) : (
+            <p role="status">Loading competition settings...</p>
+          )}
         </TabsContent>
       </Tabs>
 
-      <AlertDialog
-        open={archiveDialog.open}
-        onOpenChange={(open) => setArchiveDialog({ ...archiveDialog, open })}
-      >
+      <AlertDialog open={archiveDialog.open} onOpenChange={(open) => setArchiveDialog({ ...archiveDialog, open })}>
         <AlertDialogContent className="w-[calc(100vw-2rem)] sm:w-full max-w-md max-h-[90dvh] overflow-y-auto">
           <AlertDialogHeader>
             <AlertDialogTitle>Archive {archiveDialog.count} Evaluations?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will move the selected evaluations to the archive table and remove them from the active list.
-              This action preserves the data for history.
+              This will move the selected evaluations to the archive table and remove them from the active list. This
+              action preserves the data for history.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 mt-4">

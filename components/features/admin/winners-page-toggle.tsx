@@ -18,23 +18,25 @@ export function WinnersPageToggle({ initialVisible }: WinnersPageToggleProps) {
   const [loading, setLoading] = useState(initialVisible === undefined)
   const [saving, setSaving] = useState(false)
 
-  const hasLoaded = useRef(false)
-
   useEffect(() => {
-    if (initialVisible !== undefined || hasLoaded.current) return
-    hasLoaded.current = true
-    loadVisibility()
-  }, [])
-
-  const loadVisibility = async () => {
-    setLoading(true)
-    try {
-      const result = await getWinnersPageVisibility()
-      if (result.success) setVisible(result.visible ?? true)
-    } finally {
-      setLoading(false)
+    if (initialVisible !== undefined) return
+    let cancelled = false
+    async function load() {
+      try {
+        const result = await getWinnersPageVisibility()
+        if (cancelled) return
+        if (result.success) setVisible(result.visible ?? true)
+      } catch (error) {
+        console.error("Could not load setting", error)
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
     }
-  }
+    void load()
+    return () => {
+      cancelled = true
+    }
+  }, [initialVisible])
 
   const handleToggle = async () => {
     setSaving(true)
@@ -43,7 +45,10 @@ export function WinnersPageToggle({ initialVisible }: WinnersPageToggleProps) {
       const result = await setWinnersPageVisibility(newVisibility)
       if (result.success) {
         setVisible(newVisibility)
-        toast({ title: "Success", description: newVisibility ? "Winners page is now visible to all users" : "Winners page is now hidden" })
+        toast({
+          title: "Success",
+          description: newVisibility ? "Winners page is now visible to all users" : "Winners page is now hidden"
+        })
       } else {
         toast({ title: "Error", description: result.error || "Failed to update visibility", variant: "destructive" })
       }
@@ -59,9 +64,7 @@ export function WinnersPageToggle({ initialVisible }: WinnersPageToggleProps) {
           <Trophy className="h-5 w-5" />
           Winners Page Control
         </CardTitle>
-        <CardDescription>
-          Control the visibility of the animated winners/leaderboard page
-        </CardDescription>
+        <CardDescription>Control the visibility of the animated winners/leaderboard page</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="flex items-center justify-between">
@@ -71,11 +74,7 @@ export function WinnersPageToggle({ initialVisible }: WinnersPageToggleProps) {
               {visible ? "Page is currently visible to all users" : "Page is currently hidden"}
             </p>
           </div>
-          <Button
-            onClick={handleToggle}
-            disabled={loading || saving}
-            variant={visible ? "default" : "outline"}
-          >
+          <Button onClick={handleToggle} disabled={loading || saving} variant={visible ? "default" : "outline"}>
             {loading ? (
               "Loading..."
             ) : visible ? (

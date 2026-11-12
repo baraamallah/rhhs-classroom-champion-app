@@ -9,11 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
 import { useExcelWorker } from "@/lib/workers/use-excel-worker"
-import {
-  exportAllDataAsZip,
-  exportDataAsExcel,
-  exportWeeklyGreenReport,
-} from "@/app/actions/export-data-actions"
+import { exportAllDataAsZip, exportDataAsExcel, exportWeeklyGreenReport } from "@/app/actions/export-data-actions"
 import { downloadWorkbookBuffer } from "@/lib/excel/excel-design-tokens"
 import { buildFilteredEvaluationsWorkbook } from "@/lib/excel/master-export-builder"
 import { getEvaluationsByDateRange, getClassrooms } from "@/lib/supabase-data"
@@ -31,10 +27,10 @@ import {
   Loader2,
   Sparkles,
   Trophy,
-  Award,
+  Award
 } from "lucide-react"
 
-export function ExportManagement() {
+function useExportManagementController() {
   const { toast } = useToast()
   const { exportSheets, isExporting: isWorkerExporting, exportProgress } = useExcelWorker()
   const [exportingZip, setExportingZip] = useState(false)
@@ -102,14 +98,14 @@ export function ExportManagement() {
     try {
       const result = await exportWeeklyGreenReport({
         startDate: weeklyStartDate,
-        weekPreset: weeklyPreset,
+        weekPreset: weeklyPreset
       })
 
       if (!result.success || !result.base64) {
         toast({
           title: "Export Failed",
           description: result.error || "Failed to generate weekly green report",
-          variant: "destructive",
+          variant: "destructive"
         })
         return
       }
@@ -121,14 +117,14 @@ export function ExportManagement() {
 
       toast({
         title: "Shaded Excel Export Ready",
-        description: `Downloaded ${result.fileName} with per-division sheets and winners summary.`,
+        description: `Downloaded ${result.fileName} with per-division sheets and winners summary.`
       })
     } catch (err: any) {
       console.error("Weekly export error:", err)
       toast({
         title: "Export Error",
         description: err.message || "Failed to generate weekly report",
-        variant: "destructive",
+        variant: "destructive"
       })
     } finally {
       setExportingWeekly(false)
@@ -144,7 +140,7 @@ export function ExportManagement() {
         toast({
           title: "Export Failed",
           description: result.error || "Failed to compile Excel data",
-          variant: "destructive",
+          variant: "destructive"
         })
         return
       }
@@ -159,7 +155,7 @@ export function ExportManagement() {
         )
         toast({
           title: "Master Excel Ready",
-          description: `Downloaded ${result.fileName} with per-division sheets.`,
+          description: `Downloaded ${result.fileName} with per-division sheets.`
         })
         return
       }
@@ -174,7 +170,7 @@ export function ExportManagement() {
       toast({
         title: "Export Error",
         description: err.message || "Failed to generate Excel file",
-        variant: "destructive",
+        variant: "destructive"
       })
     } finally {
       setExportingExcel(false)
@@ -190,7 +186,7 @@ export function ExportManagement() {
         toast({
           title: "Backup Failed",
           description: result.error || "Failed to compile system database files",
-          variant: "destructive",
+          variant: "destructive"
         })
         return
       }
@@ -214,14 +210,14 @@ export function ExportManagement() {
 
       toast({
         title: "Backup Archive Created",
-        description: `Exported ${result.files.length} JSON database collections in ZIP archive.`,
+        description: `Exported ${result.files.length} JSON database collections in ZIP archive.`
       })
     } catch (err: any) {
       console.error("ZIP creation error:", err)
       toast({
         title: "Export Error",
         description: err.message || "Failed to generate ZIP archive",
-        variant: "destructive",
+        variant: "destructive"
       })
     } finally {
       setExportingZip(false)
@@ -234,7 +230,7 @@ export function ExportManagement() {
     try {
       const [evaluations, classrooms] = await Promise.all([
         getEvaluationsByDateRange(startDate, endDate),
-        getClassrooms(),
+        getClassrooms()
       ])
 
       const classroomMap = new Map(classrooms.map((c) => [c.id, c]))
@@ -251,7 +247,7 @@ export function ExportManagement() {
         toast({
           title: "No Data Found",
           description: "No evaluations matched the selected dates and division criteria.",
-          variant: "destructive",
+          variant: "destructive"
         })
         return
       }
@@ -261,7 +257,7 @@ export function ExportManagement() {
         classrooms,
         startDate,
         endDate,
-        selectedDivision,
+        selectedDivision
       })
 
       const buffer = await workbook.xlsx.writeBuffer()
@@ -270,19 +266,72 @@ export function ExportManagement() {
 
       toast({
         title: "Export Ready",
-        description: `Downloaded ${fileName} with per-division sheets.`,
+        description: `Downloaded ${fileName} with per-division sheets.`
       })
     } catch (err: any) {
       console.error("Custom export error:", err)
       toast({
         title: "Export Error",
         description: err.message || "Failed to export filtered evaluations",
-        variant: "destructive",
+        variant: "destructive"
       })
     } finally {
       setExportingCustom(false)
     }
   }
+  return {
+    dateRangePreset,
+    endDate,
+    exportProgress,
+    exportingCustom,
+    exportingExcel,
+    exportingWeekly,
+    exportingZip,
+    handleDatePresetChange,
+    handleExportCustomEvaluations,
+    handleExportMasterExcel,
+    handleExportSystemBackupZip,
+    handleExportWeeklyGreenRankings,
+    isWorkerExporting,
+    selectedDivision,
+    setDateRangePreset,
+    setEndDate,
+    setSelectedDivision,
+    setStartDate,
+    setWeeklyPreset,
+    setWeeklyStartDate,
+    startDate,
+    weeklyPreset,
+    weeklyStartDate
+  }
+}
+
+export function ExportManagement() {
+  const {
+    dateRangePreset,
+    endDate,
+    exportProgress,
+    exportingCustom,
+    exportingExcel,
+    exportingWeekly,
+    exportingZip,
+    handleDatePresetChange,
+    handleExportCustomEvaluations,
+    handleExportMasterExcel,
+    handleExportSystemBackupZip,
+    handleExportWeeklyGreenRankings,
+    isWorkerExporting,
+    selectedDivision,
+    setDateRangePreset,
+    setEndDate,
+    setSelectedDivision,
+    setStartDate,
+    setWeeklyPreset,
+    setWeeklyStartDate,
+    startDate,
+    weeklyPreset,
+    weeklyStartDate
+  } = useExportManagementController()
 
   return (
     <div className="space-y-8 animate-in fade-in-50 duration-300">
@@ -293,265 +342,356 @@ export function ExportManagement() {
       />
 
       {/* Featured Card: Weekly Green Rankings Report (Benchmark Shaded Format) */}
-      <Card className="border-emerald-500/30 bg-gradient-to-br from-emerald-500/5 via-card/80 to-teal-500/5 backdrop-blur-md shadow-sm relative overflow-hidden">
-        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-teal-600 via-emerald-500 to-green-600" />
-        <CardHeader className="pb-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="p-3 rounded-2xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 ring-1 ring-emerald-500/20">
-                <Trophy className="h-6 w-6" />
-              </div>
-              <div>
-                <CardTitle className="text-lg font-bold flex items-center gap-2">
-                  Weekly Green Rankings Report
-                  <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 ring-1 ring-emerald-500/30">
-                    Shaded Excel
-                  </span>
-                </CardTitle>
-                <CardDescription className="text-xs mt-1">
-                  Mon–Fri performance with Greenest winners, dynamic formulas, and dedicated division tabs in one file.
-                </CardDescription>
-              </div>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-5 pt-0">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-end bg-background/50 p-4 rounded-xl border border-border/50">
-            <div className="space-y-2">
-              <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                Week Preset
-              </Label>
-              <Select
-                value={weeklyPreset}
-                onValueChange={(val: any) => setWeeklyPreset(val)}
-              >
-                <SelectTrigger className="bg-background rounded-xl">
-                  <SelectValue placeholder="Select week" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="current-week">Current School Week (Mon–Fri)</SelectItem>
-                  <SelectItem value="last-week">Previous School Week (Mon–Fri)</SelectItem>
-                  <SelectItem value="custom">Custom Week Starting Monday</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {weeklyPreset === "custom" && (
-              <div className="space-y-2">
-                <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                  Week Start Date (Monday)
-                </Label>
-                <Input
-                  type="date"
-                  value={weeklyStartDate}
-                  onChange={(e) => setWeeklyStartDate(e.target.value)}
-                  className="bg-background rounded-xl"
-                />
-              </div>
-            )}
-
-            <div className="sm:col-span-1 flex items-end">
-              <Button
-                onClick={handleExportWeeklyGreenRankings}
-                disabled={exportingWeekly}
-                className="w-full rounded-xl gap-2 font-semibold shadow-xs cursor-pointer bg-emerald-600 hover:bg-emerald-700 text-white"
-              >
-                {exportingWeekly ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" /> Compiling All Division Sheets...
-                  </>
-                ) : (
-                  <>
-                    <Download className="h-4 w-4" /> Download Shaded Rankings (.xlsx)
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <ExportPeriodFilters
+        exportingWeekly={exportingWeekly}
+        handleExportWeeklyGreenRankings={handleExportWeeklyGreenRankings}
+        setWeeklyPreset={setWeeklyPreset}
+        setWeeklyStartDate={setWeeklyStartDate}
+        weeklyPreset={weeklyPreset}
+        weeklyStartDate={weeklyStartDate}
+      />
 
       {/* Grid: Master Excel Workbook & System Database Backup */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="border-border/60 bg-card/60 backdrop-blur-md shadow-xs hover:border-primary/40 transition-colors">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <div className="p-2.5 rounded-xl bg-primary/10 text-primary">
-                <FileSpreadsheet className="h-5 w-5" />
-              </div>
-              <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-primary/10 text-primary">
-                Full Database
-              </span>
-            </div>
-            <CardTitle className="text-base font-bold mt-2">Master Excel Workbook</CardTitle>
-            <CardDescription className="text-xs">
-              Complete spreadsheet of Classrooms, Supervisors, Evaluations, KPIs, and division tabs.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <Button
-              onClick={handleExportMasterExcel}
-              disabled={exportingExcel || isWorkerExporting}
-              className="w-full rounded-xl gap-2 font-semibold shadow-xs cursor-pointer"
-            >
-              {exportingExcel || isWorkerExporting ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" /> {exportProgress || "Compiling Sheets..."}
-                </>
-              ) : (
-                <>
-                  <Download className="h-4 w-4" /> Download Master Excel (.xlsx)
-                </>
-              )}
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border/60 bg-card/60 backdrop-blur-md shadow-xs hover:border-primary/40 transition-colors">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
-                <Archive className="h-5 w-5" />
-              </div>
-              <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400">
-                JSON Tables
-              </span>
-            </div>
-            <CardTitle className="text-base font-bold mt-2">System Database Backup</CardTitle>
-            <CardDescription className="text-xs">
-              Direct JSON database dumps for all tables in a single compressed ZIP archive.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <Button
-              onClick={handleExportSystemBackupZip}
-              disabled={exportingZip}
-              variant="outline"
-              className="w-full rounded-xl gap-2 font-semibold shadow-xs cursor-pointer"
-            >
-              {exportingZip ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" /> Archiving Tables...
-                </>
-              ) : (
-                <>
-                  <Database className="h-4 w-4" /> Download Backup (.zip)
-                </>
-              )}
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
+      <MasterExportActions
+        exportProgress={exportProgress}
+        exportingExcel={exportingExcel}
+        exportingZip={exportingZip}
+        handleExportMasterExcel={handleExportMasterExcel}
+        handleExportSystemBackupZip={handleExportSystemBackupZip}
+        isWorkerExporting={isWorkerExporting}
+      />
 
       {/* Filtered Evaluations Export Section */}
-      <Card className="border-border/60 bg-card/60 backdrop-blur-md shadow-xs">
-        <CardHeader className="border-b border-border/40 p-4 sm:p-5">
+      <CustomEvaluationExport
+        dateRangePreset={dateRangePreset}
+        endDate={endDate}
+        exportProgress={exportProgress}
+        exportingCustom={exportingCustom}
+        handleDatePresetChange={handleDatePresetChange}
+        handleExportCustomEvaluations={handleExportCustomEvaluations}
+        isWorkerExporting={isWorkerExporting}
+        selectedDivision={selectedDivision}
+        setDateRangePreset={setDateRangePreset}
+        setEndDate={setEndDate}
+        setSelectedDivision={setSelectedDivision}
+        setStartDate={setStartDate}
+        startDate={startDate}
+      />
+    </div>
+  )
+}
+
+function ExportPeriodFilters({
+  exportingWeekly,
+  handleExportWeeklyGreenRankings,
+  setWeeklyPreset,
+  setWeeklyStartDate,
+  weeklyPreset,
+  weeklyStartDate
+}: Pick<
+  ReturnType<typeof useExportManagementController>,
+  | "exportingWeekly"
+  | "handleExportWeeklyGreenRankings"
+  | "setWeeklyPreset"
+  | "setWeeklyStartDate"
+  | "weeklyPreset"
+  | "weeklyStartDate"
+>) {
+  return (
+    <Card className="border-emerald-500/30 bg-gradient-to-br from-emerald-500/5 via-card/80 to-teal-500/5 backdrop-blur-md shadow-sm relative overflow-hidden">
+      <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-teal-600 via-emerald-500 to-green-600" />
+      <CardHeader className="pb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-primary/10 text-primary">
-              <Filter className="h-5 w-5" />
+            <div className="p-3 rounded-2xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 ring-1 ring-emerald-500/20">
+              <Trophy className="h-6 w-6" />
             </div>
             <div>
-              <CardTitle className="text-lg font-bold">Custom Evaluations Export</CardTitle>
-              <CardDescription className="text-xs">
-                Filter evaluation records by date and division to generate customized Excel sheets.
+              <CardTitle className="text-lg font-bold flex items-center gap-2">
+                Weekly Green Rankings Report
+                <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 ring-1 ring-emerald-500/30">
+                  Shaded Excel
+                </span>
+              </CardTitle>
+              <CardDescription className="text-xs mt-1">
+                Mon–Fri performance with Greenest winners, dynamic formulas, and dedicated division tabs in one file.
               </CardDescription>
             </div>
           </div>
-        </CardHeader>
-        <CardContent className="pt-6 space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
-            <div className="space-y-2">
-              <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                Date Preset
-              </Label>
-              <Select
-                value={dateRangePreset}
-                onValueChange={(val: any) => handleDatePresetChange(val)}
-              >
-                <SelectTrigger className="bg-background rounded-xl">
-                  <SelectValue placeholder="Select preset" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="current-month">This Month</SelectItem>
-                  <SelectItem value="last-month">Last Month</SelectItem>
-                  <SelectItem value="custom">Custom Date Range</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                Start Date
-              </Label>
-              <Input
-                type="date"
-                value={startDate}
-                onChange={(e) => {
-                  setStartDate(e.target.value)
-                  setDateRangePreset("custom")
-                }}
-                className="bg-background rounded-xl"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                End Date
-              </Label>
-              <Input
-                type="date"
-                value={endDate}
-                onChange={(e) => {
-                  setEndDate(e.target.value)
-                  setDateRangePreset("custom")
-                }}
-                className="bg-background rounded-xl"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                Division Filter
-              </Label>
-              <Select value={selectedDivision} onValueChange={setSelectedDivision}>
-                <SelectTrigger className="bg-background rounded-xl">
-                  <SelectValue placeholder="All Divisions" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Divisions (Includes Individual Tabs)</SelectItem>
-                  {DIVISION_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-5 pt-0">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-end bg-background/50 p-4 rounded-xl border border-border/50">
+          <div className="space-y-2">
+            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Week Preset</Label>
+            <Select value={weeklyPreset} onValueChange={(val: any) => setWeeklyPreset(val)}>
+              <SelectTrigger className="bg-background rounded-xl">
+                <SelectValue placeholder="Select week" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="current-week">Current School Week (Mon–Fri)</SelectItem>
+                <SelectItem value="last-week">Previous School Week (Mon–Fri)</SelectItem>
+                <SelectItem value="custom">Custom Week Starting Monday</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-border/40">
-            <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-              <Sparkles className="h-3.5 w-3.5 text-primary" />
-              Exports include classroom name, division, supervisor, score percentages, and timestamps in shaded format.
-            </p>
+          {weeklyPreset === "custom" && (
+            <div className="space-y-2">
+              <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Week Start Date (Monday)
+              </Label>
+              <Input
+                type="date"
+                value={weeklyStartDate}
+                onChange={(e) => setWeeklyStartDate(e.target.value)}
+                className="bg-background rounded-xl"
+              />
+            </div>
+          )}
+
+          <div className="sm:col-span-1 flex items-end">
             <Button
-              onClick={handleExportCustomEvaluations}
-              disabled={exportingCustom || isWorkerExporting}
-              className="w-full sm:w-auto rounded-xl gap-2 font-semibold shadow-xs cursor-pointer"
+              onClick={handleExportWeeklyGreenRankings}
+              disabled={exportingWeekly}
+              className="w-full rounded-xl gap-2 font-semibold shadow-xs cursor-pointer bg-emerald-600 hover:bg-emerald-700 text-white"
             >
-              {exportingCustom || isWorkerExporting ? (
+              {exportingWeekly ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin" /> {exportProgress || "Exporting..."}
+                  <Loader2 className="h-4 w-4 animate-spin" /> Compiling All Division Sheets...
                 </>
               ) : (
                 <>
-                  <Download className="h-4 w-4" /> Export Filtered Evaluations (.xlsx)
+                  <Download className="h-4 w-4" /> Download Shaded Rankings (.xlsx)
                 </>
               )}
             </Button>
           </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function MasterExportActions({
+  exportProgress,
+  exportingExcel,
+  exportingZip,
+  handleExportMasterExcel,
+  handleExportSystemBackupZip,
+  isWorkerExporting
+}: Pick<
+  ReturnType<typeof useExportManagementController>,
+  | "exportProgress"
+  | "exportingExcel"
+  | "exportingZip"
+  | "handleExportMasterExcel"
+  | "handleExportSystemBackupZip"
+  | "isWorkerExporting"
+>) {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <Card className="border-border/60 bg-card/60 backdrop-blur-md shadow-xs hover:border-primary/40 transition-colors">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div className="p-2.5 rounded-xl bg-primary/10 text-primary">
+              <FileSpreadsheet className="h-5 w-5" />
+            </div>
+            <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+              Full Database
+            </span>
+          </div>
+          <CardTitle className="text-base font-bold mt-2">Master Excel Workbook</CardTitle>
+          <CardDescription className="text-xs">
+            Complete spreadsheet of Classrooms, Supervisors, Evaluations, KPIs, and division tabs.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <Button
+            onClick={handleExportMasterExcel}
+            disabled={exportingExcel || isWorkerExporting}
+            className="w-full rounded-xl gap-2 font-semibold shadow-xs cursor-pointer"
+          >
+            {exportingExcel || isWorkerExporting ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" /> {exportProgress || "Compiling Sheets..."}
+              </>
+            ) : (
+              <>
+                <Download className="h-4 w-4" /> Download Master Excel (.xlsx)
+              </>
+            )}
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card className="border-border/60 bg-card/60 backdrop-blur-md shadow-xs hover:border-primary/40 transition-colors">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
+              <Archive className="h-5 w-5" />
+            </div>
+            <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400">
+              JSON Tables
+            </span>
+          </div>
+          <CardTitle className="text-base font-bold mt-2">System Database Backup</CardTitle>
+          <CardDescription className="text-xs">
+            Direct JSON database dumps for all tables in a single compressed ZIP archive.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <Button
+            onClick={handleExportSystemBackupZip}
+            disabled={exportingZip}
+            variant="outline"
+            className="w-full rounded-xl gap-2 font-semibold shadow-xs cursor-pointer"
+          >
+            {exportingZip ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" /> Archiving Tables...
+              </>
+            ) : (
+              <>
+                <Database className="h-4 w-4" /> Download Backup (.zip)
+              </>
+            )}
+          </Button>
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+function CustomEvaluationExport({
+  dateRangePreset,
+  endDate,
+  exportProgress,
+  exportingCustom,
+  handleDatePresetChange,
+  handleExportCustomEvaluations,
+  isWorkerExporting,
+  selectedDivision,
+  setDateRangePreset,
+  setEndDate,
+  setSelectedDivision,
+  setStartDate,
+  startDate
+}: Pick<
+  ReturnType<typeof useExportManagementController>,
+  | "dateRangePreset"
+  | "endDate"
+  | "exportProgress"
+  | "exportingCustom"
+  | "handleDatePresetChange"
+  | "handleExportCustomEvaluations"
+  | "isWorkerExporting"
+  | "selectedDivision"
+  | "setDateRangePreset"
+  | "setEndDate"
+  | "setSelectedDivision"
+  | "setStartDate"
+  | "startDate"
+>) {
+  return (
+    <Card className="border-border/60 bg-card/60 backdrop-blur-md shadow-xs">
+      <CardHeader className="border-b border-border/40 p-4 sm:p-5">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-xl bg-primary/10 text-primary">
+            <Filter className="h-5 w-5" />
+          </div>
+          <div>
+            <CardTitle className="text-lg font-bold">Custom Evaluations Export</CardTitle>
+            <CardDescription className="text-xs">
+              Filter evaluation records by date and division to generate customized Excel sheets.
+            </CardDescription>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="pt-6 space-y-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+          <div className="space-y-2">
+            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Date Preset</Label>
+            <Select value={dateRangePreset} onValueChange={(val: any) => handleDatePresetChange(val)}>
+              <SelectTrigger className="bg-background rounded-xl">
+                <SelectValue placeholder="Select preset" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="current-month">This Month</SelectItem>
+                <SelectItem value="last-month">Last Month</SelectItem>
+                <SelectItem value="custom">Custom Date Range</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Start Date</Label>
+            <Input
+              type="date"
+              value={startDate}
+              onChange={(e) => {
+                setStartDate(e.target.value)
+                setDateRangePreset("custom")
+              }}
+              className="bg-background rounded-xl"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">End Date</Label>
+            <Input
+              type="date"
+              value={endDate}
+              onChange={(e) => {
+                setEndDate(e.target.value)
+                setDateRangePreset("custom")
+              }}
+              className="bg-background rounded-xl"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Division Filter
+            </Label>
+            <Select value={selectedDivision} onValueChange={setSelectedDivision}>
+              <SelectTrigger className="bg-background rounded-xl">
+                <SelectValue placeholder="All Divisions" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Divisions (Includes Individual Tabs)</SelectItem>
+                {DIVISION_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-border/40">
+          <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+            <Sparkles className="h-3.5 w-3.5 text-primary" />
+            Exports include classroom name, division, supervisor, score percentages, and timestamps in shaded format.
+          </p>
+          <Button
+            onClick={handleExportCustomEvaluations}
+            disabled={exportingCustom || isWorkerExporting}
+            className="w-full sm:w-auto rounded-xl gap-2 font-semibold shadow-xs cursor-pointer"
+          >
+            {exportingCustom || isWorkerExporting ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" /> {exportProgress || "Exporting..."}
+              </>
+            ) : (
+              <>
+                <Download className="h-4 w-4" /> Export Filtered Evaluations (.xlsx)
+              </>
+            )}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   )
 }

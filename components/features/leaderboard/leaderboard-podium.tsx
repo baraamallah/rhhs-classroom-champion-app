@@ -27,7 +27,7 @@ export function LeaderboardPodium({ topThree }: LeaderboardPodiumProps) {
             className="flex-1 min-w-0 max-w-[31%] xs:max-w-[32%] sm:max-w-44 md:max-w-52 flex flex-col items-center group"
             initial={{ opacity: 0, y: 30, scale: 0.94 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ duration: 0.55, delay: 0.12, type: "spring", stiffness: 140, damping: 18 }}
+            transition={{ delay: 0.12, type: "spring", stiffness: 140, damping: 18 }}
           >
             {/* 3D Silver Medallion */}
             <div className="relative mb-2 sm:mb-3 flex flex-col items-center">
@@ -58,7 +58,7 @@ export function LeaderboardPodium({ topThree }: LeaderboardPodiumProps) {
             </div>
 
             {/* Pedestal Block - Architectural Silver Finish */}
-            <div className="w-full h-22 xs:h-26 sm:h-36 rounded-t-xl sm:rounded-t-2xl bg-linear-to-b from-slate-100 via-slate-50 to-card dark:from-slate-800 dark:via-slate-850 dark:to-card border-t-2 border-x border-slate-300 dark:border-slate-600 shadow-md group-hover:shadow-lg transition-all duration-300 flex flex-col items-center justify-between p-1.5 sm:p-3 relative overflow-hidden">
+            <div className="w-full h-22 xs:h-26 sm:h-36 rounded-t-xl sm:rounded-t-2xl bg-linear-to-b from-slate-100 via-slate-50 to-card dark:from-slate-800 dark:via-slate-850 dark:to-card border-t-2 border-x border-slate-300 dark:border-slate-600 shadow-md group-hover:shadow-lg transition-[color,background-color,border-color,box-shadow] duration-300 flex flex-col items-center justify-between p-1.5 sm:p-3 relative overflow-hidden">
               {/* Highlight Top Bevel */}
               <div className="absolute top-0 inset-x-0 h-1 bg-linear-to-r from-transparent via-white dark:via-slate-400/40 to-transparent" />
 
@@ -80,7 +80,7 @@ export function LeaderboardPodium({ topThree }: LeaderboardPodiumProps) {
             className="flex-1 min-w-0 max-w-[37%] xs:max-w-[36%] sm:max-w-48 md:max-w-56 flex flex-col items-center group z-10"
             initial={{ opacity: 0, y: 40, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ duration: 0.65, delay: 0.2, type: "spring", stiffness: 150, damping: 16 }}
+            transition={{ delay: 0.2, type: "spring", stiffness: 150, damping: 16 }}
           >
             {/* Golden Radiant Crown & Emblem */}
             <div className="relative mb-2 sm:mb-3 flex flex-col items-center">
@@ -122,7 +122,7 @@ export function LeaderboardPodium({ topThree }: LeaderboardPodiumProps) {
             </div>
 
             {/* Pedestal Block (Tallest, Luminous Gold Finish) */}
-            <div className="w-full h-28 xs:h-34 sm:h-48 rounded-t-xl sm:rounded-t-3xl bg-linear-to-b from-amber-100/90 via-amber-50/70 to-card dark:from-amber-950/60 dark:via-amber-900/40 dark:to-card border-t-2 border-x-2 border-amber-400 dark:border-amber-400/90 shadow-xl shadow-amber-500/15 group-hover:shadow-2xl group-hover:shadow-amber-500/25 transition-all duration-300 flex flex-col items-center justify-between p-1.5 sm:p-4 relative overflow-hidden">
+            <div className="w-full h-28 xs:h-34 sm:h-48 rounded-t-xl sm:rounded-t-3xl bg-linear-to-b from-amber-100/90 via-amber-50/70 to-card dark:from-amber-950/60 dark:via-amber-900/40 dark:to-card border-t-2 border-x-2 border-amber-400 dark:border-amber-400/90 shadow-xl shadow-amber-500/15 group-hover:shadow-2xl group-hover:shadow-amber-500/25 transition-[color,background-color,border-color,box-shadow] duration-300 flex flex-col items-center justify-between p-1.5 sm:p-4 relative overflow-hidden">
               {/* Highlight Top Bevel with Golden Shimmer */}
               <div className="absolute top-0 inset-x-0 h-1.5 bg-linear-to-r from-transparent via-amber-300 dark:via-amber-400 to-transparent" />
 
@@ -144,7 +144,7 @@ export function LeaderboardPodium({ topThree }: LeaderboardPodiumProps) {
             className="flex-1 min-w-0 max-w-[31%] xs:max-w-[32%] sm:max-w-40 md:max-w-48 flex flex-col items-center group"
             initial={{ opacity: 0, y: 30, scale: 0.94 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ duration: 0.55, delay: 0.08, type: "spring", stiffness: 140, damping: 18 }}
+            transition={{ delay: 0.08, type: "spring", stiffness: 140, damping: 18 }}
           >
             {/* 3D Bronze Shield */}
             <div className="relative mb-2 sm:mb-3 flex flex-col items-center">
@@ -175,7 +175,7 @@ export function LeaderboardPodium({ topThree }: LeaderboardPodiumProps) {
             </div>
 
             {/* Pedestal Block - Architectural Bronze Finish */}
-            <div className="w-full h-18 xs:h-22 sm:h-28 rounded-t-xl sm:rounded-t-2xl bg-linear-to-b from-amber-100/70 via-orange-50/60 to-card dark:from-stone-900/80 dark:via-amber-950/50 dark:to-card border-t-2 border-x border-amber-600/50 dark:border-amber-700/70 shadow-md group-hover:shadow-lg transition-all duration-300 flex flex-col items-center justify-between p-1.5 sm:p-3 relative overflow-hidden">
+            <div className="w-full h-18 xs:h-22 sm:h-28 rounded-t-xl sm:rounded-t-2xl bg-linear-to-b from-amber-100/70 via-orange-50/60 to-card dark:from-stone-900/80 dark:via-amber-950/50 dark:to-card border-t-2 border-x border-amber-600/50 dark:border-amber-700/70 shadow-md group-hover:shadow-lg transition-[color,background-color,border-color,box-shadow] duration-300 flex flex-col items-center justify-between p-1.5 sm:p-3 relative overflow-hidden">
               {/* Highlight Top Bevel */}
               <div className="absolute top-0 inset-x-0 h-1 bg-linear-to-r from-transparent via-amber-300/40 dark:via-amber-500/30 to-transparent" />
 

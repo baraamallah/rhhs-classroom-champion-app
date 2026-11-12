@@ -1,5 +1,6 @@
 "use client"
 
+import { PolicyTable } from "@/components/features/legal/policy-table"
 import React from "react"
 import { ShieldCheck, Lock, UserCheck, KeyRound, Clock, Server } from "lucide-react"
 import { useAuth } from "@/components/providers/auth-provider"
@@ -56,7 +57,9 @@ export function StaffPrivacyAddendum() {
             <span>Staff Account Data Processing &amp; Safeguards</span>
           </h3>
           <p className="text-muted-foreground">
-            As an authorized supervisor or administrative evaluator, your institutional profile consists of your full name, verified institutional school email address, securely salted cryptographic credentials, and assigned permission boundaries.
+            As an authorized supervisor or administrative evaluator, your institutional profile consists of your full
+            name, verified institutional school email address, securely salted cryptographic credentials, and assigned
+            permission boundaries.
           </p>
         </div>
 
@@ -67,7 +70,8 @@ export function StaffPrivacyAddendum() {
               <span>Evaluation Audit Trails</span>
             </span>
             <p className="text-muted-foreground text-xs">
-              All submitted classroom checklist evaluations and score adjustments are logged with your account ID and an immutable timestamp to maintain institutional transparency and accountability.
+              All submitted classroom checklist evaluations and score adjustments are logged with your account ID and an
+              immutable timestamp to maintain institutional transparency and accountability.
             </p>
           </div>
 
@@ -77,13 +81,15 @@ export function StaffPrivacyAddendum() {
               <span>Session Boundaries</span>
             </span>
             <p className="text-muted-foreground text-xs">
-              Administrative sessions utilize encrypted, HttpOnly, SameSite browser session cookies with enforced 7-day expiration limits. Plaintext passwords are never accessible or stored.
+              Administrative sessions utilize encrypted, HttpOnly, SameSite browser session cookies with enforced 7-day
+              expiration limits. Plaintext passwords are never accessible or stored.
             </p>
           </div>
         </div>
 
         <p className="text-xs text-muted-foreground pt-1 italic">
-          Staff profile data is retained for the active academic appointment term. You maintain the right to review your audit history through the school administration office.
+          Staff profile data is retained for the active academic appointment term. You maintain the right to review your
+          audit history through the school administration office.
         </p>
       </div>
     </section>
@@ -127,7 +133,9 @@ export function StaffTermsAddendum() {
             <span>1. Objective Evaluation Standards</span>
           </h3>
           <p className="text-muted-foreground text-xs sm:text-sm">
-            Designated student supervisors and faculty inspectors must conduct audits impartially, without favoritism or bias. Every classroom must be graded against the standardized 5-point eco rubric (Waste Sorting, Cleanliness, Lighting/Energy, Board/Furniture, Ecological Initiative).
+            Designated student supervisors and faculty inspectors must conduct audits impartially, without favoritism or
+            bias. Every classroom must be graded against the standardized 5-point eco rubric (Waste Sorting,
+            Cleanliness, Lighting/Energy, Board/Furniture, Ecological Initiative).
           </p>
         </div>
 
@@ -137,7 +145,9 @@ export function StaffTermsAddendum() {
             <span>2. Credential Confidentiality &amp; Non-Delegation</span>
           </h3>
           <p className="text-muted-foreground text-xs sm:text-sm">
-            Supervisor and administrator account credentials are non-transferable. Account sharing, lending passwords, or permitting unauthorized third parties to submit scores on your behalf is strictly prohibited and subject to institutional review.
+            Supervisor and administrator account credentials are non-transferable. Account sharing, lending passwords,
+            or permitting unauthorized third parties to submit scores on your behalf is strictly prohibited and subject
+            to institutional review.
           </p>
         </div>
 
@@ -147,7 +157,12 @@ export function StaffTermsAddendum() {
             <span>3. Audit Discrepancies &amp; Incident Reporting</span>
           </h3>
           <p className="text-muted-foreground text-xs sm:text-sm">
-            Supervisors who notice anomalies in score tallies, duplicate evaluations, or suspect unauthorized access to their credentials must immediately notify the RHHS Administration at <a href="mailto:info@rhhs.edu.lb" className="text-primary underline">info@rhhs.edu.lb</a>.
+            Supervisors who notice anomalies in score tallies, duplicate evaluations, or suspect unauthorized access to
+            their credentials must immediately notify the RHHS Administration at{" "}
+            <a href="mailto:info@rhhs.edu.lb" className="text-primary underline">
+              info@rhhs.edu.lb
+            </a>
+            .
           </p>
         </div>
       </div>
@@ -185,32 +200,45 @@ export function StaffCookiesAddendum() {
         </span>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-border/70 shadow-2xs">
-        <table className="w-full text-left text-xs sm:text-sm border-collapse">
-          <thead>
-            <tr className="bg-muted/70 text-foreground border-b border-border/60">
-              <th className="p-3 font-semibold">Technical Purpose</th>
-              <th className="p-3 font-semibold">Storage Type</th>
-              <th className="p-3 font-semibold">Security Safeguards</th>
-              <th className="p-3 font-semibold">Lifespan</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border/50 bg-card">
-            <tr>
-              <td className="p-3 font-medium text-foreground">Staff Session Authentication</td>
-              <td className="p-3 text-muted-foreground">HTTP Cookie</td>
-              <td className="p-3 text-muted-foreground">HttpOnly, Secure, SameSite=Lax. Protects evaluation and administration endpoints.</td>
-              <td className="p-3 text-muted-foreground">7 Days</td>
-            </tr>
-            <tr>
-              <td className="p-3 font-medium text-foreground">Evaluation Write Sync</td>
-              <td className="p-3 text-muted-foreground">HTTP Cookie</td>
-              <td className="p-3 text-muted-foreground">Temporary read-after-write synchronization token for instant leaderboard updates.</td>
-              <td className="p-3 text-muted-foreground">10 Seconds</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+      <PolicyTable
+        headings={["Technical Purpose", "Storage Type", "Security Safeguards", "Lifespan"]}
+        rows={[
+          {
+            id: "Staff Session Authentication",
+            cells: [
+              {
+                heading: "Technical Purpose",
+                text: "Staff Session Authentication",
+                className: "p-3 font-medium text-foreground"
+              },
+              { heading: "Storage Type", text: "HTTP Cookie", className: "p-3 text-muted-foreground" },
+              {
+                heading: "Security Safeguards",
+                text: "HttpOnly, Secure, SameSite=Lax. Protects evaluation and administration endpoints.",
+                className: "p-3 text-muted-foreground"
+              },
+              { heading: "Lifespan", text: "7 Days", className: "p-3 text-muted-foreground" }
+            ]
+          },
+          {
+            id: "Evaluation Write Sync",
+            cells: [
+              {
+                heading: "Technical Purpose",
+                text: "Evaluation Write Sync",
+                className: "p-3 font-medium text-foreground"
+              },
+              { heading: "Storage Type", text: "HTTP Cookie", className: "p-3 text-muted-foreground" },
+              {
+                heading: "Security Safeguards",
+                text: "Temporary read-after-write synchronization token for instant leaderboard updates.",
+                className: "p-3 text-muted-foreground"
+              },
+              { heading: "Lifespan", text: "10 Seconds", className: "p-3 text-muted-foreground" }
+            ]
+          }
+        ]}
+      />
     </section>
   )
 }

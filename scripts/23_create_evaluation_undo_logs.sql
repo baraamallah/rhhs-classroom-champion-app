@@ -32,24 +32,18 @@ CREATE INDEX IF NOT EXISTS idx_evaluation_undo_logs_undone_at ON evaluation_undo
 -- Enable RLS
 ALTER TABLE evaluation_undo_logs ENABLE ROW LEVEL SECURITY;
 
--- Allow authenticated users to view undo logs
+-- Browser database clients may read their own audit history; active administrators may read all.
+-- Application writes use the server client after validating the custom eco_session cookie.
 CREATE POLICY "Allow authenticated users to read undo logs"
-  ON evaluation_undo_logs
-  FOR SELECT
-  TO authenticated
-  USING (true);
+  ON evaluation_undo_logs FOR SELECT TO authenticated
+  USING (
+    auth.uid() IS NOT NULL AND EXISTS (
+      SELECT 1 FROM public.users AS actor
+      WHERE actor.id = auth.uid() AND actor.is_active = true
+        AND (actor.role IN ('admin', 'super_admin') OR
+          (actor.role = 'supervisor' AND evaluation_undo_logs.supervisor_id = actor.id))
+    )
+  );
 
--- Allow admins and supervisors to insert undo logs
-CREATE POLICY "Allow authenticated users to insert undo logs"
-  ON evaluation_undo_logs
-  FOR INSERT
-  TO authenticated
-  WITH CHECK (true);
-
--- Allow admins and supervisors to update undo logs (e.g. mark restored)
-CREATE POLICY "Allow authenticated users to update undo logs"
-  ON evaluation_undo_logs
-  FOR UPDATE
-  TO authenticated
-  USING (true)
-  WITH CHECK (true);
+-- Audit records are created/restored only by authorized server actions, never directly by browser clients.
+-- No authenticated INSERT, UPDATE, or DELETE policy is granted.

@@ -1,7 +1,14 @@
 "use client"
 
 import { useState, useMemo } from "react"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter
+} from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -27,13 +34,13 @@ interface DivisionAssignmentModalProps {
   onSuccess: () => void
 }
 
-export function DivisionAssignmentModal({
+function useDivisionAssignmentModalController({
   isOpen,
   onClose,
   supervisor,
   availableClassrooms,
   currentAssignedIds,
-  onSuccess,
+  onSuccess
 }: DivisionAssignmentModalProps) {
   const { toast } = useToast()
   const [selectedIds, setSelectedIds] = useState<string[]>(currentAssignedIds)
@@ -41,10 +48,7 @@ export function DivisionAssignmentModal({
   const [saving, setSaving] = useState(false)
   const [activeDivisionTab, setActiveDivisionTab] = useState<string>("all")
 
-  // Sync initial selection whenever modal opens with new supervisor
-  useMemo(() => {
-    setSelectedIds(currentAssignedIds)
-  }, [currentAssignedIds, isOpen])
+  const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds])
 
   const filteredClassrooms = useMemo(() => {
     return availableClassrooms.filter((c) => {
@@ -69,9 +73,7 @@ export function DivisionAssignmentModal({
   }, [availableClassrooms])
 
   const handleToggleClassroom = (id: string) => {
-    setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
-    )
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]))
   }
 
   const handleAssignWholeDivision = async (division: string) => {
@@ -81,7 +83,7 @@ export function DivisionAssignmentModal({
       toast({
         title: "No Classrooms Found",
         description: `No active classrooms exist in division "${division}".`,
-        variant: "destructive",
+        variant: "destructive"
       })
       return
     }
@@ -92,7 +94,7 @@ export function DivisionAssignmentModal({
 
     toast({
       title: `${division} Selected`,
-      description: `Added ${divisionIds.length} classrooms to selection. Click "Save Assignments" to commit.`,
+      description: `Added ${divisionIds.length} classrooms to selection. Click "Save Assignments" to commit.`
     })
   }
 
@@ -103,7 +105,7 @@ export function DivisionAssignmentModal({
 
     toast({
       title: `${division} Removed`,
-      description: `Removed ${divisionRooms.length} classrooms from selection.`,
+      description: `Removed ${divisionRooms.length} classrooms from selection.`
     })
   }
 
@@ -125,7 +127,7 @@ export function DivisionAssignmentModal({
       if (result.success) {
         toast({
           title: "Assignments Updated",
-          description: `Successfully assigned ${selectedIds.length} classrooms to ${supervisor.name}.`,
+          description: `Successfully assigned ${selectedIds.length} classrooms to ${supervisor.name}.`
         })
         onSuccess()
         onClose()
@@ -133,22 +135,131 @@ export function DivisionAssignmentModal({
         toast({
           title: "Assignment Failed",
           description: result.error || "Could not update assignments.",
-          variant: "destructive",
+          variant: "destructive"
         })
       }
     } catch (err: any) {
       toast({
         title: "Error",
         description: err.message || "An unexpected error occurred.",
-        variant: "destructive",
+        variant: "destructive"
       })
     } finally {
       setSaving(false)
     }
   }
+  return {
+    classroomsByDivision,
+    filteredClassrooms,
+    handleAssignWholeDivision,
+    handleDeselectAllFiltered,
+    handleRemoveWholeDivision,
+    handleSave,
+    handleSelectAllFiltered,
+    handleToggleClassroom,
+    saving,
+    searchQuery,
+    selectedIdSet,
+    selectedIds,
+    setSearchQuery
+  }
+}
+
+export function DivisionAssignmentModal({
+  isOpen,
+  onClose,
+  supervisor,
+  availableClassrooms,
+  currentAssignedIds,
+  onSuccess
+}: DivisionAssignmentModalProps) {
+  const {
+    classroomsByDivision,
+    filteredClassrooms,
+    handleAssignWholeDivision,
+    handleDeselectAllFiltered,
+    handleRemoveWholeDivision,
+    handleSave,
+    handleSelectAllFiltered,
+    handleToggleClassroom,
+    saving,
+    searchQuery,
+    selectedIdSet,
+    selectedIds,
+    setSearchQuery
+  } = useDivisionAssignmentModalController({
+    isOpen,
+    onClose,
+    supervisor,
+    availableClassrooms,
+    currentAssignedIds,
+    onSuccess
+  })
 
   if (!supervisor) return null
 
+  return (
+    <SupervisorAssignmentPicker
+      availableClassrooms={availableClassrooms}
+      classroomsByDivision={classroomsByDivision}
+      filteredClassrooms={filteredClassrooms}
+      handleAssignWholeDivision={handleAssignWholeDivision}
+      handleDeselectAllFiltered={handleDeselectAllFiltered}
+      handleRemoveWholeDivision={handleRemoveWholeDivision}
+      handleSave={handleSave}
+      handleSelectAllFiltered={handleSelectAllFiltered}
+      handleToggleClassroom={handleToggleClassroom}
+      isOpen={isOpen}
+      onClose={onClose}
+      saving={saving}
+      searchQuery={searchQuery}
+      selectedIdSet={selectedIdSet}
+      selectedIds={selectedIds}
+      setSearchQuery={setSearchQuery}
+      supervisor={supervisor}
+    />
+  )
+}
+
+function SupervisorAssignmentPicker({
+  availableClassrooms,
+  classroomsByDivision,
+  filteredClassrooms,
+  handleAssignWholeDivision,
+  handleDeselectAllFiltered,
+  handleRemoveWholeDivision,
+  handleSave,
+  handleSelectAllFiltered,
+  handleToggleClassroom,
+  isOpen,
+  onClose,
+  saving,
+  searchQuery,
+  selectedIdSet,
+  selectedIds,
+  setSearchQuery,
+  supervisor
+}: Pick<
+  ReturnType<typeof useDivisionAssignmentModalController>,
+  | "classroomsByDivision"
+  | "filteredClassrooms"
+  | "handleAssignWholeDivision"
+  | "handleDeselectAllFiltered"
+  | "handleRemoveWholeDivision"
+  | "handleSave"
+  | "handleSelectAllFiltered"
+  | "handleToggleClassroom"
+  | "saving"
+  | "searchQuery"
+  | "selectedIdSet"
+  | "selectedIds"
+  | "setSearchQuery"
+> &
+  Pick<
+    NonNullable<Parameters<typeof useDivisionAssignmentModalController>[0]>,
+    "availableClassrooms" | "isOpen" | "onClose" | "supervisor"
+  >) {
+  if (!supervisor) return null
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90dvh] flex flex-col p-0 gap-0 overflow-hidden rounded-2xl border border-border">
@@ -160,13 +271,9 @@ export function DivisionAssignmentModal({
                 <Badge variant="outline" className="text-primary bg-primary/10 border-primary/20">
                   Supervisor Assignments
                 </Badge>
-                <span className="text-xs text-muted-foreground font-mono">
-                  {selectedIds.length} Selected
-                </span>
+                <span className="text-xs text-muted-foreground font-mono">{selectedIds.length} Selected</span>
               </div>
-              <DialogTitle className="text-lg sm:text-xl font-bold">
-                Assign Classrooms to {supervisor.name}
-              </DialogTitle>
+              <DialogTitle className="text-lg sm:text-xl font-bold">Assign Classrooms to {supervisor.name}</DialogTitle>
               <DialogDescription className="text-xs text-muted-foreground">
                 Assign individual classrooms or click any division pill below to select the whole division at once.
               </DialogDescription>
@@ -182,7 +289,7 @@ export function DivisionAssignmentModal({
               {DIVISION_OPTIONS.map((div) => {
                 const count = (classroomsByDivision[div.value] || []).length
                 const selectedInDiv = (classroomsByDivision[div.value] || []).filter((c) =>
-                  selectedIds.includes(c.id)
+                  selectedIdSet.has(c.id)
                 ).length
                 const allSelected = count > 0 && selectedInDiv === count
 
@@ -198,9 +305,7 @@ export function DivisionAssignmentModal({
                         : "border-border hover:border-primary/50 text-muted-foreground hover:text-foreground"
                     }`}
                     onClick={() =>
-                      allSelected
-                        ? handleRemoveWholeDivision(div.value)
-                        : handleAssignWholeDivision(div.value)
+                      allSelected ? handleRemoveWholeDivision(div.value) : handleAssignWholeDivision(div.value)
                     }
                   >
                     {div.label} ({selectedInDiv}/{count})
@@ -255,11 +360,21 @@ export function DivisionAssignmentModal({
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {filteredClassrooms.map((classroom) => {
-                const isChecked = selectedIds.includes(classroom.id)
+                const isChecked = selectedIdSet.has(classroom.id)
 
                 return (
                   <div
                     key={classroom.id}
+                    role="checkbox"
+                    aria-checked={isChecked}
+                    aria-label={classroom.name}
+                    tabIndex={0}
+                    onKeyDown={(event) => {
+                      if (event.key === " " || event.key === "Enter") {
+                        event.preventDefault()
+                        handleToggleClassroom(classroom.id)
+                      }
+                    }}
                     onClick={() => handleToggleClassroom(classroom.id)}
                     className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all select-none ${
                       isChecked
@@ -268,11 +383,9 @@ export function DivisionAssignmentModal({
                     }`}
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <Checkbox
-                        checked={isChecked}
-                        onCheckedChange={() => handleToggleClassroom(classroom.id)}
-                        className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-                      />
+                      <span aria-hidden="true" className="shrink-0 text-primary">
+                        {isChecked ? <CheckSquare className="h-4 w-4" /> : <Square className="h-4 w-4" />}
+                      </span>
                       <div className="truncate">
                         <p className="font-semibold text-sm text-foreground truncate">{classroom.name}</p>
                         <p className="text-xs text-muted-foreground">

@@ -1,5 +1,6 @@
 "use client"
 
+import { EcoLoader } from "@/components/common/eco-loader"
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { getEvaluations, getClassrooms } from "@/lib/supabase-data"
@@ -40,17 +41,7 @@ export function AdminStats() {
   }, [])
 
   if (loading) {
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {[1, 2, 3].map((i) => (
-          <Card key={i}>
-            <CardContent className="py-12 text-center">
-              <p className="text-muted-foreground text-sm">Loading...</p>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    )
+    return <EcoLoader compact title="Gathering campus insights" />
   }
 
   return (

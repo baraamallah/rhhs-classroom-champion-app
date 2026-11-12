@@ -28,7 +28,7 @@ export default function NotFound() {
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
           {floatingLeaves.map((leaf, index) => (
             <m.div
-              key={index}
+              key={`${leaf.x}-${leaf.y}`}
               className="absolute text-primary/15 dark:text-primary/10"
               style={{ left: leaf.x, top: leaf.y }}
               initial={{ y: 0, rotate: leaf.rotate, opacity: 0 }}
@@ -124,7 +124,7 @@ export default function NotFound() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4, duration: 0.5 }}
             >
-              <Button asChild size="lg" className="rounded-full shadow-md hover:shadow-lg transition-all">
+              <Button asChild size="lg" className="rounded-full shadow-md hover:shadow-lg transition-[color,background-color,border-color,box-shadow]">
                 <Link href="/">
                   <Home className="mr-2 h-5 w-5" />
                   Return to Leaderboard
@@ -154,7 +154,7 @@ export default function NotFound() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <Link
                   href="/"
-                  className="p-3 rounded-xl bg-background/60 hover:bg-primary/10 border border-border/40 hover:border-primary/40 transition-all flex flex-col items-center text-center group"
+                  className="p-3 rounded-xl bg-background/60 hover:bg-primary/10 border border-border/40 hover:border-primary/40 transition-[color,background-color,border-color] flex flex-col items-center text-center group"
                 >
                   <Leaf className="h-5 w-5 text-primary mb-1 group-hover:scale-110 transition-transform" />
                   <span className="text-xs font-semibold text-foreground">Live Scores</span>
@@ -163,7 +163,7 @@ export default function NotFound() {
 
                 <Link
                   href="/winners"
-                  className="p-3 rounded-xl bg-background/60 hover:bg-amber-500/10 border border-border/40 hover:border-amber-500/40 transition-all flex flex-col items-center text-center group"
+                  className="p-3 rounded-xl bg-background/60 hover:bg-amber-500/10 border border-border/40 hover:border-amber-500/40 transition-[color,background-color,border-color] flex flex-col items-center text-center group"
                 >
                   <Trophy className="h-5 w-5 text-amber-500 mb-1 group-hover:scale-110 transition-transform" />
                   <span className="text-xs font-semibold text-foreground">Champions</span>
@@ -172,7 +172,7 @@ export default function NotFound() {
 
                 <Link
                   href="/about"
-                  className="p-3 rounded-xl bg-background/60 hover:bg-blue-500/10 border border-border/40 hover:border-blue-500/40 transition-all flex flex-col items-center text-center group"
+                  className="p-3 rounded-xl bg-background/60 hover:bg-blue-500/10 border border-border/40 hover:border-blue-500/40 transition-[color,background-color,border-color] flex flex-col items-center text-center group"
                 >
                   <Info className="h-5 w-5 text-blue-500 mb-1 group-hover:scale-110 transition-transform" />
                   <span className="text-xs font-semibold text-foreground">About Us</span>

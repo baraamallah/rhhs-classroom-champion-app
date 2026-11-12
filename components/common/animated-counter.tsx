@@ -10,13 +10,7 @@ interface AnimatedCounterProps {
   prefix?: string
 }
 
-export function AnimatedCounter({
-  value,
-  duration = 900,
-  className,
-  suffix = "",
-  prefix = "",
-}: AnimatedCounterProps) {
+export function AnimatedCounter({ value, duration = 900, className, suffix = "", prefix = "" }: AnimatedCounterProps) {
   const [displayValue, setDisplayValue] = useState(0)
 
   useEffect(() => {
@@ -29,6 +23,7 @@ export function AnimatedCounter({
       return
     }
 
+    let rafId = 0
     const step = (timestamp: number) => {
       if (!startTimestamp) startTimestamp = timestamp
       const progress = Math.min((timestamp - startTimestamp) / duration, 1)
@@ -37,11 +32,11 @@ export function AnimatedCounter({
       setDisplayValue(Math.round(startValue + (endValue - startValue) * easeProgress))
 
       if (progress < 1) {
-        window.requestAnimationFrame(step)
+        rafId = window.requestAnimationFrame(step)
       }
     }
 
-    const rafId = window.requestAnimationFrame(step)
+    rafId = window.requestAnimationFrame(step)
     return () => window.cancelAnimationFrame(rafId)
   }, [value, duration])
 

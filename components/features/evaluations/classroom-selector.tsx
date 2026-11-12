@@ -1,5 +1,6 @@
 "use client"
 
+import { EcoLoader } from "@/components/common/eco-loader"
 import { useEffect, useState, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -108,15 +109,7 @@ export function ClassroomSelector({
   }, [classrooms, searchQuery, activeTab, dateStatuses])
 
   if (loading) {
-    return (
-      <div className="py-16 text-center">
-        <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-primary/10 text-primary mb-2 animate-pulse">
-          <Clock className="h-5 w-5 animate-spin" />
-        </div>
-        <p className="text-sm font-semibold text-foreground">Loading assigned classrooms...</p>
-        <p className="text-xs text-muted-foreground mt-0.5">Fetching room listings</p>
-      </div>
-    )
+    return <EcoLoader title="Finding your classrooms" description="Getting your assigned rooms ready." />
   }
 
   return (

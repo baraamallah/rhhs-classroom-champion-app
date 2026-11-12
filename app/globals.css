@@ -254,3 +254,59 @@ body {
     display: none !important;
   }
 }
+
+/* Shared pixel garden loading state. */
+.eco-loader {
+  --leaf-vein: #315840;
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 60svh;
+  padding: 3rem 1.25rem;
+  overflow: hidden;
+  isolation: isolate;
+  background: var(--background);
+  color: var(--foreground);
+}
+.eco-loader--screen { min-height: 100svh; }
+.eco-loader--compact { min-height: 18rem; padding-block: 2rem; }
+.eco-loader__content { width: min(100%, 25rem); text-align: center; }
+.eco-loader__scene { position: relative; height: 210px; width: min(100%, 300px); margin: 0 auto 2rem; overflow: hidden; }
+.eco-loader__grid {
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(to right, var(--border) 1px, transparent 1px), linear-gradient(to bottom, var(--border) 1px, transparent 1px);
+  background-size: 24px 24px;
+  opacity: .28;
+  mask-image: radial-gradient(ellipse at center, black 10%, transparent 72%);
+}
+.eco-loader__fall { position: absolute; top: -30px; left: var(--x); color: #6c9859; animation: eco-leaf-fall var(--duration) linear var(--delay) infinite; will-change: transform; }
+.eco-loader__fall:nth-child(3n) { color: #b49b52; }
+.eco-loader__fall:nth-child(3n + 1) { color: #38745b; }
+.eco-loader__leaf { display: block; animation: eco-leaf-sway 3s ease-in-out var(--delay) infinite alternate; }
+.eco-loader__sprout { position: absolute; bottom: 16px; left: calc(50% - 48px); }
+.eco-loader__ground { position: absolute; bottom: 14px; left: 18%; right: 18%; height: 1px; background: var(--border); }
+.eco-loader__eyebrow { font-family: ui-monospace, monospace; font-size: 10px; font-weight: 600; letter-spacing: .2em; color: var(--muted-foreground); margin-bottom: .8rem; }
+.eco-loader__title { font-size: clamp(1.35rem, 4vw, 1.75rem); line-height: 1.25; letter-spacing: -.035em; font-weight: 600; text-wrap: balance; }
+.eco-loader__description { font-size: .8125rem; line-height: 1.7; color: var(--muted-foreground); margin-top: .65rem; text-wrap: balance; }
+.eco-loader__steps { display: flex; gap: 6px; justify-content: center; margin-top: 1.75rem; }
+.eco-loader__steps span { width: 5px; height: 5px; background: #6c9859; animation: eco-step 1.6s ease-in-out infinite; }
+.eco-loader--compact .eco-loader__scene { height: 130px; margin-bottom: 1rem; }
+.eco-loader--compact .eco-loader__title { font-size: 1.125rem; }
+.dark .eco-loader { --leaf-vein: #b2ce8e; }
+.dark .eco-loader__fall { color: #88b574; }
+.dark .eco-loader__fall:nth-child(3n) { color: #ccb56d; }
+@keyframes eco-leaf-fall {
+  0% { transform: translate3d(-12px, 0, 0); opacity: 0; }
+  12% { opacity: .85; }
+  80% { opacity: .7; }
+  100% { transform: translate3d(20px, 250px, 0); opacity: 0; }
+}
+@keyframes eco-leaf-sway { from { transform: rotate(-30deg); } to { transform: rotate(35deg); } }
+@keyframes eco-step { 0%, 70%, 100% { opacity: .25; transform: translateY(0); } 35% { opacity: 1; transform: translateY(-3px); } }
+@media (prefers-reduced-motion: reduce) {
+  .eco-loader__fall, .eco-loader__leaf, .eco-loader__steps span { animation: none; will-change: auto; }
+  .eco-loader__fall { top: 24%; opacity: .6; }
+  .eco-loader__fall:nth-child(even) { top: 48%; }
+  .eco-loader__steps span { opacity: .65; }
+}
