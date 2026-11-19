@@ -20,7 +20,7 @@ export async function getCurrentUser(): Promise<User | null> {
     // Read only the user identified by the verified session cookie.
     const { data, error } = await supabase
       .from("users")
-      .select("id, email, name, role, is_active, created_at, updated_at")
+      .select("id, email, name, role, is_active, created_at")
       .eq("id", session.userId)
       .eq("is_active", true)
       .single()

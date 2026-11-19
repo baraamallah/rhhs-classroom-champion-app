@@ -100,6 +100,33 @@ test("page access checks the active database user, not just the signed cookie ro
   }
 })
 
+test("the admin guard can load an active superadmin using the users schema", async () => {
+  const user = { id: "superadmin", role: "super_admin", is_active: true }
+  const schema = fs.readFileSync(path.resolve(__dirname, "01_schema.sql"), "utf8")
+  const usersTable = schema.match(/CREATE TABLE IF NOT EXISTS users \(([\s\S]*?)\r?\n\);/)[1]
+  const columns = new Set([...usersTable.matchAll(/^\s+(\w+)\s+\w+/gm)].map(([, column]) => column))
+  const query = {
+    select(selection) {
+      for (const column of selection.split(",").map((name) => name.trim())) {
+        assert.ok(columns.has(column), `Unknown users column: ${column}`)
+      }
+      return this
+    },
+    eq() {
+      return this
+    },
+    async single() {
+      return { data: user }
+    }
+  }
+  const auth = load("lib/auth/server.ts", {
+    "next/navigation": navigation,
+    "./session": { getSessionFromCookies: async () => ({ userId: user.id }) },
+    "@/lib/supabase/server": { createAdminClient: async () => ({ from: () => query }) }
+  })
+  assert.equal(await auth.requirePageRole(["admin", "super_admin", "stats"]), user)
+})
+
 test("hidden winners redirect on the server; visible winners retain the frozen period", async () => {
   for (const visible of [false, true]) {
     const page = load("app/winners/page.tsx", {
