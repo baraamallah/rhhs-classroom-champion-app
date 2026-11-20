@@ -2,16 +2,24 @@
 
 import { useEffect, useState, useMemo } from "react"
 import Link from "next/link"
+import dynamic from "next/dynamic"
 import { m, AnimatePresence } from "framer-motion"
 import { SimpleClassroomCard } from "@/components/features/leaderboard/simple-classroom-card"
 import { LeaderboardPodium } from "@/components/features/leaderboard/leaderboard-podium"
-import { CalculationAnimation } from "@/components/features/animations/calculation-animation"
-import { WinnerRevealAnimation } from "@/components/features/animations/winner-reveal-animation"
 import { LeafIcon, TrophyIcon } from "@/components/common/icons"
 import type { ClassroomScore } from "@/lib/types"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { DIVISION_OPTIONS } from "@/lib/division-display"
 import { LazyMotionProvider } from "@/components/providers/lazy-motion-provider"
+
+const CalculationAnimation = dynamic(
+  () => import("@/components/features/animations/calculation-animation").then((mod) => mod.CalculationAnimation),
+  { ssr: false }
+)
+const WinnerRevealAnimation = dynamic(
+  () => import("@/components/features/animations/winner-reveal-animation").then((mod) => mod.WinnerRevealAnimation),
+  { ssr: false }
+)
 import {
   ArrowRight,
   Sparkles,
@@ -66,14 +74,36 @@ function useLeaderboardViewController({
     }
   }, [winnersPageVisible])
 
-  // Count per division
+  // Group classrooms by division once whenever leaderboard changes
+  const divisionGroups = useMemo(() => {
+    const groups = new Map<string, { classrooms: ClassroomScore[]; maxScore: number }>()
+    for (const opt of DIVISION_OPTIONS) {
+      groups.set(opt.value, { classrooms: [], maxScore: 0 })
+    }
+    for (const entry of leaderboard) {
+      const div = entry.classroom.division
+      if (!div) continue
+      const bucket = groups.get(div)
+      if (!bucket) continue
+      bucket.classrooms.push(entry)
+      if (entry.totalScore > bucket.maxScore) {
+        bucket.maxScore = entry.totalScore
+      }
+    }
+    for (const bucket of groups.values()) {
+      if (bucket.classrooms.length === 0) bucket.maxScore = 100
+    }
+    return groups
+  }, [leaderboard])
+
+  // Count per division derived from memoized groups
   const divisionCounts = useMemo(() => {
     const counts: Record<string, number> = {}
     DIVISION_OPTIONS.forEach((opt) => {
-      counts[opt.value] = leaderboard.filter((c) => c.classroom.division === opt.value).length
+      counts[opt.value] = divisionGroups.get(opt.value)?.classrooms.length ?? 0
     })
     return counts
-  }, [leaderboard])
+  }, [divisionGroups])
 
   const getDivisionIcon = (division: string) => {
     switch (division) {
@@ -94,6 +124,7 @@ function useLeaderboardViewController({
   return {
     activeDivision,
     divisionCounts,
+    divisionGroups,
     getDivisionIcon,
     isWinnersVisible,
     searchQuery,
@@ -113,6 +144,7 @@ export function LeaderboardView({
   const {
     activeDivision,
     divisionCounts,
+    divisionGroups,
     getDivisionIcon,
     isWinnersVisible,
     searchQuery,
@@ -189,8 +221,8 @@ export function LeaderboardView({
             <LeaderboardFilters
               activeDivision={activeDivision}
               divisionCounts={divisionCounts}
+              divisionGroups={divisionGroups}
               getDivisionIcon={getDivisionIcon}
-              leaderboard={leaderboard}
               searchQuery={searchQuery}
               setActiveDivision={setActiveDivision}
               setSearchQuery={setSearchQuery}
@@ -207,8 +239,8 @@ export function LeaderboardView({
 function LeaderboardFilters({
   activeDivision,
   divisionCounts,
+  divisionGroups,
   getDivisionIcon,
-  leaderboard,
   searchQuery,
   setActiveDivision,
   setSearchQuery,
@@ -218,14 +250,14 @@ function LeaderboardFilters({
   ReturnType<typeof useLeaderboardViewController>,
   | "activeDivision"
   | "divisionCounts"
+  | "divisionGroups"
   | "getDivisionIcon"
   | "searchQuery"
   | "setActiveDivision"
   | "setSearchQuery"
   | "setViewMode"
   | "viewMode"
-> &
-  Pick<NonNullable<Parameters<typeof useLeaderboardViewController>[0]>, "leaderboard">) {
+>) {
   return (
     <Tabs
       defaultValue="Pre-School"
@@ -284,22 +316,20 @@ function LeaderboardFilters({
         <div className="flex items-center justify-center w-full sm:w-auto p-1 bg-muted/60 dark:bg-card/70 rounded-full border border-border/60 shadow-2xs">
           <button
             onClick={() => setViewMode("podium")}
-            className={`flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-[color,background-color,border-color,box-shadow] cursor-pointer ${
-              viewMode === "podium"
-                ? "bg-primary text-primary-foreground shadow-xs"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
+            className={`flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-[color,background-color,border-color,box-shadow] cursor-pointer ${viewMode === "podium"
+              ? "bg-primary text-primary-foreground shadow-xs"
+              : "text-muted-foreground hover:text-foreground"
+              }`}
           >
             <Trophy className="w-3.5 h-3.5 shrink-0" />
             <span>Podium Showcase</span>
           </button>
           <button
             onClick={() => setViewMode("list")}
-            className={`flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-[color,background-color,border-color,box-shadow] cursor-pointer ${
-              viewMode === "list"
-                ? "bg-primary text-primary-foreground shadow-xs"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
+            className={`flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-[color,background-color,border-color,box-shadow] cursor-pointer ${viewMode === "list"
+              ? "bg-primary text-primary-foreground shadow-xs"
+              : "text-muted-foreground hover:text-foreground"
+              }`}
           >
             <ListOrdered className="w-3.5 h-3.5 shrink-0" />
             <span>Full List</span>
@@ -309,15 +339,18 @@ function LeaderboardFilters({
 
       {/* Division Content Lists */}
       {DIVISION_OPTIONS.map((option) => {
-        const divisionClassrooms = leaderboard.filter((c) => c.classroom.division === option.value)
-        const filteredClassrooms = divisionClassrooms.filter((c) => {
-          if (!searchQuery.trim()) return true
-          const q = searchQuery.toLowerCase().trim()
-          return c.classroom.name.toLowerCase().includes(q) || c.classroom.grade.toLowerCase().includes(q)
-        })
+        const bucket = divisionGroups.get(option.value)
+        const divisionClassrooms = bucket?.classrooms ?? []
+        const normalizedQuery = searchQuery.toLowerCase().trim()
+        const filteredClassrooms = normalizedQuery
+          ? divisionClassrooms.filter(
+            (c) =>
+              c.classroom.name.toLowerCase().includes(normalizedQuery) ||
+              c.classroom.grade.toLowerCase().includes(normalizedQuery)
+          )
+          : divisionClassrooms
 
-        const maxScoreInDivision =
-          divisionClassrooms.length > 0 ? Math.max(...divisionClassrooms.map((c) => c.totalScore)) : 100
+        const maxScoreInDivision = bucket?.maxScore ?? 100
 
         const showPodium = viewMode === "podium" && !searchQuery && filteredClassrooms.length >= 1
 

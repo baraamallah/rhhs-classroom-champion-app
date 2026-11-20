@@ -2,30 +2,12 @@
 
 import { revalidatePath } from "next/cache"
 import { createAdminClient } from "@/lib/supabase/server"
-import { getSessionFromCookies } from "@/lib/auth/session"
+import { requireRoleAction } from "@/lib/auth/server"
 
-export async function requireAdmin(): Promise<{ currentUser?: { id: string; role: string }; error?: string }> {
-  const session = await getSessionFromCookies()
-  if (!session) {
-    return { error: "Not authenticated" }
-  }
-
-  const supabase = await createAdminClient()
-  const { data: userData, error: userError } = await supabase
-    .from("users")
-    .select("id, role, is_active")
-    .eq("id", session.userId)
-    .single()
-
-  if (userError || !userData || !userData.is_active) {
-    return { error: "Not authenticated" }
-  }
-
-  if (userData.role !== "super_admin" && userData.role !== "admin") {
-    return { error: "Unauthorized: Admin access required" }
-  }
-
-  return { currentUser: { id: userData.id, role: userData.role } }
+async function requireAdmin() {
+  return requireRoleAction(["super_admin", "admin"], {
+    deniedMessage: "Unauthorized: Admin access required",
+  })
 }
 
 export async function getEvaluationsStatus(): Promise<{ success: boolean; enabled?: boolean; error?: string }> {
@@ -42,9 +24,8 @@ export async function getEvaluationsStatus(): Promise<{ success: boolean; enable
       return { success: false, error: error.message }
     }
 
-    // Default to true if setting doesn't exist
     const rawValue = data?.value
-    const enabled = rawValue === null || rawValue === undefined ? true : (rawValue === true || rawValue === "true")
+    const enabled = rawValue === null || rawValue === undefined ? true : rawValue === true || rawValue === "true"
 
     return { success: true, enabled }
   } catch (error: any) {
@@ -64,7 +45,7 @@ export async function setEvaluationsStatus(enabled: boolean): Promise<{ success:
 
     const settingData = {
       key: "evaluations_enabled",
-      value: enabled,
+      value: Boolean(enabled),
       description: "Controls whether the system is accepting new evaluations",
       updated_by: currentUser.id,
       updated_at: new Date().toISOString(),

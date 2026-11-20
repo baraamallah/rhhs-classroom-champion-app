@@ -1,83 +1,76 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
+import { z } from "zod"
 import { createAdminClient } from "@/lib/supabase/server"
-import { clearSessionCookie, getSessionFromCookies } from "@/lib/auth/session"
-import { generateSecurePassword } from "./password-actions"
+import { requireRoleAction } from "@/lib/auth/server"
+import { hashPassword, MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from "@/lib/auth/password"
+import { generateSecurePassword } from "@/lib/auth/password-generator"
 
 type ManagedRole = "admin" | "supervisor" | "stats"
-type UserRole = "super_admin" | "admin" | "supervisor" | "viewer" | "stats"
 
-interface CurrentUser {
-  id: string
-  role: UserRole
+const managedRoleSchema = z.enum(["admin", "supervisor", "stats"])
+const emailSchema = z.string().trim().toLowerCase().email("A valid email address is required").max(254)
+const nameSchema = z.string().trim().min(1, "Name is required").max(120)
+const passwordSchema = z
+  .string()
+  .min(MIN_PASSWORD_LENGTH, `Password must be at least ${MIN_PASSWORD_LENGTH} characters`)
+  .max(MAX_PASSWORD_LENGTH, `Password must be at most ${MAX_PASSWORD_LENGTH} characters`)
+
+async function requireAdmin() {
+  return requireRoleAction(["super_admin", "admin"], {
+    clearOnInvalid: true,
+    deniedMessage: "Unauthorized: Admin access required",
+  })
 }
 
-async function requireAdmin(): Promise<{ currentUser?: CurrentUser; error?: string }> {
-  const session = await getSessionFromCookies()
-
-  if (!session) {
-    return { error: "Not authenticated" }
-  }
-
-  const supabase = await createAdminClient()
-  const { data: userData, error: userError } = await supabase
-    .from('users')
-    .select('id, role, is_active')
-    .eq('id', session.userId)
-    .single()
-
-  if (userError || !userData) {
-    console.error("[user-actions] requireAdmin check failed:", userError?.message || "User not found")
-    return { error: "Not authenticated" }
-  }
-
-  if (!userData.is_active) {
-    await clearSessionCookie()
-    return { error: "Not authenticated" }
-  }
-
-  if (!["super_admin", "admin"].includes(userData.role)) {
-    return { error: "Unauthorized: Admin access required" }
-  }
-
-  return { currentUser: { id: userData.id, role: userData.role } }
-}
-
-export async function createUserAccount(formData: { email: string; role: ManagedRole; name: string; password: string }) {
+export async function createUserAccount(formData: {
+  email: string
+  role: ManagedRole
+  name: string
+  password: string
+}) {
   const { currentUser, error } = await requireAdmin()
   if (error || !currentUser) {
     return { success: false, error }
   }
 
-  if (currentUser.role === "admin" && formData.role === "admin") {
-    return { success: false, error: "Unauthorized: Only super admins can create admin accounts" }
+  const parsed = z
+    .object({
+      email: emailSchema,
+      name: nameSchema,
+      role: managedRoleSchema,
+      password: passwordSchema,
+    })
+    .safeParse(formData)
+
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message || "Invalid user details" }
   }
 
-  const email = formData.email.trim().toLowerCase()
-  const name = formData.name.trim()
-  if (!email || !name) {
-    return { success: false, error: "Name and email are required" }
+  const { email, name, role, password } = parsed.data
+
+  if (currentUser.role === "admin" && role === "admin") {
+    return { success: false, error: "Unauthorized: Only super admins can create admin accounts" }
   }
 
   const supabase = await createAdminClient()
 
   try {
-    const { error } = await supabase
-      .from('users')
-      .insert({
-        email,
-        password_hash: formData.password,
-        role: formData.role,
-        name,
-        is_active: true
-      })
+    const passwordHash = await hashPassword(password)
+    const { error: insertError } = await supabase.from("users").insert({
+      email,
+      password_hash: passwordHash,
+      role,
+      name,
+      is_active: true,
+    })
 
-    if (error) {
-      if (error.code === "23505") {
+    if (insertError) {
+      if (insertError.code === "23505") {
         return { success: false, error: "Email is already in use" }
       }
-      console.error("[user-actions] createUserAccount error", error)
+      console.error("[user-actions] createUserAccount error", insertError)
       return { success: false, error: "Failed to create user" }
     }
   } catch (dbError: any) {
@@ -101,33 +94,26 @@ export async function getAllUsers() {
   const supabase = await createAdminClient()
 
   try {
-    let query = supabase
-      .from('users')
-      .select('id, email, name, role, is_active, created_at')
-      .eq('is_active', true)
-      .order('created_at', { ascending: false })
-
-    // For admin users, show all users (they can see everyone but can only assign classrooms)
-    // Super admins see all users and can edit/delete
-    // No additional filtering needed
-
-    const { data, error: queryError } = await query
+    const { data, error: queryError } = await supabase
+      .from("users")
+      .select("id, email, name, role, is_active, created_at")
+      .eq("is_active", true)
+      .order("created_at", { ascending: false })
 
     if (queryError) {
       console.error("[user-actions] getAllUsers error", queryError)
       return { success: false, error: "Failed to fetch users", data: [] }
     }
 
-    // Batch fetch all supervisor-classroom relations in a single query (N+1 fix)
-    const supervisorIds = data?.filter(r => r.role === 'supervisor').map(r => r.id) || []
+    const supervisorIds = data?.filter((r) => r.role === "supervisor").map((r) => r.id) || []
     const classroomsBySupervisor = new Map<string, { id: string; name: string; grade: string }[]>()
 
     if (supervisorIds.length > 0) {
       const { data: supervisorClassrooms, error: relError } = await supabase
-        .from('classroom_supervisors')
-        .select('supervisor_id, classroom_id, classrooms!inner(id, name, grade)')
-        .in('supervisor_id', supervisorIds)
-        .eq('classrooms.is_active', true)
+        .from("classroom_supervisors")
+        .select("supervisor_id, classroom_id, classrooms!inner(id, name, grade)")
+        .in("supervisor_id", supervisorIds)
+        .eq("classrooms.is_active", true)
 
       if (!relError && supervisorClassrooms) {
         for (const item of supervisorClassrooms) {
@@ -179,22 +165,24 @@ export async function deleteUser(userId: string) {
 
   try {
     const { data: targetData, error: targetError } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', userId)
-      .eq('is_active', true)
+      .from("users")
+      .select("role")
+      .eq("id", userId)
+      .eq("is_active", true)
       .single()
 
     if (targetError || !targetData) {
       return { success: false, error: "User not found" }
     }
 
-    // Allow admins and super_admins to manage any user
+    if (targetData.role === "super_admin" && currentUser.role !== "super_admin") {
+      return { success: false, error: "Unauthorized: Only super admins can manage super admin accounts" }
+    }
 
     const { error: updateError } = await supabase
-      .from('users')
+      .from("users")
       .update({ is_active: false })
-      .eq('id', userId)
+      .eq("id", userId)
 
     if (updateError) {
       console.error("[user-actions] deleteUser error", updateError)
@@ -209,50 +197,62 @@ export async function deleteUser(userId: string) {
   }
 }
 
-export async function updateUser(formData: { userId: string; email: string; name: string; role: ManagedRole }) {
+export async function updateUser(formData: {
+  userId: string
+  email: string
+  name: string
+  role: ManagedRole
+}) {
   const { currentUser, error } = await requireAdmin()
   if (error || !currentUser) {
     return { success: false, error }
   }
 
-  const email = formData.email.trim().toLowerCase()
-  const name = formData.name.trim()
-  if (!email || !name) {
-    return { success: false, error: "Name and email are required" }
+  const parsed = z
+    .object({
+      userId: z.string().min(1),
+      email: emailSchema,
+      name: nameSchema,
+      role: managedRoleSchema,
+    })
+    .safeParse(formData)
+
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message || "Invalid user details" }
   }
 
-  // Allow admins to edit admin accounts, but not create them (restriction remains in createUserAccount)
-
+  const { userId, email, name, role } = parsed.data
   const supabase = await createAdminClient()
 
   try {
-    // Check if user exists and current user has permission to edit
     const { data: targetData, error: targetError } = await supabase
-      .from('users')
-      .select('role, id, name, email')
-      .eq('id', formData.userId)
+      .from("users")
+      .select("role, id, name, email")
+      .eq("id", userId)
       .single()
 
     if (targetError || !targetData) {
       return { success: false, error: "User not found" }
     }
 
-    // Allow admins and super_admins to edit any user
+    if (targetData.role === "super_admin" && currentUser.role !== "super_admin") {
+      return { success: false, error: "Unauthorized: Only super admins can modify super admin accounts" }
+    }
 
-    const { error } = await supabase
-      .from('users')
-      .update({
-        email,
-        name,
-        role: formData.role
-      })
-      .eq('id', formData.userId)
+    if (role === "admin" && targetData.role !== "admin" && currentUser.role !== "super_admin") {
+      return { success: false, error: "Unauthorized: Only super admins can promote accounts to admin" }
+    }
 
-    if (error) {
-      if (error.code === "23505") {
+    const { error: updateError } = await supabase
+      .from("users")
+      .update({ email, name, role })
+      .eq("id", userId)
+
+    if (updateError) {
+      if (updateError.code === "23505") {
         return { success: false, error: "Email is already in use" }
       }
-      console.error("[user-actions] updateUser error", error)
+      console.error("[user-actions] updateUser error", updateError)
       return { success: false, error: "Failed to update user" }
     }
   } catch (dbError: any) {
@@ -273,36 +273,44 @@ export async function updateUserPassword(formData: { userId: string; password: s
     return { success: false, error }
   }
 
-  if (!formData.password || formData.password.length < 8) {
-    return { success: false, error: "Password must be at least 8 characters" }
+  const parsed = z
+    .object({
+      userId: z.string().min(1),
+      password: passwordSchema,
+    })
+    .safeParse(formData)
+
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message || "Invalid password" }
   }
 
   const supabase = await createAdminClient()
 
   try {
-    // Check if user exists and current user has permission to edit
     const { data: targetData, error: targetError } = await supabase
-      .from('users')
-      .select('id')
-      .eq('id', formData.userId)
-      .eq('is_active', true)
+      .from("users")
+      .select("id, role")
+      .eq("id", parsed.data.userId)
+      .eq("is_active", true)
       .single()
 
     if (targetError || !targetData) {
       return { success: false, error: "User not found" }
     }
 
-    // Allow admins and super_admins to edit any user's password
+    if (targetData.role === "super_admin" && currentUser.role !== "super_admin") {
+      return { success: false, error: "Unauthorized: Only super admins can change a super admin password" }
+    }
 
-    const { error } = await supabase
-      .from('users')
-      .update({
-        password_hash: formData.password
-      })
-      .eq('id', formData.userId)
+    const passwordHash = await hashPassword(parsed.data.password)
 
-    if (error) {
-      console.error("[user-actions] updateUserPassword error", error)
+    const { error: updateError } = await supabase
+      .from("users")
+      .update({ password_hash: passwordHash })
+      .eq("id", parsed.data.userId)
+
+    if (updateError) {
+      console.error("[user-actions] updateUserPassword error", updateError)
       return { success: false, error: "Failed to update password" }
     }
   } catch (dbError: any) {
@@ -323,29 +331,36 @@ export async function sendUserPasswordReset(email: string) {
     return { success: false, error }
   }
 
-  const normalizedEmail = email.trim().toLowerCase()
+  const parsedEmail = emailSchema.safeParse(email)
+  if (!parsedEmail.success) {
+    return { success: false, error: "Invalid email address" }
+  }
+
   const supabase = await createAdminClient()
 
   try {
     const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('id')
-      .eq('email', normalizedEmail)
-      .eq('is_active', true)
+      .from("users")
+      .select("id, role")
+      .eq("email", parsedEmail.data)
+      .eq("is_active", true)
       .single()
 
     if (userError || !userData) {
       return { success: false, error: "User not found or inactive" }
     }
 
-    const tempPassword = await generateSecurePassword(12)
+    if (userData.role === "super_admin" && currentUser.role !== "super_admin") {
+      return { success: false, error: "Unauthorized: Only super admins can reset a super admin password" }
+    }
+
+    const tempPassword = generateSecurePassword(14)
+    const passwordHash = await hashPassword(tempPassword)
 
     const { error: updateError } = await supabase
-      .from('users')
-      .update({
-        password_hash: tempPassword
-      })
-      .eq('id', userData.id)
+      .from("users")
+      .update({ password_hash: passwordHash })
+      .eq("id", userData.id)
 
     if (updateError) {
       console.error("[user-actions] sendUserPasswordReset error", updateError)
@@ -370,21 +385,19 @@ export async function getSupervisorClassrooms(supervisorId: string) {
   }
 
   const supabase = await createAdminClient()
-  
+
   try {
-    // Query using the classroom_supervisors junction table
     const { data, error: queryError } = await supabase
-      .from('classroom_supervisors')
-      .select('classroom_id, classrooms!inner(id, name, grade)')
-      .eq('supervisor_id', supervisorId)
-      .eq('classrooms.is_active', true)
+      .from("classroom_supervisors")
+      .select("classroom_id, classrooms!inner(id, name, grade)")
+      .eq("supervisor_id", supervisorId)
+      .eq("classrooms.is_active", true)
 
     if (queryError) {
       console.error("[user-actions] getSupervisorClassrooms error", queryError)
       return { success: false, error: "Failed to fetch classrooms", data: [] }
     }
 
-    // Transform the data to return classroom objects
     const classrooms = data?.map((item: any) => item.classrooms) || []
     return { success: true, data: classrooms }
   } catch (dbError) {
@@ -403,10 +416,10 @@ export async function getAvailableClassrooms() {
 
   try {
     const { data, error: queryError } = await supabase
-      .from('classrooms')
-      .select('id, name, grade, division')
-      .eq('is_active', true)
-      .order('name')
+      .from("classrooms")
+      .select("id, name, grade, division")
+      .eq("is_active", true)
+      .order("name")
 
     if (queryError) {
       console.error("[user-actions] getAvailableClassrooms error", queryError)
@@ -427,28 +440,27 @@ export async function assignSupervisorToClassrooms(supervisorId: string, classro
   }
 
   const supabase = await createAdminClient()
-  
+
   try {
-    // First, remove all existing assignments for this supervisor from the junction table
     const { error: removeError } = await supabase
-      .from('classroom_supervisors')
+      .from("classroom_supervisors")
       .delete()
-      .eq('supervisor_id', supervisorId)
+      .eq("supervisor_id", supervisorId)
 
     if (removeError) {
       console.error("[user-actions] assignSupervisorToClassrooms remove error", removeError)
       return { success: false, error: "Failed to remove existing assignments" }
     }
 
-    // Then assign to new classrooms using the junction table
     if (classroomIds.length > 0) {
-      const assignments = classroomIds.map(classroomId => ({
+      const uniqueClassroomIds = [...new Set(classroomIds)]
+      const assignments = uniqueClassroomIds.map((classroomId) => ({
         classroom_id: classroomId,
-        supervisor_id: supervisorId
+        supervisor_id: supervisorId,
       }))
 
       const { error: assignError } = await supabase
-        .from('classroom_supervisors')
+        .from("classroom_supervisors")
         .insert(assignments)
 
       if (assignError) {
@@ -465,7 +477,11 @@ export async function assignSupervisorToClassrooms(supervisorId: string, classro
   }
 }
 
-export async function assignDivisionToSupervisor(supervisorId: string, division: string, replaceExisting = false) {
+export async function assignDivisionToSupervisor(
+  supervisorId: string,
+  division: string,
+  replaceExisting = false
+) {
   const { currentUser, error } = await requireAdmin()
   if (error || !currentUser) {
     return { success: false, error }
@@ -502,7 +518,9 @@ export async function assignDivisionToSupervisor(supervisorId: string, division:
         classroom_id: id,
         supervisor_id: supervisorId,
       }))
-      await supabase.from("classroom_supervisors").upsert(assignments, { onConflict: "classroom_id, supervisor_id" })
+      await supabase
+        .from("classroom_supervisors")
+        .upsert(assignments, { onConflict: "classroom_id, supervisor_id" })
     }
 
     revalidatePath("/admin")

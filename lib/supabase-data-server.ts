@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js"
+import { createClient, type SupabaseClient } from "@supabase/supabase-js"
 import { unstable_cache } from "next/cache"
 import type { Classroom, Evaluation, ClassroomScore } from "./types"
 import { calculateLeaderboard } from "./utils-leaderboard"
@@ -7,16 +7,38 @@ import { readEvaluationHistory } from "./evaluation-history"
 import { getCurrentMonthPeriod } from "./month-period"
 import { hasRecentMutation, getSupabaseServerUrl } from "./db-router"
 
-// Helper to get a server-side Supabase client routing to primary or replica
-function getServerSupabase(forcePrimary = false) {
-  const url = getSupabaseServerUrl(forcePrimary)
-  return createClient(url, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
+const HOMEPAGE_SETTING_KEYS = [
+  "leaderboard_show_monthly",
+  "calculation_mode",
+  "winner_reveal_mode",
+  "leaderboard_display_month",
+  "winners_page_visible",
+] as const
+
+const clientCache = new Map<string, SupabaseClient>()
+
+function getCachedSupabaseClient(url: string, key: string): SupabaseClient {
+  const cacheKey = `${url}::${key.slice(0, 12)}`
+  let client = clientCache.get(cacheKey)
+  if (!client) {
+    client = createClient(url, key, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    })
+    clientCache.set(cacheKey, client)
+  }
+  return client
 }
 
-// Admin client for queries requiring service role access
+// Helper to get a memoized server-side Supabase client routing to primary or replica
+function getServerSupabase(forcePrimary = false) {
+  const url = getSupabaseServerUrl(forcePrimary)
+  return getCachedSupabaseClient(url, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
+}
+
+// Memoized admin client for queries requiring service role access
 function getAdminSupabase(forcePrimary = false) {
   const url = getSupabaseServerUrl(forcePrimary)
-  return createClient(url, process.env.SUPABASE_SERVICE_ROLE_KEY!)
+  return getCachedSupabaseClient(url, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 }
 
 export async function getEvaluationsServer(forcePrimary = false): Promise<Evaluation[]> {
@@ -39,7 +61,13 @@ export async function getEvaluationsByDateRangeServer(
     const formattedStart = startDate.includes("T") ? startDate : `${startDate}T00:00:00.000Z`
     const formattedEnd = endDate.includes("T") ? endDate : `${endDate}T23:59:59.999Z`
 
-    return await readEvaluationHistory(supabase, { start: formattedStart, end: formattedEnd, endInclusive: true, includeArchives: true })
+    return await readEvaluationHistory(supabase, {
+      start: formattedStart,
+      end: formattedEnd,
+      endInclusive: true,
+      includeArchives: true,
+      parallelTables: true,
+    })
   } catch (err) {
     console.error("[supabase-data-server] Unexpected error fetching evaluations by date range:", err)
     return []
@@ -75,23 +103,30 @@ interface AdminSettings {
   winnersPageVisible: boolean
 }
 
-async function getAdminSettingsServer(forcePrimary = false): Promise<AdminSettings> {
+async function getAdminSettingsServer(): Promise<AdminSettings> {
   try {
     const adminSupabase = getAdminSupabase(true)
     const { data, error } = await adminSupabase
       .from("system_settings")
       .select("key, value")
+      .in("key", [...HOMEPAGE_SETTING_KEYS])
 
     if (error) {
       console.error("[supabase-data-server] Error fetching admin settings:", error)
-      return { showMonthly: true, calculationMode: false, winnerRevealMode: false, leaderboardMonth: null, winnersPageVisible: true }
+      return {
+        showMonthly: true,
+        calculationMode: false,
+        winnerRevealMode: false,
+        leaderboardMonth: null,
+        winnersPageVisible: true,
+      }
     }
 
-    const map = new Map(data?.map(s => [s.key, s.value]) || [])
+    const map = new Map(data?.map((s) => [s.key, s.value]) || [])
 
     const parseBool = (key: string, defaultVal: boolean): boolean => {
       const raw = map.get(key)
-      return raw === null || raw === undefined ? defaultVal : (raw === true || raw === "true")
+      return raw === null || raw === undefined ? defaultVal : raw === true || raw === "true"
     }
 
     return {
@@ -103,7 +138,13 @@ async function getAdminSettingsServer(forcePrimary = false): Promise<AdminSettin
     }
   } catch (err) {
     console.error("[supabase-data-server] Unexpected error fetching admin settings:", err)
-    return { showMonthly: true, calculationMode: false, winnerRevealMode: false, leaderboardMonth: null, winnersPageVisible: true }
+    return {
+      showMonthly: true,
+      calculationMode: false,
+      winnerRevealMode: false,
+      leaderboardMonth: null,
+      winnersPageVisible: true,
+    }
   }
 }
 
@@ -120,15 +161,18 @@ export interface HomepageData {
  * Does NOT access request-specific sources (cookies/headers) so it can be safely cached.
  */
 async function fetchHomepageDataFromDB(forcePrimary: boolean, year: number, month: number): Promise<HomepageData> {
-
   // Phase 1: settings + classrooms in parallel
   const [settings, classrooms] = await Promise.all([
-    getAdminSettingsServer(forcePrimary),
+    getAdminSettingsServer(),
     getClassroomsServer(forcePrimary),
   ])
 
   const scope = resolveLeaderboardScope(settings.showMonthly, settings.leaderboardMonth, { year, month })
-  const evaluations = await readEvaluationHistory(getAdminSupabase(forcePrimary), scope)
+  const evaluations = await readEvaluationHistory(getAdminSupabase(forcePrimary), {
+    ...scope,
+    includeDetails: false,
+    parallelTables: true,
+  })
 
   const leaderboard = calculateLeaderboard(evaluations, classrooms)
 
@@ -149,7 +193,7 @@ const getCachedHomepageData = unstable_cache(
   async (year: number, month: number) => fetchHomepageDataFromDB(false, year, month),
   ["homepage-leaderboard-data"],
   {
-    revalidate: 60, // 60s background revalidation window
+    revalidate: 60,
     tags: ["leaderboard", "classrooms", "settings"],
   }
 )
@@ -165,10 +209,8 @@ export async function getHomepageData(): Promise<HomepageData> {
   const recentlyMutated = await hasRecentMutation()
 
   if (recentlyMutated) {
-    // Bypasses shared cache, queries authoritative Primary DB directly
     return fetchHomepageDataFromDB(true, year, month)
   }
 
-  // Standard public read path via shared tagged cache
   return getCachedHomepageData(year, month)
 }

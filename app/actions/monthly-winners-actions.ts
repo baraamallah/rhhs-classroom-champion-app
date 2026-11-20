@@ -1,47 +1,17 @@
 "use server"
 
 import { readClassroomWinCounts } from "@/lib/classroom-win-counts"
-import { revalidatePath } from "next/cache"
+import { revalidatePath, revalidateTag } from "next/cache"
 import { createAdminClient } from "@/lib/supabase/server"
 import { readMonthlyRankings, includeRecordedWinnerScores } from "@/lib/evaluation-history"
-import { getSessionFromCookies, clearSessionCookie } from "@/lib/auth/session"
+import { requireRoleAction } from "@/lib/auth/server"
+import { recordRecentMutationCookie } from "@/lib/db-router"
 
-type UserRole = "super_admin" | "admin" | "supervisor" | "viewer"
-
-interface CurrentUser {
-  id: string
-  role: UserRole
-}
-
-async function requireAdmin(): Promise<{ currentUser?: CurrentUser; error?: string }> {
-  const session = await getSessionFromCookies()
-
-  if (!session) {
-    return { error: "Not authenticated" }
-  }
-
-  const supabase = await createAdminClient()
-  const { data: userData, error: userError } = await supabase
-    .from("users")
-    .select("id, role, is_active")
-    .eq("id", session.userId)
-    .single()
-
-  if (userError || !userData) {
-    await clearSessionCookie()
-    return { error: "Not authenticated" }
-  }
-
-  if (!userData.is_active) {
-    await clearSessionCookie()
-    return { error: "Not authenticated" }
-  }
-
-  if (userData.role !== "super_admin" && userData.role !== "admin") {
-    return { error: "Unauthorized: Admin access required" }
-  }
-
-  return { currentUser: { id: userData.id, role: userData.role } }
+async function requireAdmin() {
+  return requireRoleAction(["super_admin", "admin"], {
+    clearOnInvalid: true,
+    deniedMessage: "Unauthorized: Admin access required",
+  })
 }
 
 export async function declareMonthlyWinner(
@@ -132,6 +102,8 @@ export async function declareMonthlyWinner(
         return { success: false, error: `Failed to update winner: ${updateError.message}` }
       }
 
+      await recordRecentMutationCookie()
+      revalidateTag("winners", { expire: 0 })
       revalidatePath("/admin")
       revalidatePath("/winners")
       return { success: true, message: `Updated winner for ${division} - ${month}/${year}` }
@@ -146,6 +118,8 @@ export async function declareMonthlyWinner(
         return { success: false, error: `Failed to declare winner: ${insertError.message}` }
       }
 
+      await recordRecentMutationCookie()
+      revalidateTag("winners", { expire: 0 })
       revalidatePath("/admin")
       revalidatePath("/winners")
       return { success: true, message: `Declared winner for ${division} - ${month}/${year}` }
@@ -246,7 +220,10 @@ export async function deleteMonthlyWinner(winnerId: string) {
       return { success: false, error: `Failed to delete winner: ${deleteError.message}` }
     }
 
+    await recordRecentMutationCookie()
+    revalidateTag("winners", { expire: 0 })
     revalidatePath("/admin")
+    revalidatePath("/winners")
     return { success: true, message: "Winner deleted successfully" }
   } catch (dbError: any) {
     console.error("[deleteMonthlyWinner] Unexpected error:", dbError)

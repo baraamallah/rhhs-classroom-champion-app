@@ -1,5 +1,16 @@
 import type ExcelJS from "exceljs"
 
+const FORMULA_TRIGGER_PATTERN = /^[=+\-@\t\r]/
+
+/**
+ * Neutralizes spreadsheet formula injection (CSV/Excel DDE) on untrusted text
+ * values by prefixing leading formula characters with a single quote.
+ */
+export function sanitizeSpreadsheetCell<T>(value: T): T {
+  if (typeof value !== "string" || value.length === 0) return value
+  return (FORMULA_TRIGGER_PATTERN.test(value) ? `'${value}` : value) as unknown as T
+}
+
 /**
  * Standard Design Tokens extracted from RHHS_Green_App_October_Week_2_Rankings_Shaded.xlsx
  */

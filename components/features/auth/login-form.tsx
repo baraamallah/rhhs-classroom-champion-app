@@ -4,6 +4,7 @@ import type React from "react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/components/providers/auth-provider"
+import { getSafeRelativeRedirect } from "@/lib/auth/redirect"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -44,7 +45,7 @@ export function LoginForm() {
       // Check for redirect query param safely without triggering Suspense requirement
       let redirectParam: string | null = null
       if (typeof window !== "undefined") {
-        redirectParam = new URLSearchParams(window.location.search).get("redirect")
+        redirectParam = getSafeRelativeRedirect(new URLSearchParams(window.location.search).get("redirect"))
       }
 
       // Explicitly map role to control panel destination
@@ -56,12 +57,12 @@ export function LoginForm() {
       } else if (role === "supervisor") {
         // Supervisors ALWAYS open their control panel directly
         destination = redirectParam && redirectParam.startsWith("/supervisor") ? redirectParam : "/supervisor"
-      } else if (redirectParam && redirectParam.startsWith("/") && redirectParam !== "/login" && redirectParam !== "/") {
+      } else if (redirectParam && redirectParam !== "/login" && redirectParam !== "/") {
         destination = redirectParam
       }
 
       // Update auth context state in parallel
-      await refresh().catch(() => {})
+      await refresh().catch(() => { })
 
       // Use window.location.replace to ensure full session-cookie synchronization,
       // preventing any client router race conditions or accidental redirects to the leaderboard

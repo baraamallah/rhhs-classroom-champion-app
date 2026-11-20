@@ -1,4 +1,7 @@
 import type { Metadata } from "next"
+import { requirePageRole } from "@/lib/auth/server"
+
+export const dynamic = "force-dynamic"
 
 export const metadata: Metadata = {
   title: "Supervisor Portal",
@@ -9,10 +12,11 @@ export const metadata: Metadata = {
   },
 }
 
-export default function SupervisorLayout({
+export default async function SupervisorLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  await requirePageRole(["supervisor"])
   return <>{children}</>
 }

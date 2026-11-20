@@ -3,17 +3,11 @@
 import { after } from "next/server"
 import { revalidatePath, revalidateTag } from "next/cache"
 import { createAdminClient } from "@/lib/supabase/server"
-import { getSessionFromCookies, clearSessionCookie } from "@/lib/auth/session"
+import { requireRoleAction } from "@/lib/auth/server"
+import { recordRecentMutationCookie } from "@/lib/db-router"
 import { calculateLeaderboard } from "@/lib/utils-leaderboard"
 import { getCurrentMonthPeriod } from "@/lib/month-period"
 import { archiveCompletedMonths } from "@/lib/monthly-archive"
-
-type UserRole = "super_admin" | "admin" | "supervisor" | "viewer"
-
-interface CurrentUser {
-  id: string
-  role: UserRole
-}
 
 // Utility to chunk arrays into safe batch sizes (prevents 16KB HTTP headers overflow error)
 function chunkArray<T>(items: T[], size = 40): T[][] {
@@ -24,36 +18,11 @@ function chunkArray<T>(items: T[], size = 40): T[][] {
   return chunks
 }
 
-async function requireSuperAdmin(): Promise<{ currentUser?: CurrentUser; error?: string }> {
-  const session = await getSessionFromCookies()
-
-  if (!session) {
-    return { error: "Not authenticated" }
-  }
-
-  const supabase = await createAdminClient()
-  const { data: userData, error: userError } = await supabase
-    .from("users")
-    .select("id, role, is_active")
-    .eq("id", session.userId)
-    .single()
-
-  if (userError || !userData) {
-    console.error("[requireSuperAdmin] User lookup failed:", userError)
-    await clearSessionCookie()
-    return { error: "Not authenticated" }
-  }
-
-  if (!userData.is_active) {
-    await clearSessionCookie()
-    return { error: "Not authenticated" }
-  }
-
-  if (userData.role !== "super_admin" && userData.role !== "admin") {
-    return { error: "Unauthorized: Admin access required" }
-  }
-
-  return { currentUser: { id: userData.id, role: userData.role } }
+async function requireSuperAdmin() {
+  return requireRoleAction(["super_admin", "admin"], {
+    clearOnInvalid: true,
+    deniedMessage: "Unauthorized: Admin access required",
+  })
 }
 
 export async function archiveAndReset() {
@@ -98,6 +67,9 @@ export async function deleteEvaluation(evaluationId: string) {
       return { success: false, error: `Failed to delete evaluation: ${deleteError.message}` }
     }
 
+    await recordRecentMutationCookie()
+    revalidateTag("leaderboard", { expire: 0 })
+    revalidatePath("/", "layout")
     revalidatePath("/admin")
     return { success: true, message: "Evaluation deleted successfully" }
   } catch (dbError: any) {
@@ -160,6 +132,9 @@ export async function deleteEvaluations(evaluationIds: string[]) {
       }
     }
 
+    await recordRecentMutationCookie()
+    revalidateTag("leaderboard", { expire: 0 })
+    revalidatePath("/", "layout")
     revalidatePath("/admin")
     return { success: true, message: `Successfully deleted ${evaluationIds.length} evaluations` }
   } catch (dbError: any) {
@@ -168,12 +143,14 @@ export async function deleteEvaluations(evaluationIds: string[]) {
   }
 }
 
-export async function getAllEvaluationsForManagement() {
+export async function getAllEvaluationsForManagement(limit = 500, offset = 0) {
   const { currentUser, error } = await requireSuperAdmin()
   if (error || !currentUser) {
     return { success: false, error, data: [] }
   }
 
+  const safeLimit = Math.max(1, Math.min(limit, 1000))
+  const safeOffset = Math.max(0, offset)
   const supabase = await createAdminClient()
 
   try {
@@ -195,6 +172,7 @@ export async function getAllEvaluationsForManagement() {
         )
       `)
       .order("evaluation_date", { ascending: false })
+      .range(safeOffset, safeOffset + safeLimit - 1)
 
     if (fetchError) {
       console.error("[data-management-actions] getAllEvaluationsForManagement error", fetchError)
@@ -229,6 +207,9 @@ export async function archiveEvaluations(evaluationIds: string[]) {
     })
 
     if (!rpcError && rpcData?.success) {
+      await recordRecentMutationCookie()
+      revalidateTag("leaderboard", { expire: 0 })
+      revalidatePath("/", "layout")
       revalidatePath("/admin")
       return { success: true, message: `Successfully archived ${rpcData.archived_count || evaluationIds.length} evaluations` }
     }
@@ -303,6 +284,9 @@ export async function archiveEvaluations(evaluationIds: string[]) {
       }
     }
 
+    await recordRecentMutationCookie()
+    revalidateTag("leaderboard", { expire: 0 })
+    revalidatePath("/", "layout")
     revalidatePath("/admin")
     return { success: true, message: `Successfully archived ${totalArchived} evaluations` }
   } catch (dbError: any) {
@@ -331,24 +315,36 @@ export async function getArchivedEvaluations(limit = 50, offset = 0) {
       return { success: false, error: `Failed to fetch archived evaluations: ${fetchError.message}`, data: [] }
     }
 
-    const [
-      { data: activeClassrooms },
-      { data: archivedClassrooms },
-      { data: users }
-    ] = await Promise.all([
-      supabase.from("classrooms").select("id, name, grade"),
-      supabase.from("archive_classrooms").select("id, name, grade"),
-      supabase.from("users").select("id, name"),
-    ])
-
-    const allClassrooms = [
-      ...(activeClassrooms || []),
-      ...(archivedClassrooms || [])
+    const rows = evaluations || []
+    const missingClassroomIds = [
+      ...new Set(rows.filter((ev) => !ev.classroom_name && ev.classroom_id).map((ev) => ev.classroom_id)),
+    ]
+    const missingSupervisorIds = [
+      ...new Set(rows.filter((ev) => !ev.supervisor_name && ev.supervisor_id).map((ev) => ev.supervisor_id)),
     ]
 
-    const evaluationsWithDetails = evaluations?.map((ev) => {
-      const classroom = allClassrooms.find((c) => c.id === ev.classroom_id)
-      const supervisor = users?.find((u) => u.id === ev.supervisor_id)
+    const [activeClassroomsRes, archivedClassroomsRes, usersRes] = await Promise.all([
+      missingClassroomIds.length > 0
+        ? supabase.from("classrooms").select("id, name, grade").in("id", missingClassroomIds)
+        : Promise.resolve({ data: [] as any[] }),
+      missingClassroomIds.length > 0
+        ? supabase.from("archive_classrooms").select("id, name, grade").in("id", missingClassroomIds)
+        : Promise.resolve({ data: [] as any[] }),
+      missingSupervisorIds.length > 0
+        ? supabase.from("users").select("id, name").in("id", missingSupervisorIds)
+        : Promise.resolve({ data: [] as any[] }),
+    ])
+
+    const classroomById = new Map<string, { id: string; name: string; grade: string }>()
+    for (const c of archivedClassroomsRes.data || []) classroomById.set(c.id, c)
+    for (const c of activeClassroomsRes.data || []) classroomById.set(c.id, c)
+
+    const userById = new Map<string, { id: string; name: string }>()
+    for (const u of usersRes.data || []) userById.set(u.id, u)
+
+    const evaluationsWithDetails = rows.map((ev) => {
+      const classroom = classroomById.get(ev.classroom_id)
+      const supervisor = userById.get(ev.supervisor_id)
 
       const classroomName = ev.classroom_name || classroom?.name || "Unknown Classroom"
       const classroomGrade = ev.classroom_grade || classroom?.grade || ""
@@ -364,7 +360,7 @@ export async function getArchivedEvaluations(limit = 50, offset = 0) {
       }
     })
 
-    return { success: true, data: evaluationsWithDetails || [] }
+    return { success: true, data: evaluationsWithDetails }
   } catch (dbError: any) {
     console.error("[data-management-actions] getArchivedEvaluations error", dbError)
     return { success: false, error: "Failed to fetch archived evaluations", data: [] }
@@ -431,6 +427,9 @@ export async function restoreEvaluations(evaluationIds: string[]) {
       }
     }
 
+    await recordRecentMutationCookie()
+    revalidateTag("leaderboard", { expire: 0 })
+    revalidatePath("/", "layout")
     revalidatePath("/admin")
     return { success: true, message: `Successfully restored ${totalRestored} evaluations` }
   } catch (dbError: any) {

@@ -2,50 +2,20 @@
 
 import { after } from "next/server"
 import { createAdminClient } from "@/lib/supabase/server"
-import { getSessionFromCookies, clearSessionCookie } from "@/lib/auth/session"
+import { requireRoleAction } from "@/lib/auth/server"
 import { readEvaluationHistory } from "@/lib/evaluation-history"
 import { calculateLeaderboard } from "@/lib/utils-leaderboard"
 import { DIVISION_OPTIONS, getDivisionDisplayName } from "@/lib/division-display"
+import { sanitizeSpreadsheetCell } from "@/lib/excel/excel-design-tokens"
 import { buildWeeklyRankingsWorkbook } from "@/lib/excel/weekly-rankings-builder"
 import { buildMasterExcelWorkbook } from "@/lib/excel/master-export-builder"
 import { format, startOfWeek, addDays } from "date-fns"
 
-type UserRole = "super_admin" | "admin" | "supervisor" | "viewer" | "stats"
-
-interface CurrentUser {
-  id: string
-  role: UserRole
-}
-
-async function requireAdmin(): Promise<{ currentUser?: CurrentUser; error?: string }> {
-  const session = await getSessionFromCookies()
-
-  if (!session) {
-    return { error: "Not authenticated" }
-  }
-
-  const supabase = await createAdminClient()
-  const { data: userData, error: userError } = await supabase
-    .from("users")
-    .select("id, role, is_active")
-    .eq("id", session.userId)
-    .single()
-
-  if (userError || !userData) {
-    await clearSessionCookie()
-    return { error: "Not authenticated" }
-  }
-
-  if (!userData.is_active) {
-    await clearSessionCookie()
-    return { error: "Not authenticated" }
-  }
-
-  if (userData.role !== "super_admin" && userData.role !== "admin" && userData.role !== "stats") {
-    return { error: "Unauthorized: Admin access required" }
-  }
-
-  return { currentUser: { id: userData.id, role: userData.role } }
+async function requireAdmin() {
+  return requireRoleAction(["super_admin", "admin", "stats"], {
+    clearOnInvalid: true,
+    deniedMessage: "Unauthorized: Admin access required",
+  })
 }
 
 interface ExportData {
@@ -60,7 +30,31 @@ interface ExcelSheet {
   stats?: { label: string; value: string | number }[]
 }
 
-// Export data as Excel-compatible CSV files with statistics
+function sanitizeRow(row: (string | number)[]): (string | number)[] {
+  return row.map((cell) => (typeof cell === "string" ? sanitizeSpreadsheetCell(cell) : cell))
+}
+
+function sanitizeEvaluationForExport<T extends Record<string, any>>(ev: T): T {
+  return {
+    ...ev,
+    notes: typeof ev.notes === "string" ? sanitizeSpreadsheetCell(ev.notes) : ev.notes,
+    classrooms: ev.classrooms
+      ? {
+          ...ev.classrooms,
+          name: sanitizeSpreadsheetCell(ev.classrooms.name),
+          grade: sanitizeSpreadsheetCell(ev.classrooms.grade),
+        }
+      : ev.classrooms,
+    users: ev.users
+      ? {
+          ...ev.users,
+          name: sanitizeSpreadsheetCell(ev.users.name),
+          email: sanitizeSpreadsheetCell(ev.users.email),
+        }
+      : ev.users,
+  }
+}
+
 export async function exportDataAsExcel() {
   const { currentUser, error } = await requireAdmin()
   if (error || !currentUser) {
@@ -68,35 +62,41 @@ export async function exportDataAsExcel() {
   }
 
   const supabase = await createAdminClient()
-  const sheets: ExcelSheet[] = []
 
   try {
-    const DIVISIONS = DIVISION_OPTIONS.map(opt => opt.value)
-    const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+    const DIVISIONS = DIVISION_OPTIONS.map((opt) => opt.value)
+    const MONTHS = [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December",
+    ]
 
-    // 1. Fetch all data concurrently
+    // Fetch all required export data concurrently; NEVER select password_hash from users
     const [
       { data: evaluations },
       { data: archivedEvals },
       { data: classrooms },
       { data: supervisors },
-      { data: winners }
+      { data: winners },
     ] = await Promise.all([
       supabase
         .from("evaluations")
         .select(`*, classrooms:classroom_id (name, grade, division), users:supervisor_id (name, email)`)
         .order("evaluation_date", { ascending: false }),
-      supabase
-        .from("archive_evaluations")
-        .select("*")
-        .order("archived_at", { ascending: false }),
-      supabase
-        .from("classrooms")
-        .select("*")
-        .order("name", { ascending: true }),
+      supabase.from("archive_evaluations").select("*").order("archived_at", { ascending: false }),
+      supabase.from("classrooms").select("id, name, grade, division, description, is_active, created_at").order("name", { ascending: true }),
       supabase
         .from("users")
-        .select("*")
+        .select("id, name, email, role, is_active, created_at")
         .eq("role", "supervisor")
         .eq("is_active", true)
         .order("name", { ascending: true }),
@@ -107,25 +107,104 @@ export async function exportDataAsExcel() {
         .order("month", { ascending: false }),
     ])
 
-    // 2. Summary Dashboard Sheet
-    const totalEvaluations = (evaluations?.length || 0) + (archivedEvals?.length || 0)
-    const avgScore = evaluations && evaluations.length > 0 
-      ? Math.round(evaluations.reduce((sum, e) => sum + e.total_score, 0) / evaluations.length)
-      : 0
-    const totalPoints = evaluations?.reduce((sum, e) => sum + e.total_score, 0) || 0
-    
-    // Calculate division stats
-    const divisionStats = DIVISIONS.map(division => {
-      const divEvals = evaluations?.filter(e => e.classrooms?.division === division) || []
-      const divClassrooms = classrooms?.filter(c => c.division === division) || []
-      const divWinners = winners?.filter(w => w.division === division) || []
+    const safeEvaluations = (evaluations || []).map(sanitizeEvaluationForExport)
+    const safeClassrooms = (classrooms || []).map((c) => ({
+      ...c,
+      name: sanitizeSpreadsheetCell(c.name),
+      grade: sanitizeSpreadsheetCell(c.grade),
+    }))
+    const safeSupervisors = (supervisors || []).map((s) => ({
+      ...s,
+      name: sanitizeSpreadsheetCell(s.name),
+      email: sanitizeSpreadsheetCell(s.email),
+    }))
+    const safeWinners = (winners || []).map((w) => ({
+      ...w,
+      notes: typeof w.notes === "string" ? sanitizeSpreadsheetCell(w.notes) : w.notes,
+      classrooms: w.classrooms
+        ? {
+            ...w.classrooms,
+            name: sanitizeSpreadsheetCell(w.classrooms.name),
+            grade: sanitizeSpreadsheetCell(w.classrooms.grade),
+          }
+        : w.classrooms,
+      declared_by_user: w.declared_by_user
+        ? {
+            ...w.declared_by_user,
+            name: sanitizeSpreadsheetCell(w.declared_by_user.name),
+            email: sanitizeSpreadsheetCell(w.declared_by_user.email),
+          }
+        : w.declared_by_user,
+    }))
+
+    const fileName = `RHHS-Classroom-Champion-Master-Report-${format(new Date(), "yyyy-MM-dd")}.xlsx`
+
+    // Try styled ExcelJS workbook first; omit redundant `sheets` payload when base64 succeeds
+    try {
+      const styledWb = await buildMasterExcelWorkbook({
+        evaluations: safeEvaluations,
+        archivedEvals: archivedEvals || [],
+        classrooms: safeClassrooms,
+        supervisors: safeSupervisors,
+        winners: safeWinners,
+      })
+      const buffer = await styledWb.xlsx.writeBuffer()
+      const base64 = Buffer.from(buffer).toString("base64")
+      return { success: true, base64, fileName }
+    } catch (styledErr) {
+      after(() => {
+        console.warn("[exportDataAsExcel] Could not generate styled ExcelJS buffer, fallback to sheets:", styledErr)
+      })
+    }
+
+    // Fallback plain sheet compilation only if ExcelJS workbook generation failed
+    const sheets: ExcelSheet[] = []
+    const totalEvaluations = safeEvaluations.length + (archivedEvals?.length || 0)
+    const totalPoints = safeEvaluations.reduce((sum, e) => sum + e.total_score, 0)
+    const avgScore = safeEvaluations.length > 0 ? Math.round(totalPoints / safeEvaluations.length) : 0
+
+    // Pre-index evaluations and winners in O(N) maps
+    const evalsByDivision = new Map<string, typeof safeEvaluations>()
+    const evalsByClassroom = new Map<string, typeof safeEvaluations>()
+    const evalsBySupervisor = new Map<string, typeof safeEvaluations>()
+    for (const ev of safeEvaluations) {
+      const div = ev.classrooms?.division
+      if (div) {
+        const list = evalsByDivision.get(div) || []
+        list.push(ev)
+        evalsByDivision.set(div, list)
+      }
+      const cList = evalsByClassroom.get(ev.classroom_id) || []
+      cList.push(ev)
+      evalsByClassroom.set(ev.classroom_id, cList)
+
+      const sList = evalsBySupervisor.get(ev.supervisor_id) || []
+      sList.push(ev)
+      evalsBySupervisor.set(ev.supervisor_id, sList)
+    }
+
+    const classroomsByDivision = new Map<string, number>()
+    for (const c of safeClassrooms) {
+      if (c.division) classroomsByDivision.set(c.division, (classroomsByDivision.get(c.division) || 0) + 1)
+    }
+
+    const winnersByDivision = new Map<string, number>()
+    const winsByClassroom = new Map<string, number>()
+    for (const w of safeWinners) {
+      if (w.division) winnersByDivision.set(w.division, (winnersByDivision.get(w.division) || 0) + 1)
+      winsByClassroom.set(w.classroom_id, (winsByClassroom.get(w.classroom_id) || 0) + 1)
+    }
+
+    const divisionStats = DIVISIONS.map((division) => {
+      const divEvals = evalsByDivision.get(division) || []
+      const divPoints = divEvals.reduce((sum, e) => sum + e.total_score, 0)
       return {
         division,
-        classrooms: divClassrooms.length,
+        classrooms: classroomsByDivision.get(division) || 0,
         evaluations: divEvals.length,
-        totalPoints: divEvals.reduce((sum, e) => sum + e.total_score, 0),
-        avgScore: divEvals.length > 0 ? Math.round(divEvals.reduce((sum, e) => sum + e.total_score, 0) / divEvals.length) : 0,
-        winners: divWinners.length
+        totalPoints: divPoints,
+        avgScore: divEvals.length > 0 ? Math.round(divPoints / divEvals.length) : 0,
+        winners: winnersByDivision.get(division) || 0,
       }
     })
 
@@ -137,79 +216,91 @@ export async function exportDataAsExcel() {
         ["Export Time", new Date().toLocaleTimeString(), "Time this report was generated"],
         ["", "", ""],
         ["=== OVERVIEW ===", "", ""],
-        ["Total Classrooms", classrooms?.length || 0, "Number of registered classrooms"],
-        ["Active Supervisors", supervisors?.length || 0, "Number of active supervisors"],
+        ["Total Classrooms", safeClassrooms.length, "Number of registered classrooms"],
+        ["Active Supervisors", safeSupervisors.length, "Number of active supervisors"],
         ["Total Evaluations", totalEvaluations, "Active + Archived evaluations"],
-        ["Active Evaluations", evaluations?.length || 0, "Current active evaluations"],
+        ["Active Evaluations", safeEvaluations.length, "Current active evaluations"],
         ["Archived Evaluations", archivedEvals?.length || 0, "Evaluations moved to archive"],
-        ["Monthly Winners Declared", winners?.length || 0, "Total winners declared"],
+        ["Monthly Winners Declared", safeWinners.length, "Total winners declared"],
         ["", "", ""],
         ["=== PERFORMANCE ===", "", ""],
         ["Average Score", avgScore, "Average score across all evaluations"],
         ["Total Points Awarded", totalPoints, "Sum of all evaluation scores"],
-        ["Highest Single Score", evaluations && evaluations.length > 0 ? Math.max(...evaluations.map(e => e.total_score)) : 0, "Highest score in a single evaluation"],
-        ["Lowest Single Score", evaluations && evaluations.length > 0 ? Math.min(...evaluations.map(e => e.total_score)) : 0, "Lowest score in a single evaluation"],
+        [
+          "Highest Single Score",
+          safeEvaluations.length > 0 ? Math.max(...safeEvaluations.map((e) => e.total_score)) : 0,
+          "Highest score in a single evaluation",
+        ],
+        [
+          "Lowest Single Score",
+          safeEvaluations.length > 0 ? Math.min(...safeEvaluations.map((e) => e.total_score)) : 0,
+          "Lowest score in a single evaluation",
+        ],
       ],
       stats: [
         { label: "Report Generated", value: new Date().toISOString() },
-        { label: "Generated By", value: "Admin Export" }
-      ]
+        { label: "Generated By", value: "Admin Export" },
+      ],
     })
 
-    // 3. Division Statistics Sheet
     sheets.push({
       name: "Division Statistics",
       headers: ["Division", "Classrooms", "Evaluations", "Total Points", "Avg Score", "Winners Declared", "Performance Rating"],
-      rows: divisionStats.map(d => [
-        getDivisionDisplayName(d.division),
-        d.classrooms,
-        d.evaluations,
-        d.totalPoints,
-        d.avgScore,
-        d.winners,
-        d.avgScore >= 90 ? "Excellent" : d.avgScore >= 75 ? "Good" : d.avgScore >= 60 ? "Fair" : "Needs Improvement"
-      ]),
+      rows: divisionStats.map((d) =>
+        sanitizeRow([
+          getDivisionDisplayName(d.division),
+          d.classrooms,
+          d.evaluations,
+          d.totalPoints,
+          d.avgScore,
+          d.winners,
+          d.avgScore >= 90 ? "Excellent" : d.avgScore >= 75 ? "Good" : d.avgScore >= 60 ? "Fair" : "Needs Improvement",
+        ])
+      ),
       stats: [
         { label: "Total Divisions", value: DIVISIONS.length },
-        { label: "Best Performing", value: divisionStats.sort((a, b) => b.avgScore - a.avgScore)[0]?.division || "N/A" }
-      ]
+        {
+          label: "Best Performing",
+          value: [...divisionStats].sort((a, b) => b.avgScore - a.avgScore)[0]?.division || "N/A",
+        },
+      ],
     })
 
-    // 4. Active Evaluations Sheet
-    if (evaluations && evaluations.length > 0) {
+    if (safeEvaluations.length > 0) {
       sheets.push({
         name: "Active Evaluations",
         headers: ["ID", "Date", "Classroom", "Grade", "Division", "Supervisor", "Score", "Max Score", "Percentage", "Notes"],
-        rows: evaluations.map(e => [
-          e.id,
-          new Date(e.evaluation_date).toLocaleDateString(),
-          e.classrooms?.name || "Unknown",
-          e.classrooms?.grade || "N/A",
-          getDivisionDisplayName(e.classrooms?.division) || "N/A",
-          e.users?.name || "Unknown",
-          e.total_score,
-          e.max_score,
-          `${Math.round((e.total_score / e.max_score) * 100)}%`,
-          e.notes || ""
-        ]),
+        rows: safeEvaluations.map((e) =>
+          sanitizeRow([
+            e.id,
+            new Date(e.evaluation_date).toLocaleDateString(),
+            e.classrooms?.name || "Unknown",
+            e.classrooms?.grade || "N/A",
+            getDivisionDisplayName(e.classrooms?.division) || "N/A",
+            e.users?.name || "Unknown",
+            e.total_score,
+            e.max_score,
+            `${e.max_score > 0 ? Math.round((e.total_score / e.max_score) * 100) : 0}%`,
+            e.notes || "",
+          ])
+        ),
         stats: [
-          { label: "Total Evaluations", value: evaluations.length },
+          { label: "Total Evaluations", value: safeEvaluations.length },
           { label: "Average Score", value: avgScore },
-          { label: "Total Points", value: totalPoints }
-        ]
+          { label: "Total Points", value: totalPoints },
+        ],
       })
     }
 
-    // 5. Monthly Breakdown Sheet
     const monthlyData: { [key: string]: { count: number; total: number; avg: number } } = {}
-    evaluations?.forEach(e => {
+    safeEvaluations.forEach((e) => {
       const date = new Date(e.evaluation_date)
       const key = `${MONTHS[date.getMonth()]} ${date.getFullYear()}`
       if (!monthlyData[key]) monthlyData[key] = { count: 0, total: 0, avg: 0 }
       monthlyData[key].count++
       monthlyData[key].total += e.total_score
     })
-    Object.keys(monthlyData).forEach(key => {
+    Object.keys(monthlyData).forEach((key) => {
       monthlyData[key].avg = Math.round(monthlyData[key].total / monthlyData[key].count)
     })
 
@@ -225,157 +316,127 @@ export async function exportDataAsExcel() {
         }),
       stats: [
         { label: "Months with Data", value: Object.keys(monthlyData).length },
-        { label: "Best Month", value: Object.entries(monthlyData).sort((a, b) => b[1].avg - a[1].avg)[0]?.[0] || "N/A" }
-      ]
+        { label: "Best Month", value: Object.entries(monthlyData).sort((a, b) => b[1].avg - a[1].avg)[0]?.[0] || "N/A" },
+      ],
     })
 
-    // 6. Classrooms Sheet with Rankings
-    if (classrooms && classrooms.length > 0 && evaluations) {
-      const classroomStats = classrooms.map(c => {
-        const classEvals = evaluations.filter(e => e.classroom_id === c.id)
-        const totalScore = classEvals.reduce((sum, e) => sum + e.total_score, 0)
-        const avgScore = classEvals.length > 0 ? Math.round(totalScore / classEvals.length) : 0
-        const winCount = winners?.filter(w => w.classroom_id === c.id).length || 0
-        return {
-          ...c,
-          evalCount: classEvals.length,
-          totalScore,
-          avgScore,
-          winCount
-        }
-      }).sort((a, b) => b.totalScore - a.totalScore)
+    if (safeClassrooms.length > 0) {
+      const classroomStats = safeClassrooms
+        .map((c) => {
+          const classEvals = evalsByClassroom.get(c.id) || []
+          const totalScore = classEvals.reduce((sum, e) => sum + e.total_score, 0)
+          const classAvg = classEvals.length > 0 ? Math.round(totalScore / classEvals.length) : 0
+          return {
+            ...c,
+            evalCount: classEvals.length,
+            totalScore,
+            avgScore: classAvg,
+            winCount: winsByClassroom.get(c.id) || 0,
+          }
+        })
+        .sort((a, b) => b.totalScore - a.totalScore)
 
       sheets.push({
         name: "Classroom Rankings",
         headers: ["Rank", "Classroom", "Grade", "Division", "Evaluations", "Total Score", "Avg Score", "Wins", "Status"],
-        rows: classroomStats.map((c, index) => [
-          index + 1,
-          c.name,
-          c.grade,
-          c.division || "N/A",
-          c.evalCount,
-          c.totalScore,
-          c.avgScore,
-          c.winCount,
-          c.is_active ? "Active" : "Inactive"
-        ]),
+        rows: classroomStats.map((c, index) =>
+          sanitizeRow([
+            index + 1,
+            c.name,
+            c.grade,
+            c.division || "N/A",
+            c.evalCount,
+            c.totalScore,
+            c.avgScore,
+            c.winCount,
+            c.is_active ? "Active" : "Inactive",
+          ])
+        ),
         stats: [
-          { label: "Total Classrooms", value: classrooms.length },
-          { label: "Active Classrooms", value: classrooms.filter(c => c.is_active).length },
-          { label: "Top Performer", value: classroomStats[0]?.name || "N/A" }
-        ]
+          { label: "Total Classrooms", value: safeClassrooms.length },
+          { label: "Active Classrooms", value: safeClassrooms.filter((c) => c.is_active).length },
+          { label: "Top Performer", value: classroomStats[0]?.name || "N/A" },
+        ],
       })
     }
 
-    // 7. Supervisors Performance Sheet
-    if (supervisors && supervisors.length > 0 && evaluations) {
-      const supervisorStats = supervisors.map(s => {
-        const supEvals = evaluations.filter(e => e.supervisor_id === s.id)
-        return {
-          ...s,
-          evalCount: supEvals.length,
-          avgScore: supEvals.length > 0 ? Math.round(supEvals.reduce((sum, e) => sum + e.total_score, 0) / supEvals.length) : 0
-        }
-      }).sort((a, b) => b.evalCount - a.evalCount)
+    if (safeSupervisors.length > 0) {
+      const supervisorStats = safeSupervisors
+        .map((s) => {
+          const supEvals = evalsBySupervisor.get(s.id) || []
+          return {
+            ...s,
+            evalCount: supEvals.length,
+            avgScore:
+              supEvals.length > 0
+                ? Math.round(supEvals.reduce((sum, e) => sum + e.total_score, 0) / supEvals.length)
+                : 0,
+          }
+        })
+        .sort((a, b) => b.evalCount - a.evalCount)
 
       sheets.push({
         name: "Supervisor Performance",
-        headers: ["Name", "Email", "Evaluations Completed", "Avg Score Given", "Last Login", "Status"],
-        rows: supervisorStats.map(s => [
-          s.name,
-          s.email,
-          s.evalCount,
-          s.avgScore,
-          s.last_login_at ? new Date(s.last_login_at).toLocaleDateString() : "Never",
-          "Active"
-        ]),
+        headers: ["Name", "Email", "Evaluations Completed", "Avg Score Given", "Status"],
+        rows: supervisorStats.map((s) => sanitizeRow([s.name, s.email, s.evalCount, s.avgScore, "Active"])),
         stats: [
-          { label: "Total Supervisors", value: supervisors.length },
+          { label: "Total Supervisors", value: safeSupervisors.length },
           { label: "Most Active", value: supervisorStats[0]?.name || "N/A" },
-          { label: "Total Evaluations", value: supervisorStats.reduce((sum, s) => sum + s.evalCount, 0) }
-        ]
+          { label: "Total Evaluations", value: supervisorStats.reduce((sum, s) => sum + s.evalCount, 0) },
+        ],
       })
     }
 
-    // 8. Monthly Winners Sheet
-    if (winners && winners.length > 0) {
+    if (safeWinners.length > 0) {
       sheets.push({
         name: "Monthly Winners",
         headers: ["Month", "Year", "Division", "Winner Classroom", "Grade", "Total Score", "Avg Score", "Evaluations", "Declared By", "Declared Date"],
-        rows: winners.map(w => [
-          MONTHS[w.month - 1],
-          w.year,
-          w.division,
-          w.classrooms?.name || "Unknown",
-          w.classrooms?.grade || "N/A",
-          w.total_score,
-          w.average_score.toFixed(2),
-          w.evaluation_count,
-          w.declared_by_user?.name || "Unknown",
-          new Date(w.declared_at).toLocaleDateString()
-        ]),
+        rows: safeWinners.map((w) =>
+          sanitizeRow([
+            MONTHS[w.month - 1],
+            w.year,
+            w.division,
+            w.classrooms?.name || "Unknown",
+            w.classrooms?.grade || "N/A",
+            w.total_score,
+            w.average_score.toFixed(2),
+            w.evaluation_count,
+            w.declared_by_user?.name || "Unknown",
+            new Date(w.declared_at).toLocaleDateString(),
+          ])
+        ),
         stats: [
-          { label: "Total Winners", value: winners.length },
-          { label: "Divisions with Winners", value: new Set(winners.map(w => w.division)).size }
-        ]
+          { label: "Total Winners", value: safeWinners.length },
+          { label: "Divisions with Winners", value: new Set(safeWinners.map((w) => w.division)).size },
+        ],
       })
     }
 
-    // 9. Archived Evaluations Sheet
     if (archivedEvals && archivedEvals.length > 0) {
       sheets.push({
         name: "Archived Evaluations",
         headers: ["ID", "Original Date", "Archived Date", "Score", "Max Score", "Percentage"],
-        rows: archivedEvals.map(e => [
+        rows: archivedEvals.map((e) => [
           e.id,
           new Date(e.evaluation_date).toLocaleDateString(),
           e.archived_at ? new Date(e.archived_at).toLocaleDateString() : "N/A",
           e.total_score,
           e.max_score,
-          `${Math.round((e.total_score / e.max_score) * 100)}%`
+          `${e.max_score > 0 ? Math.round((e.total_score / e.max_score) * 100) : 0}%`,
         ]),
-        stats: [
-          { label: "Total Archived", value: archivedEvals.length }
-        ]
+        stats: [{ label: "Total Archived", value: archivedEvals.length }],
       })
     }
 
-    let base64: string | undefined
-    const fileName = `RHHS-Classroom-Champion-Master-Report-${format(new Date(), "yyyy-MM-dd")}.xlsx`
-
-    try {
-      const styledWb = await buildMasterExcelWorkbook({
-        evaluations: evaluations || [],
-        archivedEvals: archivedEvals || [],
-        classrooms: classrooms || [],
-        supervisors: supervisors || [],
-        winners: winners || [],
-      })
-      const buffer = await styledWb.xlsx.writeBuffer()
-      base64 = Buffer.from(buffer).toString("base64")
-    } catch (styledErr) {
-      after(() => {
-        console.warn("[exportDataAsExcel] Could not generate styled ExcelJS buffer, fallback to sheets:", styledErr)
-      })
-    }
-
-    return { success: true, sheets, base64, fileName }
+    return { success: true, sheets, fileName }
   } catch (dbError: any) {
     console.error("[exportDataAsExcel] Error:", dbError)
     return { success: false, error: `Failed to export data: ${dbError.message || "Unknown error"}` }
   }
 }
 
-/**
- * Exports Weekly Green Rankings workbook matching RHHS_Green_App_October_Week_2_Rankings_Shaded.xlsx
- * Includes:
- * 1. "All Divisions" master rankings tab
- * 2. "Greenest Winners" winners summary & methodology tab
- * 3. Dedicated tab for every individual academic division
- */
 export async function exportWeeklyGreenReport({
   startDate,
-  endDate,
   weekPreset,
 }: {
   startDate?: string
@@ -407,24 +468,42 @@ export async function exportWeeklyGreenReport({
     const startStr = format(days[0], "yyyy-MM-dd")
     const endStr = format(days[4], "yyyy-MM-dd")
 
-    const [history, { data: classrooms, error: classErr }] =
-      await Promise.all([
-        readEvaluationHistory(supabase, {
-          start: `${startStr}T00:00:00.000Z`, end: `${endStr}T23:59:59.999Z`,
-          endInclusive: true, includeArchives: true,
-        }),
-        supabase
-          .from("classrooms")
-          .select("id, name, grade, division, is_active")
-          .eq("is_active", true)
-          .order("name", { ascending: true }),
-      ])
+    const [history, { data: classrooms, error: classErr }] = await Promise.all([
+      readEvaluationHistory(supabase, {
+        start: `${startStr}T00:00:00.000Z`,
+        end: `${endStr}T23:59:59.999Z`,
+        endInclusive: true,
+        includeArchives: true,
+        includeDetails: false,
+        parallelTables: true,
+      }),
+      supabase
+        .from("classrooms")
+        .select("id, name, grade, division, is_active")
+        .eq("is_active", true)
+        .order("name", { ascending: true }),
+    ])
 
     if (classErr) throw new Error(classErr.message)
 
+    const safeClassrooms = (classrooms || []).map((c) => ({
+      ...c,
+      name: sanitizeSpreadsheetCell(c.name),
+      grade: sanitizeSpreadsheetCell(c.grade),
+    }))
+
     const workbook = await buildWeeklyRankingsWorkbook({
-      evaluations: history.map((evaluation) => ({ ...evaluation, classrooms: evaluation.classroom })) as any,
-      classrooms: (classrooms || []) as any,
+      evaluations: history.map((evaluation) => ({
+        ...evaluation,
+        classrooms: evaluation.classroom
+          ? {
+              ...evaluation.classroom,
+              name: sanitizeSpreadsheetCell(evaluation.classroom.name),
+              grade: sanitizeSpreadsheetCell(evaluation.classroom.grade),
+            }
+          : undefined,
+      })) as any,
+      classrooms: safeClassrooms as any,
       workDays: days,
     })
 
@@ -453,15 +532,38 @@ export async function exportAllDataAsZip() {
   const exportFiles: ExportData[] = []
 
   try {
-    // 1. Export Active Evaluations
-    const { data: evaluations, error: evalError } = await supabase
-      .from("evaluations")
-      .select(`
-        *,
-        classrooms:classroom_id (name, grade, division),
-        users:supervisor_id (name, email)
-      `)
-      .order("evaluation_date", { ascending: false })
+    // Fetch all 6 tables concurrently (explicit columns on users — never select password_hash)
+    const [
+      { data: evaluations, error: evalError },
+      { data: archivedEvals, error: archEvalError },
+      { data: classrooms, error: classError },
+      { data: assignments },
+      { data: supervisors, error: supError },
+      { data: winners, error: winnersError },
+    ] = await Promise.all([
+      supabase
+        .from("evaluations")
+        .select(`*, classrooms:classroom_id (name, grade, division), users:supervisor_id (name, email)`)
+        .order("evaluation_date", { ascending: false }),
+      supabase.from("archive_evaluations").select("*").order("archived_at", { ascending: false }),
+      supabase
+        .from("classrooms")
+        .select("id, name, grade, division, description, is_active, created_at")
+        .order("name", { ascending: true }),
+      supabase.from("classroom_supervisors").select(`classroom_id, users:supervisor_id (name, email)`),
+      supabase
+        .from("users")
+        .select("id, name, email, role, is_active, created_at")
+        .eq("role", "supervisor")
+        .eq("is_active", true)
+        .order("name", { ascending: true }),
+      supabase
+        .from("monthly_winners")
+        .select(`*, classrooms:classroom_id (name, grade, division), declared_by_user:declared_by (name, email)`)
+        .order("year", { ascending: false })
+        .order("month", { ascending: false })
+        .order("division", { ascending: true }),
+    ])
 
     if (!evalError && evaluations) {
       let evalContent = "ACTIVE EVALUATIONS\n"
@@ -477,7 +579,7 @@ export async function exportAllDataAsZip() {
         evalContent += `- Division: ${evaluation.classrooms?.division || "N/A"}\n`
         evalContent += `- Supervisor: ${evaluation.users?.name || "Unknown"} (${evaluation.users?.email || "N/A"})\n`
         evalContent += `- Score: ${evaluation.total_score}/${evaluation.max_score}\n`
-        evalContent += `- Items Checked: ${Object.keys(evaluation.items || {}).filter(k => evaluation.items[k]).length}\n`
+        evalContent += `- Items Checked: ${Object.keys(evaluation.items || {}).filter((k) => evaluation.items[k]).length}\n`
         if (evaluation.notes) {
           evalContent += `- Notes: ${evaluation.notes}\n`
         }
@@ -486,12 +588,6 @@ export async function exportAllDataAsZip() {
 
       exportFiles.push({ filename: "01_active_evaluations.txt", content: evalContent })
     }
-
-    // 2. Export Archived Evaluations
-    const { data: archivedEvals, error: archEvalError } = await supabase
-      .from("archive_evaluations")
-      .select("*")
-      .order("archived_at", { ascending: false })
 
     if (!archEvalError && archivedEvals) {
       let archContent = "ARCHIVED EVALUATIONS\n"
@@ -511,21 +607,17 @@ export async function exportAllDataAsZip() {
       exportFiles.push({ filename: "02_archived_evaluations.txt", content: archContent })
     }
 
-    // 3. Export Classrooms
-    const { data: classrooms, error: classError } = await supabase
-      .from("classrooms")
-      .select("*")
-      .order("name", { ascending: true })
-
-    // Get supervisor assignments separately
-    const { data: assignments } = await supabase
-      .from("classroom_supervisors")
-      .select(`
-        classroom_id,
-        users:supervisor_id (name, email)
-      `)
-
     if (!classError && classrooms) {
+      // Pre-index supervisor names by classroom_id in O(M) instead of O(N*M)
+      const supervisorsByClassroom = new Map<string, string[]>()
+      for (const a of (assignments || []) as any[]) {
+        const name = a.users?.name
+        if (!name) continue
+        const existing = supervisorsByClassroom.get(a.classroom_id) || []
+        existing.push(name)
+        supervisorsByClassroom.set(a.classroom_id, existing)
+      }
+
       let classContent = "CLASSROOMS\n"
       classContent += "=".repeat(80) + "\n\n"
       classContent += `Total Classrooms: ${classrooms.length}\n`
@@ -540,11 +632,8 @@ export async function exportAllDataAsZip() {
         if (classroom.description) {
           classContent += `- Description: ${classroom.description}\n`
         }
-        const supervisors = (assignments || [])
-          .filter((a: any) => a.classroom_id === classroom.id)
-          .map((a: any) => a.users?.name)
-          .filter(Boolean)
-        classContent += `- Supervisors: ${supervisors.length > 0 ? supervisors.join(", ") : "None assigned"}\n`
+        const roomSupervisors = supervisorsByClassroom.get(classroom.id) || []
+        classContent += `- Supervisors: ${roomSupervisors.length > 0 ? roomSupervisors.join(", ") : "None assigned"}\n`
         classContent += `- Active: ${classroom.is_active ? "Yes" : "No"}\n`
         classContent += `- Created: ${new Date(classroom.created_at).toLocaleString()}\n`
         classContent += "-".repeat(80) + "\n"
@@ -552,14 +641,6 @@ export async function exportAllDataAsZip() {
 
       exportFiles.push({ filename: "03_classrooms.txt", content: classContent })
     }
-
-    // 4. Export Supervisors
-    const { data: supervisors, error: supError } = await supabase
-      .from("users")
-      .select("*")
-      .eq("role", "supervisor")
-      .eq("is_active", true)
-      .order("name", { ascending: true })
 
     if (!supError && supervisors) {
       let supContent = "SUPERVISORS\n"
@@ -574,18 +655,13 @@ export async function exportAllDataAsZip() {
         supContent += `- Email: ${supervisor.email}\n`
         supContent += `- Role: ${supervisor.role}\n`
         supContent += `- Created: ${new Date(supervisor.created_at).toLocaleString()}\n`
-        if (supervisor.last_login_at) {
-          supContent += `- Last Login: ${new Date(supervisor.last_login_at).toLocaleString()}\n`
-        }
         supContent += "-".repeat(80) + "\n"
       })
 
       exportFiles.push({ filename: "04_supervisors.txt", content: supContent })
     }
 
-    // 5. Export Leaderboard
     if (evaluations && classrooms) {
-      // Transform evaluations to match Evaluation type
       const transformedEvaluations = evaluations.map((e: any) => ({
         id: e.id,
         classroom_id: e.classroom_id,
@@ -596,16 +672,18 @@ export async function exportAllDataAsZip() {
         max_score: e.max_score,
         notes: e.notes,
         created_at: e.created_at,
-        classroom: e.classrooms ? {
-          id: e.classroom_id,
-          name: e.classrooms.name,
-          grade: e.classrooms.grade,
-          division: e.classrooms.division,
-        } : undefined,
+        classroom: e.classrooms
+          ? {
+              id: e.classroom_id,
+              name: e.classrooms.name,
+              grade: e.classrooms.grade,
+              division: e.classrooms.division,
+            }
+          : undefined,
       }))
 
       const leaderboard = calculateLeaderboard(transformedEvaluations as any, classrooms as any)
-      
+
       let leaderContent = "LEADERBOARD\n"
       leaderContent += "=".repeat(80) + "\n\n"
       leaderContent += `Total Classrooms: ${leaderboard.length}\n`
@@ -618,10 +696,9 @@ export async function exportAllDataAsZip() {
         leaderContent += `${rank.toString().padStart(4)} | ${entry.classroom.name.padEnd(20)} | ${entry.classroom.grade.padEnd(5)} | ${(getDivisionDisplayName(entry.classroom.division) || "N/A").padEnd(15)} | ${entry.totalScore.toString().padStart(11)} | ${entry.averageScore.toString().padStart(9)} | ${entry.evaluationCount.toString().padStart(12)}\n`
       })
 
-      // Group by division
-      const divisions = DIVISION_OPTIONS.map(opt => opt.value)
-      divisions.forEach(division => {
-        const divLeaderboard = leaderboard.filter(l => l.classroom.division === division)
+      const divisions = DIVISION_OPTIONS.map((opt) => opt.value)
+      divisions.forEach((division) => {
+        const divLeaderboard = leaderboard.filter((l) => l.classroom.division === division)
         if (divLeaderboard.length > 0) {
           leaderContent += `\n\n${getDivisionDisplayName(division).toUpperCase()} DIVISION LEADERBOARD\n`
           leaderContent += "=".repeat(80) + "\n"
@@ -635,26 +712,27 @@ export async function exportAllDataAsZip() {
       exportFiles.push({ filename: "05_leaderboard.txt", content: leaderContent })
     }
 
-    // 6. Export Monthly Winners
-    const { data: winners, error: winnersError } = await supabase
-      .from("monthly_winners")
-      .select(`
-        *,
-        classrooms:classroom_id (name, grade, division),
-        declared_by_user:declared_by (name, email)
-      `)
-      .order("year", { ascending: false })
-      .order("month", { ascending: false })
-      .order("division", { ascending: true })
-
     if (!winnersError && winners) {
       let winnersContent = "MONTHLY WINNERS\n"
       winnersContent += "=".repeat(80) + "\n\n"
       winnersContent += `Total Winners Declared: ${winners.length}\n`
       winnersContent += `Export Date: ${new Date().toISOString()}\n\n`
 
-      const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
-      
+      const months = [
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December",
+      ]
+
       winners.forEach((winner, index) => {
         winnersContent += `\n[Winner ${index + 1}]\n`
         winnersContent += `- Month: ${months[winner.month - 1]} ${winner.year}\n`
@@ -674,7 +752,6 @@ export async function exportAllDataAsZip() {
       exportFiles.push({ filename: "06_monthly_winners.txt", content: winnersContent })
     }
 
-    // 7. Export Summary Statistics
     let summaryContent = "DATA EXPORT SUMMARY\n"
     summaryContent += "=".repeat(80) + "\n\n"
     summaryContent += `Export Date: ${new Date().toISOString()}\n`
@@ -685,7 +762,7 @@ export async function exportAllDataAsZip() {
     summaryContent += `- Total Classrooms: ${classrooms?.length || 0}\n`
     summaryContent += `- Active Supervisors: ${supervisors?.length || 0}\n`
     summaryContent += `- Monthly Winners: ${winners?.length || 0}\n\n`
-    
+
     if (evaluations && evaluations.length > 0) {
       const totalScore = evaluations.reduce((sum, e) => sum + e.total_score, 0)
       const avgScore = Math.round(totalScore / evaluations.length)
@@ -695,8 +772,6 @@ export async function exportAllDataAsZip() {
 
     exportFiles.push({ filename: "00_summary.txt", content: summaryContent })
 
-    // Create ZIP file content
-    // Note: We'll return the files and let the client-side create the ZIP
     return { success: true, files: exportFiles }
   } catch (dbError: any) {
     console.error("[exportAllDataAsZip] Error:", dbError)

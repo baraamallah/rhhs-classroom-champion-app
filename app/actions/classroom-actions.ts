@@ -1,31 +1,15 @@
 "use server"
 
-import { revalidatePath } from "next/cache"
+import { revalidatePath, updateTag } from "next/cache"
 import { createAdminClient } from "@/lib/supabase/server"
-import { getSessionFromCookies } from "@/lib/auth/session"
+import { requireRoleAction } from "@/lib/auth/server"
+import { recordRecentMutationCookie } from "@/lib/db-router"
 
 async function requireAdmin(): Promise<{ error?: string }> {
-  const session = await getSessionFromCookies()
-  if (!session) {
-    return { error: "Not authenticated" }
-  }
-
-  const supabase = await createAdminClient()
-  const { data: userData, error: userError } = await supabase
-    .from("users")
-    .select("id, role, is_active")
-    .eq("id", session.userId)
-    .single()
-
-  if (userError || !userData || !userData.is_active) {
-    return { error: "Not authenticated" }
-  }
-
-  if (!["super_admin", "admin"].includes(userData.role)) {
-    return { error: "Unauthorized: Admin access required" }
-  }
-
-  return {}
+  const { error } = await requireRoleAction(["super_admin", "admin"], {
+    deniedMessage: "Unauthorized: Admin access required",
+  })
+  return { error }
 }
 
 export async function createClassroomAction(
@@ -74,6 +58,11 @@ export async function createClassroomAction(
       }
     }
 
+    try {
+      updateTag("classrooms")
+      updateTag("leaderboard")
+    } catch {}
+    await recordRecentMutationCookie()
     revalidatePath("/admin")
     revalidatePath("/")
     return { success: true }
@@ -131,6 +120,11 @@ export async function updateClassroomAction(
       }
     }
 
+    try {
+      updateTag("classrooms")
+      updateTag("leaderboard")
+    } catch {}
+    await recordRecentMutationCookie()
     revalidatePath("/admin")
     revalidatePath("/")
     return { success: true }
@@ -170,6 +164,11 @@ export async function bulkUpdateClassroomDivisionsAction(
       return { success: false, error: error.message }
     }
 
+    try {
+      updateTag("classrooms")
+      updateTag("leaderboard")
+    } catch {}
+    await recordRecentMutationCookie()
     revalidatePath("/admin")
     revalidatePath("/")
     return { success: true, updatedCount: data?.length || 0 }
@@ -194,6 +193,11 @@ export async function deleteClassroomAction(id: string): Promise<{ success: bool
       return { success: false, error: error.message }
     }
 
+    try {
+      updateTag("classrooms")
+      updateTag("leaderboard")
+    } catch {}
+    await recordRecentMutationCookie()
     revalidatePath("/admin")
     revalidatePath("/")
     return { success: true }

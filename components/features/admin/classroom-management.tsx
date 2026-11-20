@@ -25,9 +25,14 @@ import {
   Search,
   X
 } from "lucide-react"
-import { createClassroom, updateClassroom, deleteClassroom, bulkUpdateClassroomDivisions } from "@/lib/supabase-data"
+import {
+  getClassrooms,
+  createClassroom,
+  updateClassroom,
+  deleteClassroom,
+  bulkUpdateClassroomDivisions
+} from "@/lib/supabase-data"
 import { getAllUsers } from "@/app/actions/user-actions"
-import { createClient } from "@/lib/supabase/client"
 import type { Classroom, User } from "@/lib/types"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { useToast } from "@/components/ui/use-toast"
@@ -70,37 +75,9 @@ function useClassroomManagementController({ currentUser }: ClassroomManagementPr
   const loadClassrooms = useCallback(
     async (signal?: AbortSignal) => {
       try {
-        const supabase = createClient()
-        const { data, error } = await supabase
-          .from("classrooms")
-          .select(
-            `
-          *,
-          classroom_supervisors!classroom_id(
-            supervisor_id,
-            users!classroom_supervisors_supervisor_id_fkey(id, name, email)
-          )
-        `
-          )
-          .eq("is_active", true)
-          .order("name")
+        const transformedData = await getClassrooms()
         if (signal?.aborted) return
-
-        if (error) {
-          console.error("Error fetching classrooms:", error)
-          toast({
-            title: "Error",
-            description: "Failed to load classrooms",
-            variant: "destructive"
-          })
-        } else {
-          // Transform data to flatten the nested structure
-          const transformedData = (data || []).map((classroom: any) => ({
-            ...classroom,
-            supervisors: classroom.classroom_supervisors?.map((s: any) => s.users) || []
-          }))
-          setClassrooms(transformedData)
-        }
+        setClassrooms(transformedData)
       } catch (error) {
         if (signal?.aborted) return
         console.error("Exception fetching classrooms:", error)

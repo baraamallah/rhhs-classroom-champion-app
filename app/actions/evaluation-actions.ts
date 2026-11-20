@@ -2,12 +2,27 @@
 
 import { revalidatePath, updateTag } from "next/cache"
 import { createAdminClient } from "@/lib/supabase/server"
-import { getSessionFromCookies } from "@/lib/auth/session"
+import { requireRoleAction } from "@/lib/auth/server"
 import { getEvaluationsStatus } from "@/app/actions/evaluation-settings-actions"
 import { getSchoolTermDates } from "@/app/actions/calendar-actions"
 import { readEvaluationHistory } from "@/lib/evaluation-history"
+import { matchesDivision } from "@/lib/checklist-division"
 import { recordRecentMutationCookie } from "@/lib/db-router"
 import { format, isWeekend, parseISO } from "date-fns"
+
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/
+const MAX_NOTES_LENGTH = 1000
+const EVALUATOR_ROLES: Array<"supervisor" | "admin" | "super_admin"> = [
+  "supervisor",
+  "admin",
+  "super_admin",
+]
+
+function isValidDateString(value: string): boolean {
+  if (!DATE_PATTERN.test(value)) return false
+  const parsed = Date.parse(`${value}T12:00:00.000Z`)
+  return Number.isFinite(parsed)
+}
 
 export interface ExistingEvaluationInfo {
   id: string
@@ -26,33 +41,64 @@ export interface ExistingEvaluationInfo {
 
 /**
  * Check if a classroom already has an evaluation recorded on a specific date.
+ * Restricted to authenticated evaluators (supervisors and admins).
  */
 export async function checkClassroomDateEvaluation(
   classroomId: string,
   dateStr: string
-): Promise<{ success: boolean; isEvaluated: boolean; evaluation?: ExistingEvaluationInfo; isWorkingDay: boolean; holidayReason?: string; error?: string }> {
+): Promise<{
+  success: boolean
+  isEvaluated: boolean
+  evaluation?: ExistingEvaluationInfo
+  isWorkingDay: boolean
+  holidayReason?: string
+  error?: string
+}> {
   try {
-    const supabase = await createAdminClient()
-    const targetDate = dateStr.trim()
-    const parsedDate = parseISO(targetDate)
+    const { currentUser, error: authError } = await requireRoleAction(EVALUATOR_ROLES, {
+      deniedMessage: "Unauthorized: Evaluator access required",
+    })
+    if (authError || !currentUser) {
+      return {
+        success: false,
+        isEvaluated: false,
+        isWorkingDay: true,
+        error: authError || "Not authenticated",
+      }
+    }
 
-    // Check weekend
+    const targetDate = typeof dateStr === "string" ? dateStr.trim() : ""
+    if (!classroomId || !isValidDateString(targetDate)) {
+      return {
+        success: false,
+        isEvaluated: false,
+        isWorkingDay: true,
+        error: "Valid classroom ID and date (YYYY-MM-DD) are required.",
+      }
+    }
+
+    const supabase = await createAdminClient()
+    const parsedDate = parseISO(targetDate)
     const isWeekendDay = isWeekend(parsedDate)
 
-    // Check holiday exception
-    const { data: holiday } = await supabase
-      .from("school_calendar_exceptions")
-      .select("reason")
-      .eq("exception_date", targetDate)
-      .maybeSingle()
+    const [{ data: holiday }, history] = await Promise.all([
+      supabase
+        .from("school_calendar_exceptions")
+        .select("reason")
+        .eq("exception_date", targetDate)
+        .maybeSingle(),
+      // Archived days stay locked: moving a record must not allow a second score.
+      readEvaluationHistory(supabase, {
+        classroomId,
+        start: `${targetDate}T00:00:00.000Z`,
+        end: `${targetDate}T23:59:59.999Z`,
+        endInclusive: true,
+        includeArchives: true,
+      }),
+    ])
 
+    const [existing] = history
     const isWorkingDay = !isWeekendDay && !holiday
-
-    // Archived days stay locked: moving a record must not allow a second score.
-    const [existing] = await readEvaluationHistory(supabase, {
-      classroomId, start: `${targetDate}T00:00:00.000Z`,
-      end: `${targetDate}T23:59:59.999Z`, endInclusive: true, includeArchives: true,
-    })
 
     let evaluation: ExistingEvaluationInfo | undefined
     if (existing) {
@@ -88,49 +134,114 @@ export async function checkClassroomDateEvaluation(
 }
 
 /**
- * Server Action for supervisors to securely submit an evaluation.
+ * Server Action for supervisors and admins to securely submit an evaluation.
  * Enforces:
- * 1. Working day verification (excludes weekends & school holidays).
- * 2. 1 evaluation per classroom per day lock.
- * 3. Atomic insertion with service role.
+ * 1. Active role authorization (supervisor, admin, or super_admin).
+ * 2. Identity binding (supervisors cannot impersonate other supervisors) & classroom assignment check.
+ * 3. Server-side score calculation from active checklist_items (prevents score tampering).
+ * 4. Working day verification & 1 evaluation per classroom per day lock.
  */
 export async function submitEvaluation(
   classroomId: string,
   supervisorId: string,
   checkedItemIds: string[],
-  totalScore: number,
-  maxScore: number,
+  _clientTotalScore: number,
+  _clientMaxScore: number,
   evaluationDate?: string,
   notes?: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const session = await getSessionFromCookies()
-    if (!session) {
-      return { success: false, error: "Not authenticated. Please log in again." }
+    const { currentUser, error: authError } = await requireRoleAction(EVALUATOR_ROLES, {
+      clearOnInvalid: true,
+      deniedMessage: "Unauthorized: Only active supervisors or administrators can submit evaluations.",
+    })
+    if (authError || !currentUser) {
+      return { success: false, error: authError || "Not authenticated. Please log in again." }
     }
 
-    // Check if evaluations system is globally open
-    const statusResult = await getEvaluationsStatus()
-    const enabled = statusResult.success ? statusResult.enabled !== false : true
-
-    if (!enabled) {
-      return { success: false, error: "System is closed and not accepting evaluations anymore." }
-    }
-
-    if (!classroomId) {
+    if (!classroomId || typeof classroomId !== "string") {
       return { success: false, error: "Classroom ID is required." }
+    }
+
+    if (!Array.isArray(checkedItemIds)) {
+      return { success: false, error: "Checked checklist items must be provided as a list." }
+    }
+
+    if (typeof notes === "string" && notes.length > MAX_NOTES_LENGTH) {
+      return { success: false, error: `Notes must be ${MAX_NOTES_LENGTH} characters or fewer.` }
     }
 
     const todayStr = format(new Date(), "yyyy-MM-dd")
     const targetDateStr = evaluationDate?.trim() || todayStr
 
-    // Date validation
+    if (!isValidDateString(targetDateStr)) {
+      return { success: false, error: "Invalid evaluation date format." }
+    }
+
     if (targetDateStr > todayStr) {
       return { success: false, error: "Cannot submit evaluations for future dates." }
     }
 
-    // School term boundaries validation
-    const termRes = await getSchoolTermDates()
+    const parsedTargetDate = parseISO(targetDateStr)
+    if (isWeekend(parsedTargetDate)) {
+      return {
+        success: false,
+        error: "Evaluations cannot be submitted for weekend dates (Saturday/Sunday).",
+      }
+    }
+
+    const supabase = await createAdminClient()
+    const isAdmin = currentUser.role === "admin" || currentUser.role === "super_admin"
+    const effectiveSupervisorId = isAdmin && supervisorId ? supervisorId : currentUser.id
+
+    // Parallel validation queries: status, term dates, holiday, classroom, checklist rubric, assignments, daily lock
+    const [
+      statusResult,
+      termRes,
+      { data: holiday },
+      { data: classroom, error: classroomError },
+      { data: checklistData, error: checklistError },
+      supervisorAssignmentsResult,
+      existingHistory,
+    ] = await Promise.all([
+      getEvaluationsStatus(),
+      getSchoolTermDates(),
+      supabase
+        .from("school_calendar_exceptions")
+        .select("reason")
+        .eq("exception_date", targetDateStr)
+        .maybeSingle(),
+      supabase
+        .from("classrooms")
+        .select("id, division, is_active")
+        .eq("id", classroomId)
+        .eq("is_active", true)
+        .maybeSingle(),
+      supabase
+        .from("checklist_items")
+        .select("id, points, category, checklist_item_assignments(supervisor_id)")
+        .eq("is_active", true),
+      !isAdmin
+        ? supabase
+            .from("classroom_supervisors")
+            .select("classroom_id")
+            .eq("supervisor_id", currentUser.id)
+        : Promise.resolve({ data: null, error: null }),
+      readEvaluationHistory(supabase, {
+        classroomId,
+        start: `${targetDateStr}T00:00:00.000Z`,
+        end: `${targetDateStr}T23:59:59.999Z`,
+        endInclusive: true,
+        includeArchives: true,
+        includeDetails: false,
+      }),
+    ])
+
+    const enabled = statusResult.success ? statusResult.enabled !== false : true
+    if (!enabled) {
+      return { success: false, error: "System is closed and not accepting evaluations anymore." }
+    }
+
     if (termRes.success && termRes.data) {
       if (targetDateStr < termRes.data.startDate) {
         return {
@@ -146,25 +257,6 @@ export async function submitEvaluation(
       }
     }
 
-    const parsedTargetDate = parseISO(targetDateStr)
-
-    // Working days validation: Mon-Fri only
-    if (isWeekend(parsedTargetDate)) {
-      return {
-        success: false,
-        error: "Evaluations cannot be submitted for weekend dates (Saturday/Sunday).",
-      }
-    }
-
-    const supabase = await createAdminClient()
-
-    // Holiday validation: check school_calendar_exceptions
-    const { data: holiday } = await supabase
-      .from("school_calendar_exceptions")
-      .select("reason")
-      .eq("exception_date", targetDateStr)
-      .maybeSingle()
-
     if (holiday) {
       return {
         success: false,
@@ -172,44 +264,85 @@ export async function submitEvaluation(
       }
     }
 
-    // Daily Lock Check: Ensure classroom does not already have an evaluation on target date
-    const [existingEval] = await readEvaluationHistory(supabase, {
-      classroomId, start: `${targetDateStr}T00:00:00.000Z`,
-      end: `${targetDateStr}T23:59:59.999Z`, endInclusive: true, includeArchives: true,
-    })
+    if (classroomError || !classroom) {
+      return { success: false, error: "Selected classroom was not found or is inactive." }
+    }
 
-    if (existingEval) {
+    // Enforce supervisor classroom assignment when explicit assignments exist
+    if (!isAdmin && supervisorAssignmentsResult.data && supervisorAssignmentsResult.data.length > 0) {
+      const assignedIds = new Set(supervisorAssignmentsResult.data.map((row: any) => row.classroom_id))
+      if (!assignedIds.has(classroomId)) {
+        return {
+          success: false,
+          error: "Unauthorized: You are not assigned to evaluate this classroom.",
+        }
+      }
+    }
+
+    if (existingHistory.length > 0) {
       return {
         success: false,
         error: "This classroom already has an evaluation recorded for this date. The day is locked.",
       }
     }
 
-    const itemsMap = checkedItemIds.reduce((acc, id) => {
+    if (checklistError || !checklistData) {
+      return { success: false, error: "Unable to load evaluation rubric. Please try again." }
+    }
+
+    // Filter active checklist criteria applicable to this classroom division & supervisor
+    const applicableItems = (checklistData as any[]).filter((item) => {
+      if (!matchesDivision(item, classroom.division)) return false
+      const assignments = Array.isArray(item.checklist_item_assignments)
+        ? item.checklist_item_assignments
+        : []
+      if (!isAdmin && assignments.length > 0) {
+        return assignments.some((a: { supervisor_id: string }) => a.supervisor_id === effectiveSupervisorId)
+      }
+      return true
+    })
+
+    const applicableById = new Map(applicableItems.map((item) => [item.id as string, Number(item.points) || 0]))
+    const uniqueCheckedIds = [...new Set(checkedItemIds.filter((id) => typeof id === "string"))]
+
+    for (const itemId of uniqueCheckedIds) {
+      if (!applicableById.has(itemId)) {
+        return {
+          success: false,
+          error: "One or more checklist items are invalid or no longer active. Please reload and try again.",
+        }
+      }
+    }
+
+    // Compute authoritative total_score and max_score strictly on the server
+    const checkedSet = new Set(uniqueCheckedIds)
+    let computedTotalScore = 0
+    let computedMaxScore = 0
+    for (const [id, pts] of applicableById.entries()) {
+      computedMaxScore += pts
+      if (checkedSet.has(id)) {
+        computedTotalScore += pts
+      }
+    }
+
+    const itemsMap = uniqueCheckedIds.reduce((acc, id) => {
       acc[id] = true
       return acc
     }, {} as Record<string, boolean>)
 
-    // Determine actual supervisor ID (from parameter or session)
-    const effectiveSupervisorId = supervisorId || session.userId
-
-    // ISO timestamp with noon UTC on target date to avoid timezone shift
     const isoEvaluationDate = `${targetDateStr}T12:00:00.000Z`
 
-    const { error: insertError } = await supabase
-      .from("evaluations")
-      .insert({
-        classroom_id: classroomId,
-        supervisor_id: effectiveSupervisorId,
-        items: itemsMap,
-        total_score: totalScore,
-        max_score: maxScore,
-        evaluation_date: isoEvaluationDate,
-        notes: notes?.trim() || null,
-      })
+    const { error: insertError } = await supabase.from("evaluations").insert({
+      classroom_id: classroomId,
+      supervisor_id: effectiveSupervisorId,
+      items: itemsMap,
+      total_score: computedTotalScore,
+      max_score: computedMaxScore,
+      evaluation_date: isoEvaluationDate,
+      notes: notes?.trim() || null,
+    })
 
     if (insertError) {
-      // Catch unique index collision gracefully
       if (insertError.code === "23505") {
         return {
           success: false,
@@ -220,7 +353,6 @@ export async function submitEvaluation(
       return { success: false, error: insertError.message }
     }
 
-    // Revalidate tags and paths so leaderboards, history, and tracking reflect the submission immediately
     try {
       updateTag("leaderboard")
     } catch {
@@ -275,25 +407,16 @@ export async function undoEvaluation(
   reason?: string
 ): Promise<{ success: boolean; message?: string; undoEntry?: EvaluationUndoLog; error?: string }> {
   try {
-    const session = await getSessionFromCookies()
-    if (!session) {
-      return { success: false, error: "Not authenticated. Please log in again." }
+    const { currentUser: user, error: authError } = await requireRoleAction(EVALUATOR_ROLES, {
+      clearOnInvalid: true,
+      deniedMessage: "Unauthorized: Only evaluators can undo evaluations.",
+    })
+    if (authError || !user) {
+      return { success: false, error: authError || "Not authenticated. Please log in again." }
     }
 
     const supabase = await createAdminClient()
 
-    // 1. Verify user identity
-    const { data: user } = await supabase
-      .from("users")
-      .select("id, name, email, role, is_active")
-      .eq("id", session.userId)
-      .single()
-
-    if (!user || !user.is_active) {
-      return { success: false, error: "User session invalid or inactive." }
-    }
-
-    // 2. Fetch the evaluation to be undone
     const { data: evalRecord, error: fetchErr } = await supabase
       .from("evaluations")
       .select(`
@@ -324,14 +447,12 @@ export async function undoEvaluation(
       return { success: false, error: "Evaluation record not found or already removed." }
     }
 
-    // 3. Check authorization: must be creator or admin
-    const isOwner = evalRecord.supervisor_id === session.userId
+    const isOwner = evalRecord.supervisor_id === user.id
     const isAdmin = user.role === "admin" || user.role === "super_admin"
     if (!isOwner && !isAdmin) {
       return { success: false, error: "Unauthorized: You can only undo evaluations you submitted." }
     }
 
-    // 4. Create snapshot for the undo point
     const classroomName = (evalRecord.classroom as any)?.name || "Classroom"
     const grade = (evalRecord.classroom as any)?.grade || ""
     const division = (evalRecord.classroom as any)?.division || ""
@@ -352,12 +473,11 @@ export async function undoEvaluation(
       notes: evalRecord.notes || undefined,
       evaluation_date: evalRecord.evaluation_date,
       undone_at: new Date().toISOString(),
-      undone_by_id: session.userId,
+      undone_by_id: user.id,
       undone_by_name: user.name || "User",
-      reason: reason?.trim() || "Supervisor requested undo point",
+      reason: reason?.trim().slice(0, 500) || "Supervisor requested undo point",
     }
 
-    // 5. Store undo point in evaluation_undo_logs table, with fallback to system_settings
     let savedInTable = false
     try {
       const { error: insertLogError } = await supabase
@@ -384,18 +504,15 @@ export async function undoEvaluation(
 
       const updatedLogs = [undoLogEntry, ...currentLogs].slice(0, 500)
 
-      await supabase
-        .from("system_settings")
-        .upsert({
-          key: "evaluation_undo_logs",
-          value: updatedLogs,
-          description: "Audit trail of undone evaluations and reverted points",
-          updated_by: session.userId,
-          updated_at: new Date().toISOString(),
-        })
+      await supabase.from("system_settings").upsert({
+        key: "evaluation_undo_logs",
+        value: updatedLogs,
+        description: "Audit trail of undone evaluations and reverted points",
+        updated_by: user.id,
+        updated_at: new Date().toISOString(),
+      })
     }
 
-    // 6. Delete evaluation from live table
     const { error: deleteError } = await supabase
       .from("evaluations")
       .delete()
@@ -406,7 +523,6 @@ export async function undoEvaluation(
       return { success: false, error: `Failed to remove evaluation: ${deleteError.message}` }
     }
 
-    // 7. Revalidate leaderboard caches and paths
     try {
       updateTag("leaderboard")
     } catch {}
@@ -433,22 +549,32 @@ export async function undoEvaluation(
 
 /**
  * Fetch the audit log of undone evaluations (undo points).
+ * Authenticated evaluators only; supervisors are scoped strictly to their own logs.
  */
 export async function getEvaluationUndoLogs(
   supervisorId?: string
 ): Promise<{ success: boolean; data: EvaluationUndoLog[]; error?: string }> {
   try {
+    const { currentUser, error: authError } = await requireRoleAction(EVALUATOR_ROLES, {
+      deniedMessage: "Unauthorized: Evaluator access required",
+    })
+    if (authError || !currentUser) {
+      return { success: false, data: [], error: authError || "Not authenticated" }
+    }
+
+    const isAdmin = currentUser.role === "admin" || currentUser.role === "super_admin"
+    const scopedSupervisorId = isAdmin ? supervisorId : currentUser.id
+
     const supabase = await createAdminClient()
 
-    // 1. Try fetching from dedicated evaluation_undo_logs table
     try {
       let query = supabase
         .from("evaluation_undo_logs")
         .select("*")
         .order("undone_at", { ascending: false })
 
-      if (supervisorId) {
-        query = query.eq("supervisor_id", supervisorId)
+      if (scopedSupervisorId) {
+        query = query.eq("supervisor_id", scopedSupervisorId)
       }
 
       const { data, error } = await query
@@ -459,7 +585,6 @@ export async function getEvaluationUndoLogs(
       // Fall through to system_settings
     }
 
-    // 2. Fallback to system_settings
     const { data: setting } = await supabase
       .from("system_settings")
       .select("value")
@@ -467,9 +592,9 @@ export async function getEvaluationUndoLogs(
       .maybeSingle()
 
     let logs: EvaluationUndoLog[] = Array.isArray(setting?.value) ? setting.value : []
-    if (supervisorId) {
+    if (scopedSupervisorId) {
       logs = logs.filter(
-        (l) => l.supervisor_id === supervisorId || l.undone_by_id === supervisorId
+        (l) => l.supervisor_id === scopedSupervisorId || l.undone_by_id === scopedSupervisorId
       )
     }
 
@@ -484,19 +609,22 @@ export async function getEvaluationUndoLogs(
 
 /**
  * Restore an undone evaluation point back to live status.
+ * Enforces active role authorization and ownership (creator or admin).
  */
 export async function restoreUndoneEvaluation(
   undoLogId: string
 ): Promise<{ success: boolean; message?: string; error?: string }> {
   try {
-    const session = await getSessionFromCookies()
-    if (!session) {
-      return { success: false, error: "Not authenticated" }
+    const { currentUser, error: authError } = await requireRoleAction(EVALUATOR_ROLES, {
+      clearOnInvalid: true,
+      deniedMessage: "Unauthorized: Evaluator access required",
+    })
+    if (authError || !currentUser) {
+      return { success: false, error: authError || "Not authenticated" }
     }
 
     const supabase = await createAdminClient()
 
-    // 1. Retrieve the undo log entry
     let logEntry: EvaluationUndoLog | null = null
 
     try {
@@ -524,7 +652,17 @@ export async function restoreUndoneEvaluation(
       return { success: false, error: "Undo log record not found" }
     }
 
-    // 2. Check if classroom is already evaluated for this date
+    const isAdmin = currentUser.role === "admin" || currentUser.role === "super_admin"
+    const isOwner =
+      logEntry.supervisor_id === currentUser.id || logEntry.undone_by_id === currentUser.id
+
+    if (!isAdmin && !isOwner) {
+      return {
+        success: false,
+        error: "Unauthorized: You can only restore your own undone evaluations.",
+      }
+    }
+
     const targetDateStr = format(parseISO(logEntry.evaluation_date), "yyyy-MM-dd")
     const { data: existing } = await supabase
       .from("evaluations")
@@ -541,25 +679,23 @@ export async function restoreUndoneEvaluation(
       }
     }
 
-    // 3. Re-insert the evaluation
-    const { error: insertError } = await supabase
-      .from("evaluations")
-      .insert({
-        id: logEntry.evaluation_id || crypto.randomUUID(),
-        classroom_id: logEntry.classroom_id,
-        supervisor_id: logEntry.supervisor_id,
-        items: logEntry.items || {},
-        total_score: logEntry.reverted_points,
-        max_score: logEntry.max_score,
-        evaluation_date: logEntry.evaluation_date,
-        notes: logEntry.notes ? `${logEntry.notes} (Restored from undo point)` : "Restored from undo point",
-      })
+    const { error: insertError } = await supabase.from("evaluations").insert({
+      id: logEntry.evaluation_id || crypto.randomUUID(),
+      classroom_id: logEntry.classroom_id,
+      supervisor_id: logEntry.supervisor_id,
+      items: logEntry.items || {},
+      total_score: logEntry.reverted_points,
+      max_score: logEntry.max_score,
+      evaluation_date: logEntry.evaluation_date,
+      notes: logEntry.notes
+        ? `${logEntry.notes} (Restored from undo point)`
+        : "Restored from undo point",
+    })
 
     if (insertError) {
       return { success: false, error: insertError.message }
     }
 
-    // 4. Mark undo log as restored
     const nowIso = new Date().toISOString()
     try {
       await supabase
@@ -586,7 +722,6 @@ export async function restoreUndoneEvaluation(
       }
     } catch {}
 
-    // 5. Revalidate
     try {
       updateTag("leaderboard")
     } catch {}
@@ -608,4 +743,3 @@ export async function restoreUndoneEvaluation(
     return { success: false, error: err.message || "Failed to restore evaluation point" }
   }
 }
-

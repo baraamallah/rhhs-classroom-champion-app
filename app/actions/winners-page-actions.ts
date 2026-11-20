@@ -4,7 +4,22 @@ import { revalidatePath, revalidateTag } from "next/cache"
 import { recordRecentMutationCookie } from "@/lib/db-router"
 import { validDisplayMonth } from "@/lib/display-period"
 import { createAdminClient } from "@/lib/supabase/server"
-import { getSessionFromCookies } from "@/lib/auth/session"
+import { requireRoleAction } from "@/lib/auth/server"
+
+const ADMIN_SETTING_KEYS = [
+  "winners_page_visible",
+  "leaderboard_show_monthly",
+  "calculation_mode",
+  "winner_reveal_mode",
+  "evaluations_enabled",
+  "winners_display_month",
+  "leaderboard_display_month",
+] as const
+
+const ALLOWED_MONTH_SETTING_KEYS = new Set([
+  "winners_display_month",
+  "leaderboard_display_month",
+])
 
 export type AdminSettings = {
   winners_page_visible: boolean
@@ -22,17 +37,18 @@ export async function getAdminSettings(): Promise<{ success: boolean; settings?:
     const { data, error } = await supabase
       .from("system_settings")
       .select("key, value")
+      .in("key", [...ADMIN_SETTING_KEYS])
 
     if (error) {
       console.error("[getAdminSettings] Error:", error)
       return { success: false, error: error.message }
     }
 
-    const map = new Map(data?.map(s => [s.key, s.value]) || [])
+    const map = new Map(data?.map((s) => [s.key, s.value]) || [])
 
     const parseBool = (key: string, defaultVal: boolean): boolean => {
       const raw = map.get(key)
-      return raw === null || raw === undefined ? defaultVal : (raw === true || raw === "true")
+      return raw === null || raw === undefined ? defaultVal : raw === true || raw === "true"
     }
 
     const settings: AdminSettings = {
@@ -52,29 +68,10 @@ export async function getAdminSettings(): Promise<{ success: boolean; settings?:
   }
 }
 
-// TODO: Refactor this file to avoid using cookies for static rendering or switch to dynamic rendering for /winners.
-export async function requireAdmin(): Promise<{ currentUser?: { id: string; role: string }; error?: string }> {
-  const session = await getSessionFromCookies()
-  if (!session) {
-    return { error: "Not authenticated" }
-  }
-
-  const supabase = await createAdminClient()
-  const { data: userData, error: userError } = await supabase
-    .from("users")
-    .select("id, role, is_active")
-    .eq("id", session.userId)
-    .single()
-
-  if (userError || !userData || !userData.is_active) {
-    return { error: "Not authenticated" }
-  }
-
-  if (userData.role !== "super_admin" && userData.role !== "admin") {
-    return { error: "Unauthorized: Admin access required" }
-  }
-
-  return { currentUser: { id: userData.id, role: userData.role } }
+async function requireAdmin() {
+  return requireRoleAction(["super_admin", "admin"], {
+    deniedMessage: "Unauthorized: Admin access required",
+  })
 }
 
 export async function getWinnersPageVisibility(): Promise<{ success: boolean; visible?: boolean; error?: string }> {
@@ -354,6 +351,10 @@ export async function setDefaultMonthSetting(
   const { currentUser, error } = await requireAdmin()
   if (error || !currentUser) {
     return { success: false, error }
+  }
+
+  if (!ALLOWED_MONTH_SETTING_KEYS.has(key)) {
+    return { success: false, error: "Invalid setting key" }
   }
 
   if (setting !== null && !validDisplayMonth(setting)) return { success: false, error: "Select a valid year and month" }

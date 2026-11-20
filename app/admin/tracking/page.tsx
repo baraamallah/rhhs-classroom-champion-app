@@ -1,12 +1,7 @@
-"use client"
-
-import { ProtectedRoute } from "@/components/providers/protected-route"
+import { requirePageRole } from "@/lib/auth/server"
 import { AdminDashboard } from "@/components/features/admin/admin-dashboard-view"
 
-export default function TrackingPage() {
-  return (
-    <ProtectedRoute allowedRoles={["super_admin", "admin", "stats"]}>
-      <AdminDashboard tabParam="tracking" />
-    </ProtectedRoute>
-  )
+export default async function TrackingPage() {
+  await requirePageRole(["super_admin", "admin", "stats"])
+  return <AdminDashboard tabParam="tracking" />
 }

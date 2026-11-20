@@ -12,6 +12,46 @@ interface HistoryOptions {
   supervisorId?: string
   classroomId?: string
   classroomIds?: string[]
+  /** When false, omits heavy JSONB items, notes, and supervisor joins for fast scoring aggregation. */
+  includeDetails?: boolean
+  /** When true, reads independent live/archive tables concurrently via Promise.all. */
+  parallelTables?: boolean
+}
+
+async function readSingleTable(
+  supabase: SupabaseClient,
+  table: string,
+  options: HistoryOptions
+): Promise<Array<{ table: string; row: any }>> {
+  const includeDetails = options.includeDetails !== false
+  const selectClause =
+    table === "evaluations"
+      ? includeDetails
+        ? "id, classroom_id, supervisor_id, evaluation_date, items, total_score, max_score, notes, created_at, classrooms:classroom_id(name, grade, division), users:supervisor_id(name, email)"
+        : "id, classroom_id, supervisor_id, evaluation_date, total_score, max_score, created_at, classrooms:classroom_id(name, grade, division)"
+      : includeDetails
+        ? "id, classroom_id, supervisor_id, evaluation_date, items, total_score, max_score, notes, created_at, archived_at, classroom_name, classroom_grade, classroom_division, supervisor_name"
+        : "id, classroom_id, supervisor_id, evaluation_date, total_score, max_score, created_at, archived_at, classroom_name, classroom_grade, classroom_division"
+
+  const rows: Array<{ table: string; row: any }> = []
+  for (let offset = 0; ; offset += 1000) {
+    let query = supabase.from(table).select(selectClause)
+    if (options.start) query = query.gte("evaluation_date", options.start)
+    if (options.end)
+      query = options.endInclusive
+        ? query.lte("evaluation_date", options.end)
+        : query.lt("evaluation_date", options.end)
+    if (options.supervisorId) query = query.eq("supervisor_id", options.supervisorId)
+    if (options.classroomId) query = query.eq("classroom_id", options.classroomId)
+    if (options.classroomIds) query = query.in("classroom_id", options.classroomIds)
+    const { data, error } = await query.order("id").range(offset, offset + 999)
+    if (error) throw new Error(`Unable to read ${table}: ${error.message}`)
+    for (const row of (data || []) as any[]) {
+      rows.push({ table, row })
+    }
+    if (!data || data.length < 1000) break
+  }
+  return rows
 }
 
 /** Evaluation date determines the scoring month; archive date never changes it. */
@@ -25,64 +65,57 @@ export async function readEvaluationHistory(
     : options.includeArchives
       ? ["evaluations", "archive_evaluations", "academic_archive_evaluations"]
       : ["evaluations"]
-  // Read live first: a partially completed archive/restore must not count twice.
-  for (const table of tables) {
-    for (let offset = 0; ; offset += 1000) {
-      let query = supabase
-        .from(table)
-        .select(
-          table === "evaluations"
-            ? "id, classroom_id, supervisor_id, evaluation_date, items, total_score, max_score, notes, created_at, classrooms:classroom_id(name, grade, division), users:supervisor_id(name, email)"
-            : "id, classroom_id, supervisor_id, evaluation_date, items, total_score, max_score, notes, created_at, archived_at, classroom_name, classroom_grade, classroom_division, supervisor_name"
-        )
-      if (options.start) query = query.gte("evaluation_date", options.start)
-      if (options.end)
-        query = options.endInclusive
-          ? query.lte("evaluation_date", options.end)
-          : query.lt("evaluation_date", options.end)
-      if (options.supervisorId) query = query.eq("supervisor_id", options.supervisorId)
-      if (options.classroomId) query = query.eq("classroom_id", options.classroomId)
-      if (options.classroomIds) query = query.in("classroom_id", options.classroomIds)
-      const { data, error } = await query.order("id").range(offset, offset + 999)
-      if (error) throw new Error(`Unable to read ${table}: ${error.message}`)
-      for (const row of (data || []) as any[]) {
-        if (byId.has(row.id)) continue
-        const total = Number(row.total_score)
-        if (row.total_score == null || !Number.isFinite(total)) throw new Error("Invalid evaluation score")
-        const classroom =
-          row.classrooms ||
-          (row.classroom_name
-            ? {
-                name: row.classroom_name,
-                grade: row.classroom_grade,
-                division: row.classroom_division
-              }
-            : undefined)
-        byId.set(row.id, {
-          id: row.id,
-          classroom_id: row.classroom_id,
-          supervisor_id: row.supervisor_id,
-          evaluation_date: row.evaluation_date,
-          items: row.items || {},
-          total_score: total,
-          max_score: Number(row.max_score),
-          notes: row.notes,
-          created_at: row.created_at,
-          archived_at: row.archived_at,
-          is_archived: table !== "evaluations",
-          archive_source:
-            table === "evaluations" ? undefined : (table as "archive_evaluations" | "academic_archive_evaluations"),
-          classroom_name: classroom?.name,
-          classroom_grade: classroom?.grade,
-          classroom_division: classroom?.division,
-          supervisor_name: row.users?.name || row.supervisor_name,
-          classroom: classroom
-            ? { id: row.classroom_id, name: classroom.name, grade: classroom.grade || "", division: classroom.division }
-            : undefined,
-          supervisor: row.users || (row.supervisor_name ? { name: row.supervisor_name, email: "" } : undefined)
-        })
-      }
-      if (!data || data.length < 1000) break
+
+  // Fetch either concurrently or sequentially (preserving table priority order on merge)
+  const tableBatches =
+    options.parallelTables && tables.length > 1
+      ? await Promise.all(tables.map((table) => readSingleTable(supabase, table, options)))
+      : await (async () => {
+        const results: Array<Array<{ table: string; row: any }>> = []
+        for (const table of tables) {
+          results.push(await readSingleTable(supabase, table, options))
+        }
+        return results
+      })()
+
+  // Merge in live-first order: a partially completed archive/restore must not count twice.
+  for (const batch of tableBatches) {
+    for (const { table, row } of batch) {
+      if (byId.has(row.id)) continue
+      const total = Number(row.total_score)
+      if (row.total_score == null || !Number.isFinite(total)) throw new Error("Invalid evaluation score")
+      const classroom =
+        row.classrooms ||
+        (row.classroom_name
+          ? {
+            name: row.classroom_name,
+            grade: row.classroom_grade,
+            division: row.classroom_division,
+          }
+          : undefined)
+      byId.set(row.id, {
+        id: row.id,
+        classroom_id: row.classroom_id,
+        supervisor_id: row.supervisor_id,
+        evaluation_date: row.evaluation_date,
+        items: row.items || {},
+        total_score: total,
+        max_score: Number(row.max_score),
+        notes: row.notes,
+        created_at: row.created_at,
+        archived_at: row.archived_at,
+        is_archived: table !== "evaluations",
+        archive_source:
+          table === "evaluations" ? undefined : (table as "archive_evaluations" | "academic_archive_evaluations"),
+        classroom_name: classroom?.name,
+        classroom_grade: classroom?.grade,
+        classroom_division: classroom?.division,
+        supervisor_name: row.users?.name || row.supervisor_name,
+        classroom: classroom
+          ? { id: row.classroom_id, name: classroom.name, grade: classroom.grade || "", division: classroom.division }
+          : undefined,
+        supervisor: row.users || (row.supervisor_name ? { name: row.supervisor_name, email: "" } : undefined),
+      })
     }
   }
   return [...byId.values()].sort((a, b) => b.evaluation_date.localeCompare(a.evaluation_date))
@@ -90,7 +123,12 @@ export async function readEvaluationHistory(
 
 export async function readMonthlyRankings(supabase: SupabaseClient, division: string, year: number, month: number) {
   const period = getMonthPeriod(year, month)
-  const evaluations = await readEvaluationHistory(supabase, { ...period, includeArchives: true })
+  const evaluations = await readEvaluationHistory(supabase, {
+    ...period,
+    includeArchives: true,
+    includeDetails: false,
+    parallelTables: true,
+  })
   return calculateLeaderboard(evaluations.filter((evaluation) => evaluation.classroom?.division === division))
 }
 
@@ -105,7 +143,7 @@ export async function includeRecordedWinnerScores<T extends { classroom_id: stri
         const period = getMonthPeriod(winner.year, winner.month)
         return [period.key, period] as const
       })
-    ).values()
+    ).values(),
   ]
   let nextPeriod = 0
   let failed = false
@@ -115,7 +153,11 @@ export async function includeRecordedWinnerScores<T extends { classroom_id: stri
     if (failed || nextPeriod >= periods.length) return
     const period = periods[nextPeriod++]
     try {
-      const history = await readEvaluationHistory(supabase, { ...period, includeArchives: true })
+      const history = await readEvaluationHistory(supabase, {
+        ...period,
+        includeArchives: true,
+        includeDetails: false,
+      })
       months.set(period.key, calculateLeaderboard(history))
     } catch (error) {
       failed = true
@@ -133,11 +175,11 @@ export async function includeRecordedWinnerScores<T extends { classroom_id: stri
     // Keep the recorded result if legacy evaluations are no longer available.
     return score
       ? {
-          ...winner,
-          total_score: score.totalScore,
-          average_score: score.averageScore,
-          evaluation_count: score.evaluationCount
-        }
+        ...winner,
+        total_score: score.totalScore,
+        average_score: score.averageScore,
+        evaluation_count: score.evaluationCount,
+      }
       : winner
   })
 }

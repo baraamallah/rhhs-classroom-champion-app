@@ -1,5 +1,8 @@
 import { createServerClient } from "@supabase/ssr"
+import { createClient as createSupabaseJsClient, type SupabaseClient } from "@supabase/supabase-js"
 import { cookies } from "next/headers"
+
+let memoizedAdminClient: SupabaseClient | null = null
 
 export async function createClient() {
   const cookieStore = await cookies()
@@ -26,27 +29,26 @@ export async function createClient() {
   )
 }
 
-export async function createAdminClient() {
-  const cookieStore = await cookies()
+/**
+ * Returns a memoized stateless Supabase admin client using the service role key.
+ * Does not call cookies(), avoiding unnecessary dynamic opt-outs and per-call allocations.
+ */
+export async function createAdminClient(): Promise<SupabaseClient> {
+  if (!memoizedAdminClient) {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll()
-        },
-        setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            )
-          } catch {
-            // The `setAll` method was called from a Server Component.
-          }
-        },
-      },
+    if (!url || !serviceRoleKey) {
+      throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY environment variable")
     }
-  )
+
+    memoizedAdminClient = createSupabaseJsClient(url, serviceRoleKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+    })
+  }
+
+  return memoizedAdminClient
 }

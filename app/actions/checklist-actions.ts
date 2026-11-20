@@ -2,30 +2,13 @@
 
 import { revalidatePath } from "next/cache"
 import { createAdminClient } from "@/lib/supabase/server"
-import { getSessionFromCookies } from "@/lib/auth/session"
+import { requireRoleAction } from "@/lib/auth/server"
 
 async function requireAdmin(): Promise<{ error?: string }> {
-  const session = await getSessionFromCookies()
-  if (!session) {
-    return { error: "Not authenticated" }
-  }
-
-  const supabase = await createAdminClient()
-  const { data: userData, error: userError } = await supabase
-    .from("users")
-    .select("id, role, is_active")
-    .eq("id", session.userId)
-    .single()
-
-  if (userError || !userData || !userData.is_active) {
-    return { error: "Not authenticated" }
-  }
-
-  if (!["super_admin", "admin"].includes(userData.role)) {
-    return { error: "Unauthorized: Admin access required" }
-  }
-
-  return {}
+  const { error } = await requireRoleAction(["super_admin", "admin"], {
+    deniedMessage: "Unauthorized: Admin access required",
+  })
+  return { error }
 }
 
 export async function addChecklistItemAction(

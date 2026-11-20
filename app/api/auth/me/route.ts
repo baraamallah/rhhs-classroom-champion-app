@@ -2,11 +2,15 @@ import { NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/server"
 import { clearSessionCookie, getSessionFromCookies } from "@/lib/auth/session"
 
+const NO_STORE_HEADERS = {
+  "Cache-Control": "no-store, private",
+}
+
 export async function GET() {
   const session = await getSessionFromCookies()
 
   if (!session) {
-    return NextResponse.json({ user: null })
+    return NextResponse.json({ user: null }, { headers: NO_STORE_HEADERS })
   }
 
   const supabase = await createAdminClient()
@@ -17,35 +21,24 @@ export async function GET() {
     .eq("id", session.userId)
     .single()
 
-  if (process.env.NODE_ENV === "development") {
-    console.log("🔍 Auth me check:", { userData, userError, sessionUserId: session.userId })
-  }
-
   if (userError) {
-    if (process.env.NODE_ENV === "development") {
-      console.log("❌ DB error in auth check:", userError)
-    }
-    return NextResponse.json({ user: null })
+    return NextResponse.json({ user: null }, { headers: NO_STORE_HEADERS })
   }
 
   if (!userData || !userData.is_active) {
-    if (process.env.NODE_ENV === "development") {
-      console.log("❌ User not found or inactive in auth check")
-    }
     await clearSessionCookie()
-    return NextResponse.json({ user: null })
+    return NextResponse.json({ user: null }, { headers: NO_STORE_HEADERS })
   }
 
-  if (process.env.NODE_ENV === "development") {
-    console.log("✅ Auth check successful:", { userId: userData.id, role: userData.role })
-  }
-
-  return NextResponse.json({
-    user: {
-      id: userData.id,
-      email: userData.email,
-      name: userData.name,
-      role: userData.role,
+  return NextResponse.json(
+    {
+      user: {
+        id: userData.id,
+        email: userData.email,
+        name: userData.name,
+        role: userData.role,
+      },
     },
-  })
+    { headers: NO_STORE_HEADERS }
+  )
 }

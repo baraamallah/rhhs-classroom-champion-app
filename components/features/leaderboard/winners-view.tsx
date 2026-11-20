@@ -48,11 +48,19 @@ interface Winner {
   }
 }
 
-export default function WinnersView({ initialPeriod }: { initialPeriod: DisplayMonth }) {
-  const [loading, setLoading] = useState(true)
-  const [winners, setWinners] = useState<Winner[]>([])
+export default function WinnersView({
+  initialPeriod,
+  initialWinners
+}: {
+  initialPeriod: DisplayMonth
+  initialWinners?: Winner[]
+}) {
+  const hasInitialData = Array.isArray(initialWinners)
+  const [loading, setLoading] = useState(!hasInitialData)
+  const [winners, setWinners] = useState<Winner[]>(initialWinners ?? [])
   const [loadError, setLoadError] = useState<string | null>(null)
   const requestRef = useRef(0)
+  const skippedInitialFetchRef = useRef(hasInitialData)
   const [selectedYear, setSelectedYear] = useState(() => initialPeriod.year)
   const [selectedMonth, setSelectedMonth] = useState(() => initialPeriod.month)
   const [showConfetti, setShowConfetti] = useState(false)
@@ -94,11 +102,20 @@ export default function WinnersView({ initialPeriod }: { initialPeriod: DisplayM
   }, [selectedMonth, selectedYear, triggerConfetti])
 
   useEffect(() => {
+    if (
+      skippedInitialFetchRef.current &&
+      selectedYear === initialPeriod.year &&
+      selectedMonth === initialPeriod.month
+    ) {
+      skippedInitialFetchRef.current = false
+      if (winners.length > 0) triggerConfetti(3500)
+      return
+    }
     void loadData()
     return () => {
       requestRef.current += 1
     }
-  }, [loadData])
+  }, [loadData, selectedYear, selectedMonth, initialPeriod.year, initialPeriod.month, triggerConfetti, winners.length])
 
   return (
     <LazyMotionProvider>
@@ -327,11 +344,10 @@ function DivisionPlaqueCard({
       transition={{ duration: 0.35, delay: index * 0.05 }}
     >
       <Card
-        className={`relative overflow-hidden rounded-2xl sm:rounded-3xl transition-[color,background-color,border-color,box-shadow] duration-300 ${
-          winner
-            ? "border-2 border-amber-400/80 dark:border-amber-500/70 shadow-lg shadow-amber-500/10 bg-linear-to-b from-amber-500/10 via-card to-card hover:border-amber-400 hover:shadow-amber-500/20"
-            : "border border-border/70 bg-card/60"
-        }`}
+        className={`relative overflow-hidden rounded-2xl sm:rounded-3xl transition-[color,background-color,border-color,box-shadow] duration-300 ${winner
+          ? "border-2 border-amber-400/80 dark:border-amber-500/70 shadow-lg shadow-amber-500/10 bg-linear-to-b from-amber-500/10 via-card to-card hover:border-amber-400 hover:shadow-amber-500/20"
+          : "border border-border/70 bg-card/60"
+          }`}
       >
         <CardContent className="p-4 sm:p-6">
           {/* Plaque Header */}

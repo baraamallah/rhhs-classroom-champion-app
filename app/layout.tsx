@@ -6,7 +6,6 @@ import { AuthProvider } from "@/components/providers/auth-provider"
 import { ConsentProvider } from "@/components/providers/consent-provider"
 import { Footer } from "@/components/layout/footer"
 import { AutoArchiveChecker } from "@/components/features/system/auto-archive-checker"
-import { MotionProvider } from "@/components/providers/motion-provider"
 import { PrivacyConsentBanner } from "@/components/features/legal/privacy-consent-banner"
 import { PwaInstallBanner } from "@/components/features/pwa/pwa-install-banner"
 import { ConditionalTelemetry } from "@/components/features/analytics/conditional-telemetry"
@@ -182,7 +181,7 @@ export default function RootLayout({
             <ConsentProvider>
               <AutoArchiveChecker />
               <div className="min-h-screen flex flex-col w-full overflow-x-clip">
-                <MotionProvider>{children}</MotionProvider>
+                {children}
                 <Footer />
               </div>
               <PrivacyConsentBanner />

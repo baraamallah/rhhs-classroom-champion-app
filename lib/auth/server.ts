@@ -1,14 +1,10 @@
+import { cache } from "react"
 import { createAdminClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
-import { getSessionFromCookies } from "./session"
+import { clearSessionCookie, getSessionFromCookies } from "./session"
 import type { User } from "@/lib/types"
 
-/**
- * Get the currently authenticated user from the session
- * Use this in Server Components and Server Actions
- * Returns null if not authenticated
- */
-export async function getCurrentUser(): Promise<User | null> {
+async function loadCurrentUser(): Promise<User | null> {
   try {
     const session = await getSessionFromCookies()
 
@@ -30,15 +26,24 @@ export async function getCurrentUser(): Promise<User | null> {
     }
 
     return data as User
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.digest === "DYNAMIC_SERVER_USAGE") {
+      throw error
+    }
     console.error("[auth] Error getting current user:", error)
     return null
   }
 }
 
 /**
+ * Get the currently authenticated user from the session.
+ * Memoized per-request with React.cache() when available to avoid redundant DB lookups.
+ */
+export const getCurrentUser: () => Promise<User | null> =
+  typeof cache === "function" ? cache(loadCurrentUser) : loadCurrentUser
+
+/**
  * Require authentication - throws error if not authenticated
- * Use this when you need to ensure a user is logged in
  */
 export async function requireAuth(): Promise<User> {
   const user = await getCurrentUser()
@@ -52,7 +57,6 @@ export async function requireAuth(): Promise<User> {
 
 /**
  * Require specific role - throws error if user doesn't have required role
- * Use this to protect admin-only actions
  */
 export async function requireRole(allowedRoles: User["role"][]): Promise<User> {
   const user = await requireAuth()
@@ -62,6 +66,46 @@ export async function requireRole(allowedRoles: User["role"][]): Promise<User> {
   }
 
   return user
+}
+
+/**
+ * Structured authorization helper for Server Actions.
+ * Validates the signed session cookie against the live active user record in DB.
+ */
+export async function requireRoleAction(
+  allowedRoles: User["role"][],
+  options: { clearOnInvalid?: boolean; deniedMessage?: string } = {}
+): Promise<{ currentUser?: User; error?: string }> {
+  const session = await getSessionFromCookies()
+  if (!session) {
+    return { error: "Not authenticated" }
+  }
+
+  const supabase = await createAdminClient()
+  const { data, error } = await supabase
+    .from("users")
+    .select("id, email, name, role, is_active, created_at")
+    .eq("id", session.userId)
+    .single()
+
+  if (error || !data || !data.is_active) {
+    if (options.clearOnInvalid) {
+      try {
+        await clearSessionCookie()
+      } catch {
+        // Ignore cookie clear errors in read-only contexts
+      }
+    }
+    return { error: "Not authenticated" }
+  }
+
+  if (!allowedRoles.includes(data.role as User["role"])) {
+    return {
+      error: options.deniedMessage || "Unauthorized: Insufficient permissions",
+    }
+  }
+
+  return { currentUser: data as User }
 }
 
 /** Route guard: decide access before rendering a protected page. */
