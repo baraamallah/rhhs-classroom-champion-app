@@ -142,13 +142,14 @@ function useSupervisorEvaluationsHistoryController({ supervisorId }: SupervisorE
     return evaluations.filter((e) => {
       const name = e.classroom?.name || ""
       const grade = e.classroom?.grade || ""
+      const evaluationDate: string = e.evaluation_date || ""
       const formattedDate = formatDateSafe(e.evaluation_date).toLowerCase()
       return (
         !query ||
         name.toLowerCase().includes(query) ||
         grade.toLowerCase().includes(query) ||
         formattedDate.includes(query) ||
-        (e.evaluation_date || "").includes(query) ||
+        evaluationDate.includes(query) ||
         e.total_score.toString() === query
       )
     })

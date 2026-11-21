@@ -99,13 +99,17 @@ function useDataManagementPanelController() {
   const filteredEvaluations = useMemo(() => {
     if (!searchTerm) return evaluations
     const term = searchTerm.toLowerCase()
-    return evaluations.filter(
-      (evaluation) =>
+    return evaluations.filter((evaluation) => {
+      if (
         evaluation.classrooms?.name.toLowerCase().includes(term) ||
         evaluation.classrooms?.grade.toLowerCase().includes(term) ||
-        evaluation.users?.name.toLowerCase().includes(term) ||
-        evaluationDateFormatter.format(new Date(evaluation.evaluation_date)).includes(term)
-    )
+        evaluation.users?.name.toLowerCase().includes(term)
+      ) {
+        return true
+      }
+      const formattedDate: string = evaluationDateFormatter.format(new Date(evaluation.evaluation_date))
+      return formattedDate.includes(term)
+    })
   }, [evaluations, searchTerm])
 
   const handleSelectAll = () => {

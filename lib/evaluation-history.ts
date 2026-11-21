@@ -66,17 +66,19 @@ export async function readEvaluationHistory(
       ? ["evaluations", "archive_evaluations", "academic_archive_evaluations"]
       : ["evaluations"]
 
-  // Fetch either concurrently or sequentially (preserving table priority order on merge)
-  const tableBatches =
-    options.parallelTables && tables.length > 1
-      ? await Promise.all(tables.map((table) => readSingleTable(supabase, table, options)))
-      : await (async () => {
-        const results: Array<Array<{ table: string; row: any }>> = []
-        for (const table of tables) {
-          results.push(await readSingleTable(supabase, table, options))
-        }
-        return results
-      })()
+  const readTable = (table: string) => readSingleTable(supabase, table, options)
+  async function readTablesInOrder(
+    index = 0,
+    batches: Awaited<ReturnType<typeof readTable>>[] = []
+  ): Promise<typeof batches> {
+    if (index === tables.length) return batches
+    batches.push(await readTable(tables[index]))
+    return readTablesInOrder(index + 1, batches)
+  }
+
+  const tableBatches = options.parallelTables
+    ? await Promise.all(tables.map(readTable))
+    : await readTablesInOrder()
 
   // Merge in live-first order: a partially completed archive/restore must not count twice.
   for (const batch of tableBatches) {

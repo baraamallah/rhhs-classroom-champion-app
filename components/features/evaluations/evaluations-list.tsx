@@ -284,6 +284,7 @@ function useEvaluationsListController() {
         getSchoolMonthKey(new Date(e.evaluation_date)) !== monthFilter
       )
         return false
+      const evaluationDate: string = e.evaluation_date || ""
       const matchesSearch =
         !searchLower ||
         (e.classroom?.name || "").toLowerCase().includes(searchLower) ||
@@ -291,7 +292,7 @@ function useEvaluationsListController() {
         (e.supervisor?.name || "").toLowerCase().includes(searchLower) ||
         (e.classroom?.division || "").toLowerCase().includes(searchLower) ||
         formatted.includes(searchLower) ||
-        (e.evaluation_date || "").includes(searchLower) ||
+        evaluationDate.includes(searchLower) ||
         e.total_score.toString() === searchLower
 
       const matchesDivision =

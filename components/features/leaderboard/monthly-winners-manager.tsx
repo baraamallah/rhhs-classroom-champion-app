@@ -192,13 +192,9 @@ function useMonthlyWinnersManagerController({ defaultMonth }: { defaultMonth?: D
 
     try {
       const winnersByDivision = new Map(winners.map((winner) => [winner.division, winner]))
-      for (const division of DIVISIONS) {
-        const existingWinner = winnersByDivision.get(division)
-        if (existingWinner) continue // already declared
-
-        const topContenders = topClassrooms[division] || []
-        if (topContenders.length > 0) {
-          const leader = topContenders[0]
+      const declareDivisionLeader = async (division: string) => {
+        const leader = topClassrooms[division]?.[0]
+        if (leader && !winnersByDivision.has(division)) {
           const res = await declareMonthlyWinner(
             leader.classroom.id,
             division,
@@ -215,6 +211,12 @@ function useMonthlyWinnersManagerController({ defaultMonth }: { defaultMonth?: D
           }
         }
       }
+
+      // Finish each declaration before starting the next server action.
+      await DIVISIONS.reduce(
+        (pendingDeclaration, division) => pendingDeclaration.then(() => declareDivisionLeader(division)),
+        Promise.resolve()
+      )
 
       if (declaredCount > 0) {
         toast({
